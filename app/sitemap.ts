@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://revealai.com"; // Update this when you get your domain
+  const baseUrl = "https://revealai-peoplesearch.com";
 
   return [
     {

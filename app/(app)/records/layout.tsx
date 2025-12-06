@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     title: "Records Search - Court & Criminal Records | RevealAI",
     description:
       "Search court records, criminal history, and public filings. Access comprehensive background information.",
-    url: "https://revealai.com/records",
+    url: "https://revealai-peoplesearch.com/records",
   },
 };
 

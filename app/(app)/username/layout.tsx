@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     title: "Username Search - Find Social Profiles | RevealAI",
     description:
       "Search for social media profiles across 100+ platforms using a username. Find Instagram, Twitter, Facebook, and more.",
-    url: "https://revealai.com/username",
+    url: "https://revealai-peoplesearch.com/username",
   },
 };
 

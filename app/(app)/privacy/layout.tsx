@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     title: "Privacy & Data Removal - Protect Your Information | RevealAI",
     description:
       "Remove your personal information from data brokers and protect your privacy. Check your data exposure.",
-    url: "https://revealai.com/privacy",
+    url: "https://revealai-peoplesearch.com/privacy",
   },
 };
 

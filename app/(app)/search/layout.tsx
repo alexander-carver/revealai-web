@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     title: "People Search - Find Anyone | RevealAI",
     description:
       "Search for anyone using name, phone, email, or address. Access 500M+ public records and social profiles.",
-    url: "https://revealai.com/search",
+    url: "https://revealai-peoplesearch.com/search",
   },
 };
 

@@ -151,22 +151,23 @@ function HomeContent() {
               ratingCount: "2500",
             },
             description:
-              "AI-powered people search platform with access to 500M+ public records, social profiles, and background information.",
-            url: "https://revealai.com",
+              "Reveal AI - Safety Lookup & Privacy Toolkit. Search people, block spam calls, remove your data from brokers, find unclaimed money. Verify what's real with on-demand results from licensed providers.",
+            url: "https://revealai-peoplesearch.com",
             author: {
               "@type": "Organization",
               name: "RevealAI",
             },
             featureList: [
               "People Search",
-              "Background Check",
-              "Public Records",
-              "Social Media Search",
+              "Safety Lookup",
               "Reverse Phone Lookup",
-              "Email Lookup",
-              "Address Lookup",
-              "Court Records",
-              "Criminal Records",
+              "Spam Blocker",
+              "Privacy Protection",
+              "Identity Check",
+              "Contact Verification",
+              "Remove Data from Brokers",
+              "Unclaimed Money Search",
+              "Dark Web Monitoring",
             ],
           }),
         }}
@@ -178,12 +179,12 @@ function HomeContent() {
             "@context": "https://schema.org",
             "@type": "WebSite",
             name: "RevealAI",
-            url: "https://revealai.com",
+            url: "https://revealai-peoplesearch.com",
             potentialAction: {
               "@type": "SearchAction",
               target: {
                 "@type": "EntryPoint",
-                urlTemplate: "https://revealai.com/search?q={search_term_string}",
+                urlTemplate: "https://revealai-peoplesearch.com/search?q={search_term_string}",
               },
               "query-input": "required name=search_term_string",
             },
@@ -197,8 +198,8 @@ function HomeContent() {
             "@context": "https://schema.org",
             "@type": "Organization",
             name: "RevealAI",
-            url: "https://revealai.com",
-            logo: "https://revealai.com/logo.png",
+            url: "https://revealai-peoplesearch.com",
+            logo: "https://revealai-peoplesearch.com/logo.png",
             sameAs: [
               // Add your social media links here when available
               // "https://twitter.com/revealai",

@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     title: "Unclaimed Money - Find Money Owed to You | RevealAI",
     description:
       "Search for unclaimed money, property, and assets owed to you by state governments. Find forgotten bank accounts and more.",
-    url: "https://revealai.com/unclaimed",
+    url: "https://revealai-peoplesearch.com/unclaimed",
   },
 };
 

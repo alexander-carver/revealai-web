@@ -14,34 +14,38 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://revealai.com"), // Update this when you get your domain
+  metadataBase: new URL("https://revealai-peoplesearch.com"),
   title: {
-    default: "RevealAI - People Search & Background Check | AI-Powered Research",
-    template: "%s | RevealAI",
+    default: "Reveal AI - People Search | Safety Lookup & Privacy Toolkit",
+    template: "%s | Reveal AI",
   },
   description:
-    "RevealAI is the leading AI-powered people search platform. Find anyone using name, phone, email, or address. Search 500M+ public records, social profiles, court records, and more. Trusted by millions for accurate background checks and people intelligence.",
+    "Reveal AI - Safety Lookup & Privacy Toolkit. Take control of your privacy and verify what's real. Search people, block spam calls free, remove your data from broker sites, find unclaimed money, and monitor dark web breaches. Results retrieved on-demand from licensed public data providers.",
   keywords: [
     "reveal ai",
     "revealai",
     "people search",
+    "safety lookup",
+    "reverse phone lookup",
+    "spam blocker",
+    "privacy protection",
+    "identity check",
+    "contact verification",
+    "phone lookup",
+    "scam blocker",
+    "privacy toolkit",
     "background check",
     "public records",
     "social media search",
-    "reverse phone lookup",
     "email lookup",
     "address lookup",
     "court records",
     "criminal records",
     "people finder",
     "person search",
-    "people intelligence",
-    "AI people search",
-    "background check online",
-    "public records search",
-    "social profile search",
-    "phone number lookup",
-    "people search engine",
+    "remove data from brokers",
+    "unclaimed money",
+    "dark web monitoring",
   ],
   authors: [{ name: "RevealAI" }],
   creator: "RevealAI",
@@ -60,11 +64,11 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://revealai.com", // Update this when you get your domain
+    url: "https://revealai-peoplesearch.com",
     siteName: "RevealAI",
-    title: "RevealAI - People Search & Background Check | AI-Powered Research",
+    title: "Reveal AI - People Search | Safety Lookup & Privacy Toolkit",
     description:
-      "Search 500M+ public records, social profiles, and background information with AI-powered people search. Find anyone using name, phone, email, or address.",
+      "Reveal AI - Safety Lookup & Privacy Toolkit. Search people, block spam calls, remove your data from brokers, find unclaimed money. Verify what's real with on-demand results from licensed providers.",
     images: [
       {
         url: "/logo.png",
@@ -76,14 +80,14 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "RevealAI - People Search & Background Check",
+    title: "Reveal AI - People Search | Safety Lookup & Privacy Toolkit",
     description:
       "Search 500M+ public records, social profiles, and background information with AI-powered people search.",
     images: ["/logo.png"],
     creator: "@revealai", // Update with your Twitter handle if you have one
   },
   alternates: {
-    canonical: "https://revealai.com", // Update this when you get your domain
+    canonical: "https://revealai-peoplesearch.com",
   },
   verification: {
     // Add these when you set up Google Search Console and Bing Webmaster

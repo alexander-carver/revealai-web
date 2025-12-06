@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     title: "Vehicle Lookup - VIN Decoder & Vehicle History | RevealAI",
     description:
       "Decode any VIN to get vehicle history, specifications, and ownership information. Free VIN lookup.",
-    url: "https://revealai.com/vehicle",
+    url: "https://revealai-peoplesearch.com/vehicle",
   },
 };
 
