@@ -22,6 +22,7 @@ import {
   Crown,
   ChevronDown,
   ChevronUp,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,7 +32,7 @@ import { Logo } from "@/components/shared/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 const features = [
@@ -112,7 +113,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
-export default function HomePage() {
+function HomeContent() {
   const { user } = useAuth();
   const { isPro, refreshSubscription } = useSubscription();
   const searchParams = useSearchParams();
@@ -591,6 +592,20 @@ export default function HomePage() {
       </footer>
     </div>
     </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }
 

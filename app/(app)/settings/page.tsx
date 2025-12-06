@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Settings,
@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Crown,
   Check,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -27,7 +28,7 @@ import { Alert } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 
-export default function SettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const { user, signOut } = useAuth();
   const { tier, isPro, showPaywall, refreshSubscription } = useSubscription();
@@ -370,6 +371,20 @@ function NotificationToggle({
         />
       </button>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <SettingsContent />
+    </Suspense>
   );
 }
 
