@@ -131,6 +131,88 @@ function HomeContent() {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "RevealAI",
+            applicationCategory: "PeopleSearchApplication",
+            operatingSystem: "Web, iOS",
+            offers: {
+              "@type": "Offer",
+              price: "0",
+              priceCurrency: "USD",
+            },
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: "4.9",
+              ratingCount: "2500",
+            },
+            description:
+              "AI-powered people search platform with access to 500M+ public records, social profiles, and background information.",
+            url: "https://revealai.com",
+            author: {
+              "@type": "Organization",
+              name: "RevealAI",
+            },
+            featureList: [
+              "People Search",
+              "Background Check",
+              "Public Records",
+              "Social Media Search",
+              "Reverse Phone Lookup",
+              "Email Lookup",
+              "Address Lookup",
+              "Court Records",
+              "Criminal Records",
+            ],
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "RevealAI",
+            url: "https://revealai.com",
+            potentialAction: {
+              "@type": "SearchAction",
+              target: {
+                "@type": "EntryPoint",
+                urlTemplate: "https://revealai.com/search?q={search_term_string}",
+              },
+              "query-input": "required name=search_term_string",
+            },
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "RevealAI",
+            url: "https://revealai.com",
+            logo: "https://revealai.com/logo.png",
+            sameAs: [
+              // Add your social media links here when available
+              // "https://twitter.com/revealai",
+              // "https://facebook.com/revealai",
+              // "https://linkedin.com/company/revealai",
+            ],
+            contactPoint: {
+              "@type": "ContactPoint",
+              contactType: "Customer Service",
+              availableLanguage: "English",
+            },
+          }),
+        }}
+      />
       <WelcomeModal />
       <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Background pattern */}
