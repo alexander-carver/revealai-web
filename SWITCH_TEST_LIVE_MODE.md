@@ -9,13 +9,13 @@ The Supabase Edge Function secrets are currently set to **TEST MODE**. To switch
 Edge Functions can only have ONE set of secrets at a time. To switch modes, you need to update all the secrets.
 
 ### Current (TEST MODE):
-- `STRIPE_SECRET_KEY` = `sk_test_51RIJzrGjo8o5J3MxLMGislPYqOTrMvUOkprkNQSEdZKsyZ4VL5n6pOCOxf8Y8EgB5X6cuGZLiPQT0Zn2ui8KtoPQ00mKaDAKEj`
+- `STRIPE_SECRET_KEY` = `YOUR_TEST_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET` = `whsec_XhtvVOEgEWZa1QqutCOyboHjSapkw7DJ`
 - `STRIPE_WEEKLY_PRODUCT_ID` = `prod_TXqXbNAwVFC55c`
 - `STRIPE_YEARLY_PRODUCT_ID` = `prod_TXqZyyl5sHmNtZ`
 
 ### For LIVE MODE (when ready):
-- `STRIPE_SECRET_KEY` = `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`
+- `STRIPE_SECRET_KEY` = `YOUR_LIVE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET` = `whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX`
 - `STRIPE_WEEKLY_PRODUCT_ID` = `prod_TXnLmsWmubVfIh`
 - `STRIPE_YEARLY_PRODUCT_ID` = `prod_TXnMRenhMBjfBM`
@@ -33,13 +33,13 @@ Edge Functions can only have ONE set of secrets at a time. To switch modes, you 
 
 ```bash
 # Switch to TEST MODE
-supabase secrets set STRIPE_SECRET_KEY=sk_test_51RIJzrGjo8o5J3MxLMGislPYqOTrMvUOkprkNQSEdZKsyZ4VL5n6pOCOxf8Y8EgB5X6cuGZLiPQT0Zn2ui8KtoPQ00mKaDAKEj
+supabase secrets set STRIPE_SECRET_KEY=YOUR_TEST_SECRET_KEY
 supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_XhtvVOEgEWZa1QqutCOyboHjSapkw7DJ
 supabase secrets set STRIPE_WEEKLY_PRODUCT_ID=prod_TXqXbNAwVFC55c
 supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_TXqZyyl5sHmNtZ
 
 # Switch to LIVE MODE
-supabase secrets set STRIPE_SECRET_KEY=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
+supabase secrets set STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX
 supabase secrets set STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
 supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
@@ -51,16 +51,16 @@ Your `.env.local` should match the mode you're using:
 
 ### TEST MODE (.env.local):
 ```env
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51RIJzrGjo8o5J3MxcQqBT9yzOkfkvC0DHgEw8kokCuBnLqjkGuNHUuTQyjzealqSNm704ojvZ6Q71ZVkeb47gzTB008xmqlrvn
-STRIPE_SECRET_KEY=sk_test_51RIJzrGjo8o5J3MxLMGislPYqOTrMvUOkprkNQSEdZKsyZ4VL5n6pOCOxf8Y8EgB5X6cuGZLiPQT0Zn2ui8KtoPQ00mKaDAKEj
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=YOUR_TEST_PUBLISHABLE_KEY
+STRIPE_SECRET_KEY=YOUR_TEST_SECRET_KEY
 STRIPE_WEEKLY_PRODUCT_ID=prod_TXqXbNAwVFC55c
 STRIPE_YEARLY_PRODUCT_ID=prod_TXqZyyl5sHmNtZ
 ```
 
 ### LIVE MODE (.env.local):
 ```env
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_51RIJzrGjo8o5J3Mxk4f3kovLgYyTZ8RtwrFtlBRU1yCb4cwmhrp5IumNYPff5Rlt3oHCWq002JHTl2g92ZEq50AE00uODVnJje
-STRIPE_SECRET_KEY=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
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=YOUR_LIVE_PUBLISHABLE_KEY
+STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
 STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
 ```
@@ -85,7 +85,7 @@ STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
 
 ## About Your New Live Secret Key
 
-You created a new live secret key (`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`). 
+You created a new live secret key (`YOUR_LIVE_SECRET_KEY`). 
 
 **You don't need to do anything special** - just use it when you switch to live mode. The old live key will stop working, so make sure to:
 1. Update `.env.local` with the new key

@@ -4,7 +4,7 @@
 
 All secrets are configured for **TEST MODE**:
 
-- ✅ `STRIPE_SECRET_KEY` = `sk_test_51RIJzrGjo8o5J3MxLMGislPYqOTrMvUOkprkNQSEdZKsyZ4VL5n6pOCOxf8Y8EgB5X6cuGZLiPQT0Zn2ui8KtoPQ00mKaDAKEj`
+- ✅ `STRIPE_SECRET_KEY` = `YOUR_TEST_SECRET_KEY`
 - ✅ `STRIPE_WEBHOOK_SECRET` = `whsec_XhtvVOEgEWZa1QqutCOyboHjSapkw7DJ`
 - ✅ `STRIPE_WEEKLY_PRODUCT_ID` = `prod_TXqXbNAwVFC55c`
 - ✅ `STRIPE_YEARLY_PRODUCT_ID` = `prod_TXqZyyl5sHmNtZ`
@@ -16,8 +16,8 @@ All secrets are configured for **TEST MODE**:
 Make sure your `.env.local` has these TEST mode keys:
 
 ```env
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51RIJzrGjo8o5J3MxcQqBT9yzOkfkvC0DHgEw8kokCuBnLqjkGuNHUuTQyjzealqSNm704ojvZ6Q71ZVkeb47gzTB008xmqlrvn
-STRIPE_SECRET_KEY=sk_test_51RIJzrGjo8o5J3MxLMGislPYqOTrMvUOkprkNQSEdZKsyZ4VL5n6pOCOxf8Y8EgB5X6cuGZLiPQT0Zn2ui8KtoPQ00mKaDAKEj
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=YOUR_TEST_PUBLISHABLE_KEY
+STRIPE_SECRET_KEY=YOUR_TEST_SECRET_KEY
 STRIPE_WEEKLY_PRODUCT_ID=prod_TXqXbNAwVFC55c
 STRIPE_YEARLY_PRODUCT_ID=prod_TXqZyyl5sHmNtZ
 ```
@@ -70,11 +70,11 @@ When you're ready for production, see `SWITCH_TEST_LIVE_MODE.md` for instruction
 ## 📋 Live Mode Keys (Saved for Later)
 
 **Live Mode Secrets** (for when you switch):
-- `STRIPE_SECRET_KEY` = `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`
+- `STRIPE_SECRET_KEY` = `YOUR_LIVE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET` = `whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX`
 - `STRIPE_WEEKLY_PRODUCT_ID` = `prod_TXnLmsWmubVfIh`
 - `STRIPE_YEARLY_PRODUCT_ID` = `prod_TXnMRenhMBjfBM`
-- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_live_51RIJzrGjo8o5J3Mxk4f3kovLgYyTZ8RtwrFtlBRU1yCb4cwmhrp5IumNYPff5Rlt3oHCWq002JHTl2g92ZEq50AE00uODVnJje`
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `YOUR_LIVE_PUBLISHABLE_KEY`
 
 ## ❓ About Your New Live Secret Key
 

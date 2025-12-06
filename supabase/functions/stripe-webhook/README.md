@@ -21,7 +21,7 @@ supabase link --project-ref ddoginuyioiatbpfemxr
 
 ### 4. Set Environment Variables
 ```bash
-supabase secrets set STRIPE_SECRET_KEY=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
+supabase secrets set STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET
 supabase secrets set STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
 supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
