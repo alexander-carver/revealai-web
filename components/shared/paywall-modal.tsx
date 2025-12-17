@@ -1,10 +1,10 @@
 "use client";
 
-import { Crown, Check, Sparkles, X } from "lucide-react";
+import { Check, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const features = [
   { text: "UNLIMITED people searches", emoji: "♾️" },
@@ -23,6 +23,41 @@ export function PaywallModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(3600); // 1 hour in seconds
   const [showWeeklyOldPrice, setShowWeeklyOldPrice] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Preload video immediately on mount (before paywall is shown)
+  useEffect(() => {
+    const video = document.createElement('video');
+    video.preload = 'auto';
+    video.muted = true;
+    video.src = '/paywall-bg.mp4';
+    video.load();
+    
+    video.oncanplaythrough = () => {
+      setIsVideoReady(true);
+    };
+
+    // Also try to preload via link
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'video';
+    link.href = '/paywall-bg.mp4';
+    document.head.appendChild(link);
+
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, []);
+
+  // When paywall becomes visible, ensure video plays
+  useEffect(() => {
+    if (isPaywallVisible && videoRef.current) {
+      videoRef.current.play().catch(() => {
+        // Autoplay might be blocked, that's okay
+      });
+    }
+  }, [isPaywallVisible]);
 
   // Countdown timer
   useEffect(() => {
@@ -105,11 +140,14 @@ export function PaywallModal() {
         <div className="relative aspect-video w-full overflow-hidden">
           {/* Video Background */}
           <video
+            ref={videoRef}
             autoPlay
             loop
             muted
             playsInline
+            preload="auto"
             className="absolute inset-0 w-full h-full object-cover"
+            onCanPlayThrough={() => setIsVideoReady(true)}
           >
             <source src="/paywall-bg.mp4" type="video/mp4" />
           </video>

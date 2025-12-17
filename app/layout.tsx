@@ -136,6 +136,8 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        {/* Preload paywall video for instant display */}
+        <link rel="preload" href="/paywall-bg.mp4" as="video" type="video/mp4" />
       </head>
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}
