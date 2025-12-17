@@ -27,6 +27,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WelcomeModal } from "@/components/shared/welcome-modal";
+import { AppleDeviceModal } from "@/components/shared/apple-device-modal";
+import { PeopleSearch } from "@/components/shared/people-search";
+import { PaywallModal } from "@/components/shared/paywall-modal";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/shared/logo";
 import { useAuth } from "@/hooks/use-auth";
@@ -36,6 +39,26 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 const features = [
+  {
+    title: "Remove YOUR sensitive Info",
+    description: "Remove your data from brokers and check exposure",
+    icon: Shield,
+    href: "/privacy",
+    color: "text-rose-500",
+    bgColor: "bg-rose-500/10",
+    badge: "Urgent",
+    badgeColor: "bg-red-500",
+  },
+  {
+    title: "Unclaimed Money",
+    description: "Find money owed to you by state governments",
+    icon: DollarSign,
+    href: "/unclaimed",
+    color: "text-green-500",
+    bgColor: "bg-green-500/10",
+    badge: "try",
+    badgeColor: "bg-red-500",
+  },
   {
     title: "People Search",
     description: "Find anyone using name, phone, email, or address",
@@ -67,26 +90,6 @@ const features = [
     href: "/vehicle",
     color: "text-emerald-500",
     bgColor: "bg-emerald-500/10",
-  },
-  {
-    title: "Remove YOUR sensitive Info",
-    description: "Remove your data from brokers and check exposure",
-    icon: Shield,
-    href: "/privacy",
-    color: "text-rose-500",
-    bgColor: "bg-rose-500/10",
-    badge: "Urgent",
-    badgeColor: "bg-red-500",
-  },
-  {
-    title: "Unclaimed Money",
-    description: "Find money owed to you by state governments",
-    icon: DollarSign,
-    href: "/unclaimed",
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-    badge: "try",
-    badgeColor: "bg-red-500",
   },
 ];
 
@@ -214,7 +217,9 @@ function HomeContent() {
           }),
         }}
       />
+      <AppleDeviceModal />
       <WelcomeModal />
+      <PaywallModal />
       <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Background pattern */}
       <div className="absolute inset-0 pattern-dots opacity-50" />
@@ -291,46 +296,9 @@ function HomeContent() {
         </div>
       </header>
 
-      {/* Hero Section */}
       <main className="relative z-10">
-        <section className="container mx-auto px-4 py-20 text-center">
-          <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm text-primary">
-              <Sparkles className="w-4 h-4" />
-              <span>AI-Powered People Intelligence</span>
-            </div>
-
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
-              Discover the truth about{" "}
-              <span className="gradient-text">anyone</span>
-            </h1>
-
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Search public records, social profiles, background information,
-              and more with our comprehensive AI-powered research platform.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Link href="/search" className="relative inline-block">
-                <Button size="lg" className="gap-2 text-base">
-                  <Search className="w-5 h-5" />
-                  Start Searching
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-                <Badge
-                  className={`absolute -top-2 -right-2 bg-red-500 text-white text-sm font-bold px-2.5 py-1 rounded-full shadow-lg`}
-                >
-                  try
-                </Badge>
-              </Link>
-              <Link href="/login?signup=true">
-                <Button size="lg" variant="outline" className="text-base">
-                  Create Free Account
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
+        {/* Search Section - First thing users see at the top */}
+        <PeopleSearch />
 
         {/* Features Grid */}
         <section className="container mx-auto px-4 pb-20">
@@ -350,7 +318,7 @@ function HomeContent() {
                       </div>
                       {feature.badge && (
                         <Badge
-                          className={`absolute -top-2 -right-2 ${feature.badgeColor} text-white text-sm font-bold px-2.5 py-1 rounded-full shadow-lg`}
+                          className={`absolute -top-2 -right-2 ${feature.badgeColor} text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-lg`}
                         >
                           {feature.badge}
                         </Badge>

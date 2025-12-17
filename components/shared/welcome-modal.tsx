@@ -23,23 +23,61 @@ export function WelcomeModal() {
     // Check if user has seen the welcome modal before
     const hasSeenWelcome = localStorage.getItem("revealai_welcome_seen");
     
+    // Check if Apple device modal is showing (we should wait for it to potentially dismiss first)
+    const appleModalDismissed = localStorage.getItem("revealai_apple_modal_dismissed");
+    
+    // Function to detect Apple devices
+    const isAppleDevice = () => {
+      if (typeof window === "undefined") return false;
+      const userAgent = window.navigator.userAgent.toLowerCase();
+      const platform = window.navigator.platform.toLowerCase();
+      const isIOS = /iphone|ipad|ipod/.test(userAgent);
+      const isMacOS = /macintosh|mac os x/.test(userAgent) || platform.includes("mac");
+      return isIOS || isMacOS;
+    };
+    
     // Debug logging
     console.log("WelcomeModal check:", { hasSeenWelcome, isPro });
     
     // Only show if:
     // 1. User hasn't seen it before
     // 2. User is not pro
-    if (!hasSeenWelcome && !isPro) {
+    // 3. If on Apple device, only show if Apple modal was already dismissed
+    const shouldShowAppleModal = isAppleDevice() && !appleModalDismissed;
+    
+    if (!hasSeenWelcome && !isPro && !shouldShowAppleModal) {
       // Small delay to ensure smooth page load
       const timer = setTimeout(() => {
         console.log("Showing welcome modal");
         setIsVisible(true);
-        // Show close button after 10 seconds
+        // Show close button after 3 seconds
         setTimeout(() => {
           setShowCloseButton(true);
-        }, 10000);
+        }, 3000);
       }, 500);
       return () => clearTimeout(timer);
+    }
+    
+    // If Apple modal should be showing, check again after a delay in case user dismisses it
+    if (!hasSeenWelcome && !isPro && shouldShowAppleModal) {
+      const checkInterval = setInterval(() => {
+        const nowDismissed = localStorage.getItem("revealai_apple_modal_dismissed");
+        if (nowDismissed) {
+          clearInterval(checkInterval);
+          // Small delay after Apple modal is dismissed
+          setTimeout(() => {
+            setIsVisible(true);
+            setTimeout(() => {
+              setShowCloseButton(true);
+            }, 3000);
+          }, 500);
+        }
+      }, 500);
+      
+      // Clean up after 10 seconds if Apple modal is still showing
+      setTimeout(() => clearInterval(checkInterval), 10000);
+      
+      return () => clearInterval(checkInterval);
     }
   }, [isPro]);
 
@@ -59,7 +97,7 @@ export function WelcomeModal() {
 
       {/* Modal */}
       <div className="relative z-10 w-full max-w-md bg-card rounded-3xl border border-border shadow-2xl overflow-hidden animate-fade-in">
-        {/* Close Button - appears after 10 seconds */}
+        {/* Close Button - appears after 3 seconds */}
         {showCloseButton && (
           <button
             onClick={handleClose}

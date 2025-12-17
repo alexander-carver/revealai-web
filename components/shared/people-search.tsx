@@ -17,7 +17,6 @@ import {
   Sparkles,
   AlertTriangle,
 } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,19 +40,15 @@ import { useSubscription } from "@/hooks/use-subscription";
 
 // Convert markdown links to clickable HTML links
 function formatAIResponse(text: string): string {
-  // Convert markdown links [text](url) to HTML <a> tags
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   let html = text.replace(linkRegex, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>');
-  
-  // Convert line breaks to <br/>
   html = html.replace(/\n/g, "<br/>");
-  
   return html;
 }
 
-export default function PeopleSearchPage() {
+export function PeopleSearch() {
   const { isPro, showPaywall } = useSubscription();
-  const [searchMode, setSearchMode] = useState<SearchMode>("name");
+  const [searchMode, setSearchMode] = useState<SearchMode>("cheater");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -65,7 +60,7 @@ export default function PeopleSearchPage() {
     zip: "",
   });
 
-  // AI Search state
+  // AI Search state (Cheater Buster)
   const [aiQuery, setAiQuery] = useState("");
   const [aiResult, setAiResult] = useState<string | null>(null);
 
@@ -152,85 +147,53 @@ export default function PeopleSearchPage() {
     aiSearchMutation.error;
 
   return (
-    <div>
-      <PageHeader
-        title="People Search"
-        description="Find anyone using name, phone, email, or address"
-        icon={Search}
-        iconColor="text-blue-500"
-        iconBgColor="bg-blue-500/10"
-      />
-
-      {/* AI Search Section */}
-      <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Sparkles className="w-5 h-5 text-primary" />
-            AI-Powered Research
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
-            <Input
-              placeholder="Ask anything... e.g. 'Find information about John Smith from Austin, TX'"
-              value={aiQuery}
-              onChange={(e) => setAiQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAISearch()}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleAISearch}
-              isLoading={aiSearchMutation.isPending}
-              className="gap-2"
-            >
+    <section className="container mx-auto px-4 py-12">
+      <Card className="border-primary/20 shadow-xl">
+        <CardHeader className="pb-6">
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm text-primary">
               <Sparkles className="w-4 h-4" />
-              Search
-            </Button>
-          </div>
-
-          {aiResult && (
-            <div className="mt-4 p-4 rounded-xl bg-card border border-border">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: formatAIResponse(aiResult) }} />
-              </div>
+              <span>AI-Powered People Intelligence</span>
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Traditional Search */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Search Database</CardTitle>
+            <CardTitle className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
+              Discover the truth about{" "}
+              <span className="gradient-text">anyone</span>
+            </CardTitle>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+              Search public records, social profiles, background information,
+              and more with our comprehensive AI-powered research platform.
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs value={searchMode} onValueChange={(v) => setSearchMode(v as SearchMode)}>
-            <TabsList className="w-full grid grid-cols-5 mb-6">
-              <TabsTrigger value="cheater" className="gap-2">
-                <AlertTriangle className="w-4 h-4" />
+            <TabsList className="w-full grid grid-cols-5 mb-6 h-auto p-1">
+              <TabsTrigger value="cheater" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+                <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="hidden sm:inline">Cheater Buster</span>
                 <span className="sm:hidden">Cheater</span>
                 <span className="hidden md:inline">🚨</span>
               </TabsTrigger>
-              <TabsTrigger value="name" className="gap-2">
-                <User className="w-4 h-4" />
+              <TabsTrigger value="name" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+                <User className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="hidden sm:inline">Name</span>
               </TabsTrigger>
-              <TabsTrigger value="phone" className="gap-2">
-                <Phone className="w-4 h-4" />
+              <TabsTrigger value="phone" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+                <Phone className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="hidden sm:inline">Phone</span>
               </TabsTrigger>
-              <TabsTrigger value="email" className="gap-2">
-                <Mail className="w-4 h-4" />
+              <TabsTrigger value="email" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+                <Mail className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="hidden sm:inline">Email</span>
               </TabsTrigger>
-              <TabsTrigger value="address" className="gap-2">
-                <MapPin className="w-4 h-4" />
+              <TabsTrigger value="address" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+                <MapPin className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="hidden sm:inline">Address</span>
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="cheater">
+            {/* Cheater Buster (AI Search) */}
+            <TabsContent value="cheater" className="space-y-4">
               <div className="bg-gradient-to-br from-red-500/10 to-red-600/5 border border-red-500/20 rounded-xl p-4 mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertTriangle className="w-5 h-5 text-red-500" />
@@ -247,6 +210,7 @@ export default function PeopleSearchPage() {
                   onChange={(e) => setAiQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAISearch()}
                   className="flex-1"
+                  icon={<Sparkles className="w-4 h-4" />}
                 />
                 <Button
                   onClick={handleAISearch}
@@ -255,7 +219,8 @@ export default function PeopleSearchPage() {
                   className="gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
                 >
                   <Sparkles className="w-5 h-5" />
-                  Search
+                  <span className="hidden sm:inline">Search</span>
+                  <span className="sm:hidden">Go</span>
                 </Button>
               </div>
 
@@ -268,6 +233,7 @@ export default function PeopleSearchPage() {
               )}
             </TabsContent>
 
+            {/* Name Search */}
             <TabsContent value="name">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
@@ -316,6 +282,7 @@ export default function PeopleSearchPage() {
                       ? `Tell me everything about ${name} from ${location}`
                       : `Tell me everything about ${name}`;
                     setAiQuery(query);
+                    setSearchMode("cheater");
                     if (isPro) {
                       aiSearchMutation.mutate(query);
                     } else {
@@ -329,6 +296,7 @@ export default function PeopleSearchPage() {
               )}
             </TabsContent>
 
+            {/* Phone Search */}
             <TabsContent value="phone">
               <Input
                 placeholder="Phone Number"
@@ -341,6 +309,7 @@ export default function PeopleSearchPage() {
               />
             </TabsContent>
 
+            {/* Email Search */}
             <TabsContent value="email">
               <Input
                 placeholder="Email Address"
@@ -353,6 +322,7 @@ export default function PeopleSearchPage() {
               />
             </TabsContent>
 
+            {/* Address Search */}
             <TabsContent value="address">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
@@ -392,6 +362,7 @@ export default function PeopleSearchPage() {
             </TabsContent>
           </Tabs>
 
+          {/* Search Button (for non-AI searches) */}
           {searchMode !== "cheater" && (
             <Button
               onClick={handleSearch}
@@ -404,149 +375,147 @@ export default function PeopleSearchPage() {
               <ArrowRight className="w-4 h-4" />
             </Button>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Error Message */}
-      {error && (
-        <Alert variant="destructive" className="mt-6">
-          {(() => {
-            // Extract user-friendly error message
-            const err = error as any;
-            if (err?.message) {
-              // Don't show raw JSON - extract meaningful message
-              const msg = err.message;
-              if (msg.includes("{") && msg.includes("}")) {
-                try {
-                  const parsed = JSON.parse(msg);
-                  return parsed.message || parsed.error || "Search failed. Please try again.";
-                } catch {
-                  return "Search failed. Please try again.";
+          {/* Error Message */}
+          {error && (
+            <Alert variant="destructive" className="mt-6">
+              {(() => {
+                const err = error as any;
+                if (err?.message) {
+                  const msg = err.message;
+                  if (msg.includes("{") && msg.includes("}")) {
+                    try {
+                      const parsed = JSON.parse(msg);
+                      return parsed.message || parsed.error || "Search failed. Please try again.";
+                    } catch {
+                      return "Search failed. Please try again.";
+                    }
+                  }
+                  return msg;
                 }
-              }
-              return msg;
-            }
-            return "An error occurred during the search. Please try again.";
-          })()}
-        </Alert>
-      )}
+                return "An error occurred during the search. Please try again.";
+              })()}
+            </Alert>
+          )}
 
-      {/* Loading State */}
-      {isLoading && !aiSearchMutation.isPending && (
-        <div className="mt-6 space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-4">
-              <div className="flex items-center gap-4">
-                <Skeleton className="w-12 h-12 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-5 w-48" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Person Candidates Results */}
-      {candidates.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold mb-4">
-            Found {candidates.length} result{candidates.length !== 1 ? "s" : ""}
-          </h2>
-          <div className="space-y-3">
-            {candidates.map((candidate) => (
-              <Link
-                key={candidate.id}
-                href={`/search/${candidate.id}?firstName=${encodeURIComponent(
-                  candidate.firstName
-                )}&lastName=${encodeURIComponent(candidate.lastName)}`}
-              >
-                <Card className="p-4 hover:border-primary/50 transition-all cursor-pointer group">
+          {/* Loading State */}
+          {isLoading && !aiSearchMutation.isPending && searchMode !== "cheater" && (
+            <div className="mt-6 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="p-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="w-6 h-6 text-primary" />
+                    <Skeleton className="w-12 h-12 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-48" />
+                      <Skeleton className="h-4 w-32" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold truncate">
-                          {candidate.firstName} {candidate.lastName}
-                        </h3>
-                        {candidate.age && (
-                          <Badge variant="secondary">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {candidate.age}
-                          </Badge>
-                        )}
-                      </div>
-                      {(candidate.city || candidate.state) && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3" />
-                          {[candidate.city, candidate.state].filter(Boolean).join(", ")}
-                        </p>
-                      )}
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
                 </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+              ))}
+            </div>
+          )}
 
-      {/* Contact Matches Results */}
-      {contactMatches.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold mb-4">
-            Found {contactMatches.length} result{contactMatches.length !== 1 ? "s" : ""}
-          </h2>
-          <div className="space-y-3">
-            {contactMatches.map((match) => (
-              <Card key={match.id} className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{match.fullName || "Unknown"}</h3>
-                    {match.address && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                        <MapPin className="w-3 h-3" />
-                        {[
-                          match.address.street,
-                          match.address.city,
-                          match.address.state,
-                        ]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </p>
-                    )}
-                  </div>
-                  {match.enformionId && (
-                    <Link href={`/search/${match.enformionId}`}>
-                      <Button variant="outline" size="sm">
-                        View Profile
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+          {/* Person Candidates Results */}
+          {candidates.length > 0 && (
+            <div className="mt-6">
+              <h2 className="text-lg font-semibold mb-4">
+                Found {candidates.length} result{candidates.length !== 1 ? "s" : ""}
+              </h2>
+              <div className="space-y-3">
+                {candidates.map((candidate) => (
+                  <Link
+                    key={candidate.id}
+                    href={`/search/${candidate.id}?firstName=${encodeURIComponent(
+                      candidate.firstName
+                    )}&lastName=${encodeURIComponent(candidate.lastName)}`}
+                  >
+                    <Card className="p-4 hover:border-primary/50 transition-all cursor-pointer group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="w-6 h-6 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold truncate">
+                              {candidate.firstName} {candidate.lastName}
+                            </h3>
+                            {candidate.age && (
+                              <Badge variant="secondary">
+                                <Calendar className="w-3 h-3 mr-1" />
+                                {candidate.age}
+                              </Badge>
+                            )}
+                          </div>
+                          {(candidate.city || candidate.state) && (
+                            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                              <MapPin className="w-3 h-3" />
+                              {[candidate.city, candidate.state].filter(Boolean).join(", ")}
+                            </p>
+                          )}
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* No Results Message */}
-      {!isLoading &&
-        candidates.length === 0 &&
-        contactMatches.length === 0 &&
-        (personSearchMutation.isSuccess || contactSearchMutation.isSuccess) && (
-          <Alert variant="info" className="mt-6">
-            No results found. Try adjusting your search criteria.
-          </Alert>
-        )}
-    </div>
+          {/* Contact Matches Results */}
+          {contactMatches.length > 0 && (
+            <div className="mt-6">
+              <h2 className="text-lg font-semibold mb-4">
+                Found {contactMatches.length} result{contactMatches.length !== 1 ? "s" : ""}
+              </h2>
+              <div className="space-y-3">
+                {contactMatches.map((match) => (
+                  <Card key={match.id} className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="w-6 h-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{match.fullName || "Unknown"}</h3>
+                        {match.address && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                            <MapPin className="w-3 h-3" />
+                            {[
+                              match.address.street,
+                              match.address.city,
+                              match.address.state,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      {match.enformionId && (
+                        <Link href={`/search/${match.enformionId}`}>
+                          <Button variant="outline" size="sm">
+                            View Profile
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* No Results Message */}
+          {!isLoading &&
+            candidates.length === 0 &&
+            contactMatches.length === 0 &&
+            (personSearchMutation.isSuccess || contactSearchMutation.isSuccess) && (
+              <Alert variant="info" className="mt-6">
+                No results found. Try adjusting your search criteria.
+              </Alert>
+            )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 

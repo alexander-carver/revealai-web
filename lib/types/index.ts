@@ -2,7 +2,7 @@
 // Search Query Types
 // ============================================
 
-export type SearchMode = "name" | "phone" | "email" | "address";
+export type SearchMode = "cheater" | "name" | "phone" | "email" | "address";
 
 export interface SearchQuery {
   mode: SearchMode;

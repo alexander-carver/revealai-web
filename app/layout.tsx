@@ -96,6 +96,16 @@ export const metadata: Metadata = {
     // yahoo: "your-yahoo-verification-code",
   },
   category: "People Search",
+  icons: {
+    icon: [
+      { url: "/logo.png", sizes: "any" },
+      { url: "/logo.png", type: "image/png" },
+    ],
+    apple: [
+      { url: "/logo.png", sizes: "180x180", type: "image/png" },
+    ],
+    shortcut: "/logo.png",
+  },
 };
 
 export default function RootLayout({
@@ -103,8 +113,30 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Reveal AI - People Search",
+    "url": "https://revealai-peoplesearch.com",
+    "logo": "https://revealai-peoplesearch.com/logo.png",
+    "description": "AI-powered people search, safety lookup, and privacy toolkit.",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Web, iOS",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}
       >
