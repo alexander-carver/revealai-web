@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   Car,
@@ -23,15 +23,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
 import { decodeVin, getVehicleTitle, getEngineSummary } from "@/lib/services/vehicle";
 import type { VinDecodedVehicle } from "@/lib/types";
 import { useSubscription } from "@/hooks/use-subscription";
 
 export default function VehicleSearchPage() {
-  const { isPro, showPaywall } = useSubscription();
+  const { isPro } = useSubscription();
   const [vin, setVin] = useState("");
   const [vehicle, setVehicle] = useState<VinDecodedVehicle | null>(null);
   const [copied, setCopied] = useState(false);
+  
+  // Loading screen state
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
 
   const searchMutation = useMutation({
     mutationFn: async () => {
@@ -42,17 +47,25 @@ export default function VehicleSearchPage() {
     },
   });
 
-  const handleSearch = () => {
-    if (!isPro) {
-      showPaywall();
-      return;
-    }
-
+  const handleSearch = useCallback(() => {
     if (vin.trim().length < 17) {
       return;
     }
+    
+    // Show loading screen and start search
+    setLoadingSearchQuery(vin.toUpperCase());
+    setShowLoadingScreen(true);
     searchMutation.mutate();
-  };
+  }, [vin, searchMutation]);
+
+  const handleLoadingComplete = useCallback(() => {
+    setShowLoadingScreen(false);
+  }, []);
+
+  const handleLoadingCancel = useCallback(() => {
+    setShowLoadingScreen(false);
+    setVehicle(null);
+  }, []);
 
   const handleCopyVin = () => {
     if (vehicle) {
@@ -64,6 +77,14 @@ export default function VehicleSearchPage() {
 
   return (
     <div>
+      {/* Loading Screen Overlay */}
+      <SearchLoadingScreen
+        isVisible={showLoadingScreen}
+        searchQuery={loadingSearchQuery}
+        onComplete={handleLoadingComplete}
+        onCancel={handleLoadingCancel}
+      />
+
       <PageHeader
         title="Vehicle Lookup"
         description="Decode any VIN for vehicle history and specifications"
@@ -90,7 +111,7 @@ export default function VehicleSearchPage() {
             />
             <Button
               onClick={handleSearch}
-              isLoading={searchMutation.isPending}
+              isLoading={searchMutation.isPending && !showLoadingScreen}
               size="lg"
               className="gap-2"
             >
@@ -106,15 +127,15 @@ export default function VehicleSearchPage() {
       </Card>
 
       {/* Error Message */}
-      {searchMutation.error && (
+      {searchMutation.error && !showLoadingScreen && (
         <Alert variant="destructive" className="mt-6">
           {(searchMutation.error as Error).message ||
             "An error occurred during the VIN decode"}
         </Alert>
       )}
 
-      {/* Loading State */}
-      {searchMutation.isPending && (
+      {/* Loading State (inline, hidden when full loading screen is shown) */}
+      {searchMutation.isPending && !showLoadingScreen && (
         <div className="mt-6">
           <Card className="p-6">
             <div className="flex items-center gap-4 mb-6">
@@ -134,7 +155,7 @@ export default function VehicleSearchPage() {
       )}
 
       {/* Vehicle Results */}
-      {vehicle && (
+      {vehicle && !showLoadingScreen && (
         <div className="mt-6 space-y-6">
           {/* Vehicle Header */}
           <Card className="overflow-hidden">
@@ -325,4 +346,3 @@ export default function VehicleSearchPage() {
     </div>
   );
 }
-

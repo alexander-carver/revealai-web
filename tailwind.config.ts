@@ -70,12 +70,27 @@ const config: Config = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "orbit": {
+          "0%": { transform: "rotate(0deg) translateX(130px) rotate(0deg)" },
+          "100%": { transform: "rotate(360deg) translateX(130px) rotate(-360deg)" },
+        },
+        "orbit-ring": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
+        "counter-orbit": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(-360deg)" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
         pulse: "pulse 2s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
+        "orbit-avatar": "orbit 12s linear infinite",
+        "orbit-ring": "orbit-ring 20s linear infinite",
+        "counter-orbit": "counter-orbit 12s linear infinite",
       },
     },
   },

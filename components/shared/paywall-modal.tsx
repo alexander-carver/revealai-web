@@ -101,22 +101,28 @@ export function PaywallModal() {
           <X className="h-5 w-5" />
         </button>
 
-        {/* Header */}
-        <div className="relative px-6 pt-8 pb-6 text-center bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-transparent">
-          <div className="absolute inset-0 pattern-dots opacity-30" />
-          <div className="relative">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 mb-4">
-              <Crown className="w-8 h-8 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
+        {/* Header with Video Background */}
+        <div className="relative aspect-video w-full overflow-hidden">
+          {/* Video Background */}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source src="/paywall-bg.mp4" type="video/mp4" />
+          </video>
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/50" />
+          {/* Content */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
               🚨 ONE TIME DEAL
             </h2>
-            <div className="mt-2 text-lg font-semibold text-red-500">
+            <div className="mt-3 text-2xl md:text-3xl font-bold text-red-400 drop-shadow-lg">
               {formatTime(timeLeft)}
             </div>
-            <p className="text-muted-foreground mt-2">
-              Get unlimited access to all premium features
-            </p>
           </div>
         </div>
 

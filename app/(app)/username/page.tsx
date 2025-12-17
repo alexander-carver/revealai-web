@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   AtSign,
@@ -21,15 +21,20 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
 import { searchUsername } from "@/lib/services/username-search";
 import type { UsernameSearchResponse, UsernameProbe } from "@/lib/types";
 import { useSubscription } from "@/hooks/use-subscription";
 
 export default function UsernameSearchPage() {
-  const { isPro, showPaywall } = useSubscription();
+  const { isPro } = useSubscription();
   const [username, setUsername] = useState("");
   const [results, setResults] = useState<UsernameSearchResponse | null>(null);
   const [filter, setFilter] = useState<"all" | "found" | "not_found">("all");
+  
+  // Loading screen state
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
 
   const searchMutation = useMutation({
     mutationFn: async () => {
@@ -40,17 +45,25 @@ export default function UsernameSearchPage() {
     },
   });
 
-  const handleSearch = () => {
-    if (!isPro) {
-      showPaywall();
-      return;
-    }
-
+  const handleSearch = useCallback(() => {
     if (username.trim().length < 2) {
       return;
     }
+    
+    // Show loading screen and start search
+    setLoadingSearchQuery(`@${username}`);
+    setShowLoadingScreen(true);
     searchMutation.mutate();
-  };
+  }, [username, searchMutation]);
+
+  const handleLoadingComplete = useCallback(() => {
+    setShowLoadingScreen(false);
+  }, []);
+
+  const handleLoadingCancel = useCallback(() => {
+    setShowLoadingScreen(false);
+    setResults(null);
+  }, []);
 
   const filteredProfiles =
     results?.profiles.filter((p) => {
@@ -64,6 +77,14 @@ export default function UsernameSearchPage() {
 
   return (
     <div>
+      {/* Loading Screen Overlay */}
+      <SearchLoadingScreen
+        isVisible={showLoadingScreen}
+        searchQuery={loadingSearchQuery}
+        onComplete={handleLoadingComplete}
+        onCancel={handleLoadingCancel}
+      />
+
       <PageHeader
         title="Username Search"
         description="Find social profiles across 100+ platforms"
@@ -89,7 +110,7 @@ export default function UsernameSearchPage() {
             />
             <Button
               onClick={handleSearch}
-              isLoading={searchMutation.isPending}
+              isLoading={searchMutation.isPending && !showLoadingScreen}
               size="lg"
               className="gap-2"
             >
@@ -105,15 +126,15 @@ export default function UsernameSearchPage() {
       </Card>
 
       {/* Error Message */}
-      {searchMutation.error && (
+      {searchMutation.error && !showLoadingScreen && (
         <Alert variant="destructive" className="mt-6">
           {(searchMutation.error as Error).message ||
             "An error occurred during the search"}
         </Alert>
       )}
 
-      {/* Loading State */}
-      {searchMutation.isPending && (
+      {/* Loading State (inline, hidden when full loading screen is shown) */}
+      {searchMutation.isPending && !showLoadingScreen && (
         <div className="mt-6">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -138,7 +159,7 @@ export default function UsernameSearchPage() {
       )}
 
       {/* Results */}
-      {results && (
+      {results && !showLoadingScreen && (
         <div className="mt-6">
           {/* Stats Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -260,4 +281,3 @@ function ProfileCardContent({ probe }: { probe: UsernameProbe }) {
     </div>
   );
 }
-

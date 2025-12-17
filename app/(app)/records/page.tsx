@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   FileText,
@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
 import { searchRecords, normalizeDob } from "@/lib/services/records-search";
 import type { RecordsSearchResponse, CourtRecord } from "@/lib/types";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -35,7 +36,7 @@ const categoryColors: Record<string, { bg: string; text: string }> = {
 };
 
 export default function RecordsSearchPage() {
-  const { isPro, showPaywall } = useSubscription();
+  const { isPro } = useSubscription();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -44,6 +45,10 @@ export default function RecordsSearchPage() {
     dob: "",
   });
   const [results, setResults] = useState<RecordsSearchResponse | null>(null);
+  
+  // Loading screen state
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
 
   const searchMutation = useMutation({
     mutationFn: async () => {
@@ -63,17 +68,26 @@ export default function RecordsSearchPage() {
     },
   });
 
-  const handleSearch = () => {
-    if (!isPro) {
-      showPaywall();
-      return;
-    }
-
+  const handleSearch = useCallback(() => {
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
       return;
     }
+    
+    // Show loading screen and start search
+    const displayName = `${formData.firstName} ${formData.lastName}`.trim();
+    setLoadingSearchQuery(displayName);
+    setShowLoadingScreen(true);
     searchMutation.mutate();
-  };
+  }, [formData.firstName, formData.lastName, searchMutation]);
+
+  const handleLoadingComplete = useCallback(() => {
+    setShowLoadingScreen(false);
+  }, []);
+
+  const handleLoadingCancel = useCallback(() => {
+    setShowLoadingScreen(false);
+    setResults(null);
+  }, []);
 
   const getCategoryStyle = (category: string) => {
     return categoryColors[category] || categoryColors.default;
@@ -81,6 +95,14 @@ export default function RecordsSearchPage() {
 
   return (
     <div>
+      {/* Loading Screen Overlay */}
+      <SearchLoadingScreen
+        isVisible={showLoadingScreen}
+        searchQuery={loadingSearchQuery}
+        onComplete={handleLoadingComplete}
+        onCancel={handleLoadingCancel}
+      />
+
       <PageHeader
         title="Records Search"
         description="Search court records, criminal history, and public filings"
@@ -141,7 +163,7 @@ export default function RecordsSearchPage() {
 
           <Button
             onClick={handleSearch}
-            isLoading={searchMutation.isPending}
+            isLoading={searchMutation.isPending && !showLoadingScreen}
             size="lg"
             className="w-full mt-6 gap-2"
           >
@@ -153,15 +175,15 @@ export default function RecordsSearchPage() {
       </Card>
 
       {/* Error Message */}
-      {searchMutation.error && (
+      {searchMutation.error && !showLoadingScreen && (
         <Alert variant="destructive" className="mt-6">
           {(searchMutation.error as Error).message ||
             "An error occurred during the search"}
         </Alert>
       )}
 
-      {/* Loading State */}
-      {searchMutation.isPending && (
+      {/* Loading State (inline, hidden when full loading screen is shown) */}
+      {searchMutation.isPending && !showLoadingScreen && (
         <div className="mt-6 space-y-4">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="p-4">
@@ -179,7 +201,7 @@ export default function RecordsSearchPage() {
       )}
 
       {/* Results */}
-      {results && (
+      {results && !showLoadingScreen && (
         <div className="mt-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">
@@ -276,4 +298,3 @@ function RecordCard({ record }: { record: CourtRecord }) {
     </Card>
   );
 }
-

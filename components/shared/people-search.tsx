@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   Search,
@@ -24,6 +24,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SearchLoadingScreen } from "./search-loading-screen";
 import {
   searchPersonCandidates,
   lookupContactMatches,
@@ -47,7 +48,7 @@ function formatAIResponse(text: string): string {
 }
 
 export function PeopleSearch() {
-  const { isPro, showPaywall } = useSubscription();
+  const { isPro } = useSubscription();
   const [searchMode, setSearchMode] = useState<SearchMode>("cheater");
   const [formData, setFormData] = useState({
     firstName: "",
@@ -67,6 +68,10 @@ export function PeopleSearch() {
   // Results state
   const [candidates, setCandidates] = useState<PersonSearchCandidate[]>([]);
   const [contactMatches, setContactMatches] = useState<EnformionContactMatch[]>([]);
+
+  // Loading screen state
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
 
   // Mutations
   const personSearchMutation = useMutation({
@@ -98,12 +103,23 @@ export function PeopleSearch() {
     },
   });
 
-  const handleSearch = () => {
-    if (!isPro) {
-      showPaywall();
-      return;
+  // Get display name for the loading screen
+  const getSearchDisplayName = useCallback(() => {
+    if (searchMode === "name" || searchMode === "cheater") {
+      const name = `${formData.firstName} ${formData.lastName}`.trim();
+      if (name) return name;
+      if (aiQuery) return aiQuery.split(" ").slice(0, 3).join(" ");
     }
+    if (searchMode === "phone") return formData.phone || "Phone Number";
+    if (searchMode === "email") return formData.email || "Email Address";
+    if (searchMode === "address") {
+      const addr = [formData.street, formData.city, formData.state].filter(Boolean).join(", ");
+      return addr || "Address";
+    }
+    return "Unknown";
+  }, [searchMode, formData, aiQuery]);
 
+  const handleSearch = useCallback(() => {
     const query: SearchQuery = {
       mode: searchMode,
       firstName: formData.firstName,
@@ -120,21 +136,37 @@ export function PeopleSearch() {
       if (!formData.firstName.trim() || !formData.lastName.trim()) {
         return;
       }
+      // Set up pending search and show loading screen
+      setLoadingSearchQuery(getSearchDisplayName());
+      setShowLoadingScreen(true);
       personSearchMutation.mutate(query);
     } else if (searchMode !== "cheater") {
+      setLoadingSearchQuery(getSearchDisplayName());
+      setShowLoadingScreen(true);
       contactSearchMutation.mutate(query);
     }
-  };
+  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation]);
 
-  const handleAISearch = () => {
-    if (!isPro) {
-      showPaywall();
-      return;
-    }
-
+  const handleAISearch = useCallback(() => {
     if (!aiQuery.trim()) return;
+    
+    // Extract a name or short query for display
+    const displayQuery = aiQuery.split(" ").slice(0, 4).join(" ");
+    setLoadingSearchQuery(displayQuery);
+    setShowLoadingScreen(true);
     aiSearchMutation.mutate(aiQuery);
-  };
+  }, [aiQuery, aiSearchMutation]);
+
+  const handleLoadingComplete = useCallback(() => {
+    setShowLoadingScreen(false);
+  }, []);
+
+  const handleLoadingCancel = useCallback(() => {
+    setShowLoadingScreen(false);
+    setCandidates([]);
+    setContactMatches([]);
+    setAiResult(null);
+  }, []);
 
   const isLoading =
     personSearchMutation.isPending ||
@@ -146,8 +178,18 @@ export function PeopleSearch() {
     contactSearchMutation.error ||
     aiSearchMutation.error;
 
+  const showInlineLoading = isLoading && !showLoadingScreen;
+
   return (
     <section className="container mx-auto px-4 py-12">
+      {/* Loading Screen Overlay */}
+      <SearchLoadingScreen
+        isVisible={showLoadingScreen}
+        searchQuery={loadingSearchQuery}
+        onComplete={handleLoadingComplete}
+        onCancel={handleLoadingCancel}
+      />
+
       <Card className="border-primary/20 shadow-xl">
         <CardHeader className="pb-6">
           <div className="text-center space-y-4">
@@ -170,7 +212,7 @@ export function PeopleSearch() {
             <TabsList className="w-full grid grid-cols-5 mb-6 h-auto p-1">
               <TabsTrigger value="cheater" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
                 <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
-                <span className="hidden sm:inline">Cheater Buster</span>
+                <span className="hidden sm:inline">Find Dating Apps</span>
                 <span className="sm:hidden">Cheater</span>
                 <span className="hidden md:inline">🚨</span>
               </TabsTrigger>
@@ -197,15 +239,15 @@ export function PeopleSearch() {
               <div className="bg-gradient-to-br from-red-500/10 to-red-600/5 border border-red-500/20 rounded-xl p-4 mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertTriangle className="w-5 h-5 text-red-500" />
-                  <h3 className="font-semibold text-lg">Cheater Buster 🚨</h3>
+                  <h3 className="font-semibold text-lg">Find Dating Apps and Profiles 🚨</h3>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Use AI to find everything about someone. Perfect for catching cheaters, verifying identities, and comprehensive background checks.
+                  Use AI to find dating apps and profiles. Perfect for discovering hidden accounts, verifying identities, and comprehensive background checks.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Input
-                  placeholder="Ask anything... e.g. 'Find everything about John Smith from Austin, TX' or 'Tell me about Sarah Johnson who lives in Miami'"
+                  placeholder="'Find everything about John Smith from Austin, TX' or 'Tell me about Sarah Johnson who lives in Miami'"
                   value={aiQuery}
                   onChange={(e) => setAiQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAISearch()}
@@ -214,7 +256,7 @@ export function PeopleSearch() {
                 />
                 <Button
                   onClick={handleAISearch}
-                  isLoading={aiSearchMutation.isPending}
+                  isLoading={aiSearchMutation.isPending && !showLoadingScreen}
                   size="lg"
                   className="gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
                 >
@@ -224,7 +266,7 @@ export function PeopleSearch() {
                 </Button>
               </div>
 
-              {aiResult && (
+              {aiResult && !showLoadingScreen && (
                 <div className="mt-4 p-4 rounded-xl bg-card border border-border">
                   <div className="prose prose-sm dark:prose-invert max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: formatAIResponse(aiResult) }} />
@@ -283,11 +325,7 @@ export function PeopleSearch() {
                       : `Tell me everything about ${name}`;
                     setAiQuery(query);
                     setSearchMode("cheater");
-                    if (isPro) {
-                      aiSearchMutation.mutate(query);
-                    } else {
-                      showPaywall();
-                    }
+                    handleAISearch();
                   }}
                 >
                   <Sparkles className="w-4 h-4" />
@@ -366,7 +404,7 @@ export function PeopleSearch() {
           {searchMode !== "cheater" && (
             <Button
               onClick={handleSearch}
-              isLoading={isLoading && !aiSearchMutation.isPending}
+              isLoading={showInlineLoading && !aiSearchMutation.isPending}
               size="lg"
               className="w-full mt-6 gap-2"
             >
@@ -377,7 +415,7 @@ export function PeopleSearch() {
           )}
 
           {/* Error Message */}
-          {error && (
+          {error && !showLoadingScreen && (
             <Alert variant="destructive" className="mt-6">
               {(() => {
                 const err = error as any;
@@ -399,7 +437,7 @@ export function PeopleSearch() {
           )}
 
           {/* Loading State */}
-          {isLoading && !aiSearchMutation.isPending && searchMode !== "cheater" && (
+          {showInlineLoading && !aiSearchMutation.isPending && searchMode !== "cheater" && (
             <div className="mt-6 space-y-4">
               {[1, 2, 3].map((i) => (
                 <Card key={i} className="p-4">
@@ -416,7 +454,7 @@ export function PeopleSearch() {
           )}
 
           {/* Person Candidates Results */}
-          {candidates.length > 0 && (
+          {candidates.length > 0 && !showLoadingScreen && (
             <div className="mt-6">
               <h2 className="text-lg font-semibold mb-4">
                 Found {candidates.length} result{candidates.length !== 1 ? "s" : ""}
@@ -463,7 +501,7 @@ export function PeopleSearch() {
           )}
 
           {/* Contact Matches Results */}
-          {contactMatches.length > 0 && (
+          {contactMatches.length > 0 && !showLoadingScreen && (
             <div className="mt-6">
               <h2 className="text-lg font-semibold mb-4">
                 Found {contactMatches.length} result{contactMatches.length !== 1 ? "s" : ""}
@@ -506,6 +544,7 @@ export function PeopleSearch() {
 
           {/* No Results Message */}
           {!isLoading &&
+            !showLoadingScreen &&
             candidates.length === 0 &&
             contactMatches.length === 0 &&
             (personSearchMutation.isSuccess || contactSearchMutation.isSuccess) && (
@@ -518,4 +557,3 @@ export function PeopleSearch() {
     </section>
   );
 }
-

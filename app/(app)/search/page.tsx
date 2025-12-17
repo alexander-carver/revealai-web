@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   Search,
@@ -25,6 +25,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
 import {
   searchPersonCandidates,
   lookupContactMatches,
@@ -52,7 +53,7 @@ function formatAIResponse(text: string): string {
 }
 
 export default function PeopleSearchPage() {
-  const { isPro, showPaywall } = useSubscription();
+  const { isPro } = useSubscription();
   const [searchMode, setSearchMode] = useState<SearchMode>("name");
   const [formData, setFormData] = useState({
     firstName: "",
@@ -72,6 +73,11 @@ export default function PeopleSearchPage() {
   // Results state
   const [candidates, setCandidates] = useState<PersonSearchCandidate[]>([]);
   const [contactMatches, setContactMatches] = useState<EnformionContactMatch[]>([]);
+
+  // Loading screen state
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
+  const [pendingSearch, setPendingSearch] = useState<{ type: "person" | "contact" | "ai"; query?: SearchQuery; aiQuery?: string } | null>(null);
 
   // Mutations
   const personSearchMutation = useMutation({
@@ -103,12 +109,24 @@ export default function PeopleSearchPage() {
     },
   });
 
-  const handleSearch = () => {
-    if (!isPro) {
-      showPaywall();
-      return;
+  // Get display name for the loading screen
+  const getSearchDisplayName = useCallback(() => {
+    if (searchMode === "name" || searchMode === "cheater") {
+      const name = `${formData.firstName} ${formData.lastName}`.trim();
+      if (name) return name;
+      if (aiQuery) return aiQuery.split(" ").slice(0, 3).join(" ");
     }
+    if (searchMode === "phone") return formData.phone || "Phone Number";
+    if (searchMode === "email") return formData.email || "Email Address";
+    if (searchMode === "address") {
+      const addr = [formData.street, formData.city, formData.state].filter(Boolean).join(", ");
+      return addr || "Address";
+    }
+    return "Unknown";
+  }, [searchMode, formData, aiQuery]);
 
+  // Start search with loading screen
+  const handleSearch = useCallback(() => {
     const query: SearchQuery = {
       mode: searchMode,
       firstName: formData.firstName,
@@ -125,21 +143,46 @@ export default function PeopleSearchPage() {
       if (!formData.firstName.trim() || !formData.lastName.trim()) {
         return;
       }
+      // Set up pending search and show loading screen
+      setPendingSearch({ type: "person", query });
+      setLoadingSearchQuery(getSearchDisplayName());
+      setShowLoadingScreen(true);
+      // Start actual search in background
       personSearchMutation.mutate(query);
     } else if (searchMode !== "cheater") {
+      setPendingSearch({ type: "contact", query });
+      setLoadingSearchQuery(getSearchDisplayName());
+      setShowLoadingScreen(true);
       contactSearchMutation.mutate(query);
     }
-  };
+  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation]);
 
-  const handleAISearch = () => {
-    if (!isPro) {
-      showPaywall();
-      return;
-    }
-
+  const handleAISearch = useCallback(() => {
     if (!aiQuery.trim()) return;
+    
+    // Extract a name or short query for display
+    const displayQuery = aiQuery.split(" ").slice(0, 4).join(" ");
+    setPendingSearch({ type: "ai", aiQuery });
+    setLoadingSearchQuery(displayQuery);
+    setShowLoadingScreen(true);
     aiSearchMutation.mutate(aiQuery);
-  };
+  }, [aiQuery, aiSearchMutation]);
+
+  // Loading screen callbacks
+  const handleLoadingComplete = useCallback(() => {
+    setShowLoadingScreen(false);
+    setPendingSearch(null);
+    // Results are already loaded via the mutation, they'll render
+  }, []);
+
+  const handleLoadingCancel = useCallback(() => {
+    setShowLoadingScreen(false);
+    setPendingSearch(null);
+    // Clear any pending results
+    setCandidates([]);
+    setContactMatches([]);
+    setAiResult(null);
+  }, []);
 
   const isLoading =
     personSearchMutation.isPending ||
@@ -151,8 +194,19 @@ export default function PeopleSearchPage() {
     contactSearchMutation.error ||
     aiSearchMutation.error;
 
+  // Don't show inline loading if loading screen is visible
+  const showInlineLoading = isLoading && !showLoadingScreen;
+
   return (
     <div>
+      {/* Loading Screen Overlay */}
+      <SearchLoadingScreen
+        isVisible={showLoadingScreen}
+        searchQuery={loadingSearchQuery}
+        onComplete={handleLoadingComplete}
+        onCancel={handleLoadingCancel}
+      />
+
       <PageHeader
         title="People Search"
         description="Find anyone using name, phone, email, or address"
@@ -180,7 +234,7 @@ export default function PeopleSearchPage() {
             />
             <Button
               onClick={handleAISearch}
-              isLoading={aiSearchMutation.isPending}
+              isLoading={aiSearchMutation.isPending && !showLoadingScreen}
               className="gap-2"
             >
               <Sparkles className="w-4 h-4" />
@@ -188,7 +242,7 @@ export default function PeopleSearchPage() {
             </Button>
           </div>
 
-          {aiResult && (
+          {aiResult && !showLoadingScreen && (
             <div className="mt-4 p-4 rounded-xl bg-card border border-border">
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <div dangerouslySetInnerHTML={{ __html: formatAIResponse(aiResult) }} />
@@ -250,7 +304,7 @@ export default function PeopleSearchPage() {
                 />
                 <Button
                   onClick={handleAISearch}
-                  isLoading={aiSearchMutation.isPending}
+                  isLoading={aiSearchMutation.isPending && !showLoadingScreen}
                   size="lg"
                   className="gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
                 >
@@ -259,7 +313,7 @@ export default function PeopleSearchPage() {
                 </Button>
               </div>
 
-              {aiResult && (
+              {aiResult && !showLoadingScreen && (
                 <div className="mt-4 p-4 rounded-xl bg-card border border-border">
                   <div className="prose prose-sm dark:prose-invert max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: formatAIResponse(aiResult) }} />
@@ -316,11 +370,7 @@ export default function PeopleSearchPage() {
                       ? `Tell me everything about ${name} from ${location}`
                       : `Tell me everything about ${name}`;
                     setAiQuery(query);
-                    if (isPro) {
-                      aiSearchMutation.mutate(query);
-                    } else {
-                      showPaywall();
-                    }
+                    handleAISearch();
                   }}
                 >
                   <Sparkles className="w-4 h-4" />
@@ -395,7 +445,7 @@ export default function PeopleSearchPage() {
           {searchMode !== "cheater" && (
             <Button
               onClick={handleSearch}
-              isLoading={isLoading && !aiSearchMutation.isPending}
+              isLoading={showInlineLoading && !aiSearchMutation.isPending}
               size="lg"
               className="w-full mt-6 gap-2"
             >
@@ -408,7 +458,7 @@ export default function PeopleSearchPage() {
       </Card>
 
       {/* Error Message */}
-      {error && (
+      {error && !showLoadingScreen && (
         <Alert variant="destructive" className="mt-6">
           {(() => {
             // Extract user-friendly error message
@@ -432,7 +482,7 @@ export default function PeopleSearchPage() {
       )}
 
       {/* Loading State */}
-      {isLoading && !aiSearchMutation.isPending && (
+      {showInlineLoading && !aiSearchMutation.isPending && (
         <div className="mt-6 space-y-4">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="p-4">
@@ -449,7 +499,7 @@ export default function PeopleSearchPage() {
       )}
 
       {/* Person Candidates Results */}
-      {candidates.length > 0 && (
+      {candidates.length > 0 && !showLoadingScreen && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold mb-4">
             Found {candidates.length} result{candidates.length !== 1 ? "s" : ""}
@@ -496,7 +546,7 @@ export default function PeopleSearchPage() {
       )}
 
       {/* Contact Matches Results */}
-      {contactMatches.length > 0 && (
+      {contactMatches.length > 0 && !showLoadingScreen && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold mb-4">
             Found {contactMatches.length} result{contactMatches.length !== 1 ? "s" : ""}
@@ -539,6 +589,7 @@ export default function PeopleSearchPage() {
 
       {/* No Results Message */}
       {!isLoading &&
+        !showLoadingScreen &&
         candidates.length === 0 &&
         contactMatches.length === 0 &&
         (personSearchMutation.isSuccess || contactSearchMutation.isSuccess) && (
@@ -549,4 +600,3 @@ export default function PeopleSearchPage() {
     </div>
   );
 }
-
