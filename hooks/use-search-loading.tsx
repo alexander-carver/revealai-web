@@ -100,7 +100,7 @@ export function useSearchLoading(
     completeLoading,
     cancelLoading,
     isSearchComplete,
-    setSearchComplete,
+    setSearchComplete: setIsSearchComplete,
   };
 }
 
