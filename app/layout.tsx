@@ -138,6 +138,8 @@ export default function RootLayout({
         />
         {/* Preload paywall video for instant display */}
         <link rel="preload" href="/paywall-bg.mp4" as="video" type="video/mp4" />
+        {/* Favicon for Google Search results */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}
