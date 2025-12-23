@@ -41,35 +41,16 @@ export function PaywallModal() {
   const [isVideoReady, setIsVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Preload video immediately on mount
-  useEffect(() => {
-    const video = document.createElement('video');
-    video.preload = 'auto';
-    video.muted = true;
-    video.src = '/paywall-bg.mp4';
-    video.load();
-    
-    video.oncanplaythrough = () => {
-      setIsVideoReady(true);
-    };
-
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'video';
-    link.href = '/paywall-bg.mp4';
-    document.head.appendChild(link);
-
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
-
   // When paywall becomes visible, ensure video plays
+  // Video is already preloaded in the main page component
   useEffect(() => {
     if (isPaywallVisible && videoRef.current) {
+      // Video should already be cached from early preload
+      videoRef.current.load(); // Reload to ensure it's ready
       videoRef.current.play().catch(() => {
         // Autoplay might be blocked
       });
+      setIsVideoReady(true);
     }
   }, [isPaywallVisible]);
 
