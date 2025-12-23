@@ -26,16 +26,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { WelcomeModal } from "@/components/shared/welcome-modal";
-import { AppleDeviceModal } from "@/components/shared/apple-device-modal";
 import { PeopleSearch } from "@/components/shared/people-search";
 import { PaywallModal } from "@/components/shared/paywall-modal";
+import { FreeTrialPaywallModal } from "@/components/shared/free-trial-paywall-modal";
+import { OnboardingFlow } from "@/components/shared/onboarding-flow";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/shared/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import Image from "next/image";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 
 const features = [
@@ -118,8 +118,19 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 function HomeContent() {
   const { user } = useAuth();
-  const { isPro, refreshSubscription } = useSubscription();
+  const { isPro, refreshSubscription, showPaywall } = useSubscription();
   const searchParams = useSearchParams();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+
+  // Check if user has completed onboarding
+  useEffect(() => {
+    const hasCompletedOnboarding = localStorage.getItem("revealai_onboarding_completed");
+    if (!hasCompletedOnboarding && !isPro) {
+      setShowOnboarding(true);
+    }
+    setIsCheckingOnboarding(false);
+  }, [isPro]);
 
   // Refresh subscription when returning from checkout
   useEffect(() => {
@@ -131,6 +142,30 @@ function HomeContent() {
       window.history.replaceState({}, "", "/");
     }
   }, [searchParams, user, refreshSubscription]);
+
+  // Handle onboarding completion
+  const handleOnboardingComplete = useCallback(() => {
+    localStorage.setItem("revealai_onboarding_completed", "true");
+    setShowOnboarding(false);
+    // Show paywall after onboarding
+    if (!isPro) {
+      showPaywall();
+    }
+  }, [isPro, showPaywall]);
+
+  // Show loading state while checking onboarding status
+  if (isCheckingOnboarding) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show onboarding flow for first-time users
+  if (showOnboarding) {
+    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  }
 
   return (
     <>
@@ -217,9 +252,8 @@ function HomeContent() {
           }),
         }}
       />
-      <AppleDeviceModal />
-      <WelcomeModal />
       <PaywallModal />
+      <FreeTrialPaywallModal />
       <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Background pattern */}
       <div className="absolute inset-0 pattern-dots opacity-50" />

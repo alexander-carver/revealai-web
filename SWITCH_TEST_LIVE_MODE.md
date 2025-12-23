@@ -17,8 +17,9 @@ Edge Functions can only have ONE set of secrets at a time. To switch modes, you 
 ### For LIVE MODE (when ready):
 - `STRIPE_SECRET_KEY` = `YOUR_LIVE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET` = `whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX`
-- `STRIPE_WEEKLY_PRODUCT_ID` = `prod_TXnLmsWmubVfIh`
+- `STRIPE_WEEKLY_PRODUCT_ID` = `prod_TexubYU0K47p6u` (Updated: $9.99/week)
 - `STRIPE_YEARLY_PRODUCT_ID` = `prod_TXnMRenhMBjfBM`
+- `STRIPE_FREE_TRIAL_PRODUCT_ID` = `prod_TexsO0iCT5ep5s` (NEW: 7-day free trial, then $9.99/week)
 
 ## How to Switch Modes
 
@@ -41,8 +42,9 @@ supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_TXqZyyl5sHmNtZ
 # Switch to LIVE MODE
 supabase secrets set STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX
-supabase secrets set STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
+supabase secrets set STRIPE_WEEKLY_PRODUCT_ID=prod_TexubYU0K47p6u
 supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
+supabase secrets set STRIPE_FREE_TRIAL_PRODUCT_ID=prod_TexsO0iCT5ep5s
 ```
 
 ## .env.local Configuration
@@ -61,8 +63,9 @@ STRIPE_YEARLY_PRODUCT_ID=prod_TXqZyyl5sHmNtZ
 ```env
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=YOUR_LIVE_PUBLISHABLE_KEY
 STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
-STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
+STRIPE_WEEKLY_PRODUCT_ID=prod_TexubYU0K47p6u
 STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
+STRIPE_FREE_TRIAL_PRODUCT_ID=prod_TexsO0iCT5ep5s
 ```
 
 ## Stripe Dashboard Webhooks

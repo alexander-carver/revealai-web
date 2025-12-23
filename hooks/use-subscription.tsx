@@ -20,6 +20,9 @@ interface SubscriptionContextType {
   showPaywall: () => void;
   hidePaywall: () => void;
   isPaywallVisible: boolean;
+  showFreeTrialPaywall: () => void;
+  hideFreeTrialPaywall: () => void;
+  isFreeTrialPaywallVisible: boolean;
   checkAccess: (feature: string) => boolean;
   refreshSubscription: () => Promise<void>;
 }
@@ -43,6 +46,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [tier, setTier] = useState<SubscriptionTier>("free");
   const [isLoading, setIsLoading] = useState(false);
   const [isPaywallVisible, setIsPaywallVisible] = useState(false);
+  const [isFreeTrialPaywallVisible, setIsFreeTrialPaywallVisible] = useState(false);
 
   const isPro = tier === "weekly" || tier === "yearly";
 
@@ -52,6 +56,25 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const hidePaywall = useCallback(() => {
     setIsPaywallVisible(false);
+    // When main paywall is closed after onboarding, show free trial paywall
+    const onboardingCompleted = localStorage.getItem("revealai_onboarding_completed");
+    const freeTrialDismissed = localStorage.getItem("revealai_free_trial_dismissed");
+    if (onboardingCompleted && !freeTrialDismissed) {
+      // Small delay to allow for smooth transition
+      setTimeout(() => {
+        setIsFreeTrialPaywallVisible(true);
+      }, 100);
+    }
+  }, []);
+
+  const showFreeTrialPaywall = useCallback(() => {
+    setIsFreeTrialPaywallVisible(true);
+  }, []);
+
+  const hideFreeTrialPaywall = useCallback(() => {
+    setIsFreeTrialPaywallVisible(false);
+    // Mark free trial as dismissed so it doesn't show again
+    localStorage.setItem("revealai_free_trial_dismissed", "true");
   }, []);
 
   const checkAccess = useCallback(
@@ -120,6 +143,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         showPaywall,
         hidePaywall,
         isPaywallVisible,
+        showFreeTrialPaywall,
+        hideFreeTrialPaywall,
+        isFreeTrialPaywallVisible,
         checkAccess,
         refreshSubscription,
       }}

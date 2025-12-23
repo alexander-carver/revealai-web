@@ -28,11 +28,14 @@ export async function POST(request: NextRequest) {
     const productIds: Record<string, string | undefined> = {
       weekly: process.env.STRIPE_WEEKLY_PRODUCT_ID,
       yearly: process.env.STRIPE_YEARLY_PRODUCT_ID,
+      // Free trial plan - 7 day free trial then $9.99/week
+      free_trial: process.env.STRIPE_FREE_TRIAL_PRODUCT_ID,
       // Test plan - use test product ID if set, otherwise use weekly for testing
       test: process.env.STRIPE_TEST_PRODUCT_ID || process.env.STRIPE_WEEKLY_PRODUCT_ID,
     };
 
     const productId = productIds[plan as string];
+    const isFreeTrial = plan === "free_trial";
     
     if (!productId) {
       return NextResponse.json(
@@ -96,7 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Stripe checkout session - works with or without signed in user
-    const session = await stripe.checkout.sessions.create({
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [
@@ -115,7 +118,16 @@ export async function POST(request: NextRequest) {
         ...(userId && { userId }),
         plan,
       },
-    });
+    };
+
+    // Add 7-day free trial for free_trial plan
+    if (isFreeTrial) {
+      sessionConfig.subscription_data = {
+        trial_period_days: 7,
+      };
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     return NextResponse.json({ url: session.url });
   } catch (error: any) {
