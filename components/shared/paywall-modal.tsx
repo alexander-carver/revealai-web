@@ -40,6 +40,7 @@ export function PaywallModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+  const [showCloseButton, setShowCloseButton] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const continueButtonRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,6 +64,16 @@ export function PaywallModal() {
         // Autoplay might be blocked
       });
       setIsVideoReady(true);
+      
+      // Show close button after 4 seconds
+      setShowCloseButton(false);
+      const timer = setTimeout(() => {
+        setShowCloseButton(true);
+      }, 4000);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowCloseButton(false);
     }
   }, [isPaywallVisible]);
 
@@ -130,7 +141,9 @@ export function PaywallModal() {
       {/* Close Button - Fixed to viewport on mobile, no background */}
       <button
         onClick={hidePaywall}
-        className="fixed left-3 top-3 sm:absolute sm:left-4 sm:top-4 p-2 z-[200]"
+        className={`fixed left-3 top-3 sm:absolute sm:left-4 sm:top-4 p-2 z-[200] transition-opacity duration-300 ${
+          showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
         aria-label="Close"
       >
         <X className="h-7 w-7 text-gray-600" />
