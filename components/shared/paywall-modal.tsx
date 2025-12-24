@@ -86,20 +86,20 @@ export function PaywallModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white">
-      {/* Modal */}
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-fade-in">
-        {/* Close Button */}
-        <button
-          onClick={hidePaywall}
-          className="absolute left-2 top-2 sm:left-4 sm:top-4 p-2.5 sm:p-2 rounded-full bg-white/90 hover:bg-gray-100 transition-colors z-[100] shadow-md"
-          aria-label="Close"
-        >
-          <X className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700" />
-        </button>
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-white overflow-y-auto">
+      {/* Close Button - Fixed to viewport on mobile */}
+      <button
+        onClick={hidePaywall}
+        className="fixed left-3 top-3 sm:absolute sm:left-4 sm:top-4 p-2.5 rounded-full bg-white hover:bg-gray-100 transition-colors z-[200] shadow-lg border border-gray-200"
+        aria-label="Close"
+      >
+        <X className="h-6 w-6 text-gray-700" />
+      </button>
 
+      {/* Modal */}
+      <div className="relative w-full max-w-md bg-white sm:rounded-3xl shadow-2xl overflow-hidden animate-fade-in sm:m-4 min-h-screen sm:min-h-0">
         {/* Header */}
-        <div className="text-center pt-12 sm:pt-4 pb-2 relative z-10">
+        <div className="text-center pt-14 sm:pt-4 pb-2 relative z-10">
           <div className="flex items-center justify-center gap-2">
             <span className="text-2xl font-bold text-gray-900">Reveal AI</span>
             <span className="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">

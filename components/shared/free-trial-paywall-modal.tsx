@@ -85,20 +85,20 @@ export function FreeTrialPaywallModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-white">
-      {/* Modal - Full width on mobile, card on desktop */}
-      <div className="relative w-full sm:max-w-md bg-white sm:rounded-3xl shadow-2xl overflow-hidden animate-fade-in sm:m-4">
-        {/* Close Button */}
-        <button
-          onClick={hideFreeTrialPaywall}
-          className="absolute left-2 top-2 sm:left-4 sm:top-4 p-2.5 sm:p-2 rounded-full bg-white/90 hover:bg-gray-100 transition-colors z-[100] shadow-md"
-          aria-label="Close"
-        >
-          <X className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700" />
-        </button>
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-white overflow-y-auto">
+      {/* Close Button - Fixed to viewport on mobile */}
+      <button
+        onClick={hideFreeTrialPaywall}
+        className="fixed left-3 top-3 sm:absolute sm:left-4 sm:top-4 p-2.5 rounded-full bg-white hover:bg-gray-100 transition-colors z-[200] shadow-lg border border-gray-200"
+        aria-label="Close"
+      >
+        <X className="h-6 w-6 text-gray-700" />
+      </button>
 
+      {/* Modal - Full width on mobile, card on desktop */}
+      <div className="relative w-full sm:max-w-md bg-white sm:rounded-3xl shadow-2xl overflow-hidden animate-fade-in sm:m-4 min-h-screen sm:min-h-0">
         {/* Header */}
-        <div className="text-center pt-12 sm:pt-3 pb-1 relative z-10">
+        <div className="text-center pt-14 sm:pt-3 pb-1 relative z-10">
           <div className="flex items-center justify-center gap-2">
             <span className="text-xl font-bold text-gray-900">Reveal AI</span>
             <span className="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
@@ -110,7 +110,7 @@ export function FreeTrialPaywallModal() {
         {/* Video Background with FREE Badge */}
         <div className="relative h-44 w-full overflow-hidden">
           {/* FREE Badge - RED background, positioned in top left of video area */}
-          <div className="absolute top-2 left-12 sm:left-3 z-20">
+          <div className="absolute top-2 left-3 z-20">
             <div className="bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg transform -rotate-12 shadow-lg">
               FREE!
             </div>
