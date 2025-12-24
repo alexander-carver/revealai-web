@@ -1,9 +1,9 @@
 "use client";
 
-import { X, ArrowRight, Infinity, Target, Image as ImageIcon, Link2 } from "lucide-react";
+import { X, ArrowRight, Infinity, Target, Image as ImageIcon, Link2, ChevronDown } from "lucide-react";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const features = [
   { 
@@ -38,7 +38,19 @@ export function FreeTrialPaywallModal() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const continueButtonRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Check if Continue button is visible
+  const checkButtonVisibility = useCallback(() => {
+    if (continueButtonRef.current) {
+      const rect = continueButtonRef.current.getBoundingClientRect();
+      const isVisible = rect.top < window.innerHeight - 20;
+      setShowScrollIndicator(!isVisible);
+    }
+  }, []);
 
   // When paywall becomes visible, ensure video plays
   // Video is already preloaded in the main page component
@@ -52,6 +64,34 @@ export function FreeTrialPaywallModal() {
       setIsVideoReady(true);
     }
   }, [isFreeTrialPaywallVisible]);
+
+  // Check button visibility on mount and scroll
+  useEffect(() => {
+    if (!isFreeTrialPaywallVisible) return;
+    
+    // Initial check after a short delay to let layout settle
+    const timer = setTimeout(checkButtonVisibility, 100);
+    
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkButtonVisibility);
+    }
+    window.addEventListener('scroll', checkButtonVisibility);
+    window.addEventListener('resize', checkButtonVisibility);
+    
+    return () => {
+      clearTimeout(timer);
+      if (container) {
+        container.removeEventListener('scroll', checkButtonVisibility);
+      }
+      window.removeEventListener('scroll', checkButtonVisibility);
+      window.removeEventListener('resize', checkButtonVisibility);
+    };
+  }, [isFreeTrialPaywallVisible, checkButtonVisibility]);
+
+  const scrollToButton = () => {
+    continueButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   if (!isFreeTrialPaywallVisible) return null;
 
@@ -85,15 +125,26 @@ export function FreeTrialPaywallModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-white overflow-y-auto">
-      {/* Close Button - Fixed to viewport on mobile */}
+    <div ref={containerRef} className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-white overflow-y-auto">
+      {/* Close Button - Fixed to viewport on mobile, no background */}
       <button
         onClick={hideFreeTrialPaywall}
-        className="fixed left-3 top-3 sm:absolute sm:left-4 sm:top-4 p-2.5 rounded-full bg-white hover:bg-gray-100 transition-colors z-[200] shadow-lg border border-gray-200"
+        className="fixed left-3 top-3 sm:absolute sm:left-4 sm:top-4 p-2 z-[200]"
         aria-label="Close"
       >
-        <X className="h-6 w-6 text-gray-700" />
+        <X className="h-7 w-7 text-gray-600" />
       </button>
+
+      {/* Scroll indicator arrow - shows when Continue button isn't visible */}
+      {showScrollIndicator && (
+        <button
+          onClick={scrollToButton}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-bounce"
+          aria-label="Scroll to continue"
+        >
+          <ChevronDown className="h-8 w-8 text-blue-500" />
+        </button>
+      )}
 
       {/* Modal - Full width on mobile, card on desktop */}
       <div className="relative w-full sm:max-w-md bg-white sm:rounded-3xl shadow-2xl overflow-hidden animate-fade-in sm:m-4 min-h-screen sm:min-h-0">
@@ -187,6 +238,7 @@ export function FreeTrialPaywallModal() {
 
           {/* CTA Button */}
           <button
+            ref={continueButtonRef}
             onClick={handleStartFreeTrial}
             disabled={isLoading}
             className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
