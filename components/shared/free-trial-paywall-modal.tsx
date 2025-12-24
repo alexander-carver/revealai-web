@@ -91,13 +91,14 @@ export function FreeTrialPaywallModal() {
         {/* Close Button */}
         <button
           onClick={hideFreeTrialPaywall}
-          className="absolute left-3 top-3 p-2 rounded-full hover:bg-gray-100 transition-colors z-20"
+          className="absolute left-2 top-2 sm:left-4 sm:top-4 p-2.5 sm:p-2 rounded-full bg-white/90 hover:bg-gray-100 transition-colors z-[100] shadow-md"
+          aria-label="Close"
         >
-          <X className="h-5 w-5 text-gray-600" />
+          <X className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700" />
         </button>
 
         {/* Header */}
-        <div className="text-center pt-3 pb-1 relative z-10">
+        <div className="text-center pt-12 sm:pt-3 pb-1 relative z-10">
           <div className="flex items-center justify-center gap-2">
             <span className="text-xl font-bold text-gray-900">Reveal AI</span>
             <span className="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
@@ -109,7 +110,7 @@ export function FreeTrialPaywallModal() {
         {/* Video Background with FREE Badge */}
         <div className="relative h-44 w-full overflow-hidden">
           {/* FREE Badge - RED background, positioned in top left of video area */}
-          <div className="absolute top-2 left-3 z-20">
+          <div className="absolute top-2 left-12 sm:left-3 z-20">
             <div className="bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg transform -rotate-12 shadow-lg">
               FREE!
             </div>

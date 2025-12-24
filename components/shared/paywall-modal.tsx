@@ -92,13 +92,14 @@ export function PaywallModal() {
         {/* Close Button */}
         <button
           onClick={hidePaywall}
-          className="absolute left-4 top-4 p-2 rounded-full hover:bg-gray-100 transition-colors z-20"
+          className="absolute left-2 top-2 sm:left-4 sm:top-4 p-2.5 sm:p-2 rounded-full bg-white/90 hover:bg-gray-100 transition-colors z-[100] shadow-md"
+          aria-label="Close"
         >
-          <X className="h-5 w-5 text-gray-600" />
+          <X className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700" />
         </button>
 
         {/* Header */}
-        <div className="text-center pt-4 pb-2 relative z-10">
+        <div className="text-center pt-12 sm:pt-4 pb-2 relative z-10">
           <div className="flex items-center justify-center gap-2">
             <span className="text-2xl font-bold text-gray-900">Reveal AI</span>
             <span className="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
