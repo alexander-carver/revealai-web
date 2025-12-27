@@ -6,12 +6,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
+// Benefits with styled text
 const benefits = [
-  "Find Hidden Dating Apps (Tinder, Bumble, Grindr)",
-  "People Search: Vehicle, Reverse Phone, Address",
-  "Look into Criminal History",
-  "Remove Yourself from Reveal AI Search",
-  "Find Unclaimed Money for Free",
+  <>Find Hidden <span className="text-red-600 font-semibold">Dating Apps</span> (Tinder, Bumble, Grindr)</>,
+  <>People Search: <span className="font-bold">Vehicle</span>, Reverse Phone, Address</>,
+  <>Look into <span className="italic">Criminal</span> History</>,
+  <>Remove <span className="underline">Yourself</span> from Reveal AI Search</>,
+  <>Find Unclaimed <span className="font-bold">Money</span> for Free</>,
 ];
 
 export function FreeTrialPaywallModal() {
@@ -20,13 +21,13 @@ export function FreeTrialPaywallModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
 
-  // Show close button after 4 seconds
+  // Show close button after 5 seconds
   useEffect(() => {
     if (isFreeTrialPaywallVisible) {
       setShowCloseButton(false);
       const timer = setTimeout(() => {
         setShowCloseButton(true);
-      }, 4000);
+      }, 5000);
       return () => clearTimeout(timer);
     } else {
       setShowCloseButton(false);
@@ -66,17 +67,6 @@ export function FreeTrialPaywallModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      {/* Close Button */}
-      <button
-        onClick={hideFreeTrialPaywall}
-        className={`fixed left-4 top-4 p-2 z-[200] rounded-full bg-white/80 backdrop-blur-sm shadow-lg transition-all duration-300 hover:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 ${
-          showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-        aria-label="Close"
-      >
-        <X className="h-5 w-5 text-gray-700" />
-      </button>
-
       {/* Paywall Card */}
       <div className="relative z-10 w-full max-w-[460px] mx-4 max-h-[90vh] overflow-y-auto">
         <div className="relative rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
@@ -93,6 +83,17 @@ export function FreeTrialPaywallModal() {
             {/* White overlay for readability */}
             <div className="absolute inset-0 bg-white/85" />
           </div>
+          
+          {/* Close Button - Inside card, top left */}
+          <button
+            onClick={hideFreeTrialPaywall}
+            className={`absolute left-3 top-3 p-2 z-20 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-500 ${
+              showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            aria-label="Close"
+          >
+            <X className="h-5 w-5 text-gray-600" />
+          </button>
           
           {/* Card Content */}
           <div className="relative z-10 px-6 sm:px-8 py-8 sm:py-10">
