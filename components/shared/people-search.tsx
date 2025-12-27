@@ -206,11 +206,18 @@ export function PeopleSearch() {
 
   const showInlineLoading = isLoading && !showLoadingScreen;
 
-  // Smooth scroll to search section
+  // Smooth scroll to search section with header offset
   const scrollToSearch = () => {
     const searchSection = document.getElementById("search");
     if (searchSection) {
-      searchSection.scrollIntoView({ behavior: "smooth" });
+      const headerHeight = 64; // Fixed header height (h-16 = 64px)
+      const elementPosition = searchSection.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerHeight - 16; // 16px extra padding
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
     }
   };
 
@@ -296,7 +303,7 @@ export function PeopleSearch() {
       {/* ========================================
           SEARCH SECTION
           ======================================== */}
-      <section id="search" className="py-12 md:py-16 bg-gray-50 scroll-mt-4">
+      <section id="search" className="py-12 md:py-16 bg-gray-50 scroll-mt-20">
         <div className="container mx-auto px-4">
           {/* Loading Screen Overlay */}
           <SearchLoadingScreen
