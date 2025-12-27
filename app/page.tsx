@@ -27,7 +27,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PeopleSearch } from "@/components/shared/people-search";
-import { PaywallModal } from "@/components/shared/paywall-modal";
 import { FreeTrialPaywallModal } from "@/components/shared/free-trial-paywall-modal";
 import { OnboardingFlow } from "@/components/shared/onboarding-flow";
 import { Badge } from "@/components/ui/badge";
@@ -118,7 +117,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 function HomeContent() {
   const { user } = useAuth();
-  const { isPro, refreshSubscription, showPaywall } = useSubscription();
+  const { isPro, refreshSubscription, showFreeTrialPaywall } = useSubscription();
   const searchParams = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
@@ -157,11 +156,11 @@ function HomeContent() {
   const handleOnboardingComplete = useCallback(() => {
     localStorage.setItem("revealai_onboarding_completed", "true");
     setShowOnboarding(false);
-    // Show paywall after onboarding
+    // Show free trial paywall after onboarding
     if (!isPro) {
-      showPaywall();
+      showFreeTrialPaywall();
     }
-  }, [isPro, showPaywall]);
+  }, [isPro, showFreeTrialPaywall]);
 
   // Show loading state while checking onboarding status
   if (isCheckingOnboarding) {
@@ -262,7 +261,6 @@ function HomeContent() {
           }),
         }}
       />
-      <PaywallModal />
       <FreeTrialPaywallModal />
       <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Header - Fixed on top */}

@@ -56,15 +56,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const hidePaywall = useCallback(() => {
     setIsPaywallVisible(false);
-    // When main paywall is closed after onboarding, show free trial paywall
-    const onboardingCompleted = localStorage.getItem("revealai_onboarding_completed");
-    const freeTrialDismissed = localStorage.getItem("revealai_free_trial_dismissed");
-    if (onboardingCompleted && !freeTrialDismissed) {
-      // Small delay to allow for smooth transition
-      setTimeout(() => {
-        setIsFreeTrialPaywallVisible(true);
-      }, 100);
-    }
   }, []);
 
   const showFreeTrialPaywall = useCallback(() => {

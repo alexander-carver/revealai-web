@@ -1,7 +1,6 @@
 "use client";
 
 import { Navigation } from "./navigation";
-import { PaywallModal } from "./paywall-modal";
 import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
@@ -23,7 +22,6 @@ export function AppLayout({ children, className }: AppLayoutProps) {
           {children}
         </div>
       </main>
-      <PaywallModal />
     </div>
   );
 }

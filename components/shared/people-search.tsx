@@ -58,7 +58,7 @@ const heroBenefits = [
 ];
 
 export function PeopleSearch() {
-  const { isPro } = useSubscription();
+  const { isPro, showFreeTrialPaywall } = useSubscription();
   const [searchMode, setSearchMode] = useState<SearchMode>("cheater");
   const [formData, setFormData] = useState({
     firstName: "",
@@ -85,6 +85,17 @@ export function PeopleSearch() {
   // Loading screen state
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
+
+  // Show free trial paywall 10 seconds after loading screen appears (for non-pro users)
+  useEffect(() => {
+    if (showLoadingScreen && !isPro) {
+      const timer = setTimeout(() => {
+        showFreeTrialPaywall();
+      }, 10000); // 10 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [showLoadingScreen, isPro, showFreeTrialPaywall]);
 
   // Hide mobile CTA when search section is in view
   useEffect(() => {
@@ -167,13 +178,19 @@ export function PeopleSearch() {
       }
       setLoadingSearchQuery(getSearchDisplayName());
       setShowLoadingScreen(true);
-      personSearchMutation.mutate(query);
+      // Only run the actual search if user is pro
+      if (isPro) {
+        personSearchMutation.mutate(query);
+      }
     } else if (searchMode !== "cheater") {
       setLoadingSearchQuery(getSearchDisplayName());
       setShowLoadingScreen(true);
-      contactSearchMutation.mutate(query);
+      // Only run the actual search if user is pro
+      if (isPro) {
+        contactSearchMutation.mutate(query);
+      }
     }
-  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation]);
+  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation, isPro]);
 
   const handleAISearch = useCallback(() => {
     if (!aiQuery.trim()) return;
@@ -181,8 +198,11 @@ export function PeopleSearch() {
     const displayQuery = aiQuery.split(" ").slice(0, 4).join(" ");
     setLoadingSearchQuery(displayQuery);
     setShowLoadingScreen(true);
-    aiSearchMutation.mutate(aiQuery);
-  }, [aiQuery, aiSearchMutation]);
+    // Only run the actual search if user is pro
+    if (isPro) {
+      aiSearchMutation.mutate(aiQuery);
+    }
+  }, [aiQuery, aiSearchMutation, isPro]);
 
   const handleLoadingComplete = useCallback(() => {
     setShowLoadingScreen(false);
