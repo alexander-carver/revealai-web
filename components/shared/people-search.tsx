@@ -39,6 +39,7 @@ import type {
 import Link from "next/link";
 import { useSubscription } from "@/hooks/use-subscription";
 import Image from "next/image";
+import { MostSearched } from "./most-searched";
 
 // Convert markdown links to clickable HTML links
 function formatAIResponse(text: string): string {
@@ -670,6 +671,9 @@ export function PeopleSearch() {
                 )}
             </CardContent>
           </Card>
+
+          {/* Most Searched Section */}
+          <MostSearched />
         </div>
       </section>
 
