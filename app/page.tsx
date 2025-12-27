@@ -123,28 +123,11 @@ function HomeContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
-  // Preload paywall video early so it's ready when needed
+  // Preload paywall header image early so it's ready when needed
   useEffect(() => {
-    // Preload video immediately on page load
-    const video = document.createElement('video');
-    video.preload = 'auto';
-    video.muted = true;
-    video.src = '/paywall-bg.mp4';
-    video.load();
-    
-    // Also add preload link to head
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'video';
-    link.href = '/paywall-bg.mp4';
-    document.head.appendChild(link);
-
-    return () => {
-      // Cleanup on unmount
-      if (document.head.contains(link)) {
-        document.head.removeChild(link);
-      }
-    };
+    // Preload image immediately on page load
+    const img = new window.Image();
+    img.src = '/paywall-header.png';
   }, []);
 
   // Check if user has completed onboarding

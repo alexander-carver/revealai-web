@@ -136,8 +136,8 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        {/* Preload paywall video for instant display */}
-        <link rel="preload" href="/paywall-bg.mp4" as="video" type="video/mp4" />
+        {/* Preload paywall header image for instant display */}
+        <link rel="preload" href="/paywall-header.png" as="image" type="image/png" />
         {/* Favicon for Google Search results */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
