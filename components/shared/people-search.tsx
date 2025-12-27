@@ -38,6 +38,7 @@ import type {
 } from "@/lib/types";
 import Link from "next/link";
 import { useSubscription } from "@/hooks/use-subscription";
+import Image from "next/image";
 
 // Convert markdown links to clickable HTML links
 function formatAIResponse(text: string): string {
@@ -181,16 +182,46 @@ export function PeopleSearch() {
   const showInlineLoading = isLoading && !showLoadingScreen;
 
   return (
-    <section className="container mx-auto px-4 py-12">
-      {/* Loading Screen Overlay */}
-      <SearchLoadingScreen
-        isVisible={showLoadingScreen}
-        searchQuery={loadingSearchQuery}
-        onComplete={handleLoadingComplete}
-        onCancel={handleLoadingCancel}
-      />
+    <section className="relative py-12">
+      {/* Background Images - Full Width */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Mobile Background */}
+        <div className="md:hidden absolute inset-0">
+          <Image
+            src="/Reveal_Background_Mobile.png"
+            alt=""
+            fill
+            className="object-cover object-center"
+            priority
+            unoptimized
+          />
+          <div className="absolute inset-0 bg-white/60" />
+        </div>
+        {/* Desktop Background */}
+        <div className="hidden md:block absolute inset-0">
+          <Image
+            src="/Reveal_Background_Web.png"
+            alt=""
+            fill
+            className="object-cover object-center"
+            priority
+            unoptimized
+          />
+          <div className="absolute inset-0 bg-white/60" />
+        </div>
+      </div>
 
-      <Card className="border-primary/20 shadow-xl">
+      {/* Content Container */}
+      <div className="container mx-auto px-4 relative z-10">
+        {/* Loading Screen Overlay */}
+        <SearchLoadingScreen
+          isVisible={showLoadingScreen}
+          searchQuery={loadingSearchQuery}
+          onComplete={handleLoadingComplete}
+          onCancel={handleLoadingCancel}
+        />
+
+        <Card className="border-primary/20 shadow-xl bg-white/95 backdrop-blur-sm">
         <CardHeader className="pb-6">
           <div className="text-center space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm text-primary">
@@ -553,7 +584,8 @@ export function PeopleSearch() {
               </Alert>
             )}
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </section>
   );
 }
