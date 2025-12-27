@@ -123,11 +123,14 @@ function HomeContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
-  // Preload paywall header image early so it's ready when needed
+  // Preload paywall images early so they're ready when needed
   useEffect(() => {
-    // Preload image immediately on page load
-    const img = new window.Image();
-    img.src = '/paywall-header.png';
+    // Preload images immediately on page load
+    const img1 = new window.Image();
+    img1.src = '/paywall-header.png';
+    
+    const img2 = new window.Image();
+    img2.src = '/paywall_image_reveal2.png';
   }, []);
 
   // Check if user has completed onboarding

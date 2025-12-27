@@ -138,6 +138,8 @@ export default function RootLayout({
         />
         {/* Preload paywall header image for instant display */}
         <link rel="preload" href="/paywall-header.png" as="image" type="image/png" />
+        {/* Preload paywall background image for instant display */}
+        <link rel="preload" href="/paywall_image_reveal2.png" as="image" type="image/png" />
         {/* Favicon for Google Search results */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
