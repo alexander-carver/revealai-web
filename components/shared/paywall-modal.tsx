@@ -66,23 +66,7 @@ export function PaywallModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Full-bleed Background Image */}
-      <div className="absolute inset-0">
-        <Image
-          src="/paywall_image_reveal.png"
-          alt=""
-          fill
-          className="object-cover blur-sm"
-          priority
-          unoptimized
-        />
-        {/* Dark overlay for blur effect + readability */}
-        <div className="absolute inset-0 bg-white/75" />
-        {/* Gradient overlay for extra depth */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/50 via-transparent to-white/80" />
-      </div>
-
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       {/* Close Button */}
       <button
         onClick={hidePaywall}
@@ -96,9 +80,23 @@ export function PaywallModal() {
 
       {/* Paywall Card */}
       <div className="relative z-10 w-full max-w-[460px] mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+        <div className="relative rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+          {/* Card Background Image */}
+          <div className="absolute inset-0">
+            <Image
+              src="/paywall_image_reveal2.png"
+              alt=""
+              fill
+              className="object-cover"
+              priority
+              unoptimized
+            />
+            {/* White overlay for readability */}
+            <div className="absolute inset-0 bg-white/85" />
+          </div>
+          
           {/* Card Content */}
-          <div className="px-6 sm:px-8 py-8 sm:py-10">
+          <div className="relative z-10 px-6 sm:px-8 py-8 sm:py-10">
             {/* Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
