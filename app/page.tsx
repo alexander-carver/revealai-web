@@ -261,13 +261,9 @@ function HomeContent() {
       />
       <PaywallModal />
       <FreeTrialPaywallModal />
-      <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background pattern */}
-      <div className="absolute inset-0 pattern-dots opacity-50" />
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5" />
-
-      {/* Header */}
-      <header className="relative z-10 border-b border-border/50 glass">
+      <div className="min-h-screen bg-white relative overflow-hidden">
+      {/* Header - Fixed on top */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/">
             <Logo size="md" />
@@ -337,8 +333,8 @@ function HomeContent() {
         </div>
       </header>
 
-      <main className="relative z-10">
-        {/* Search Section - First thing users see at the top */}
+      <main className="relative z-10 pt-16">
+        {/* Hero + Search Section */}
         <PeopleSearch />
 
         {/* Features Grid */}

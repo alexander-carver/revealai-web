@@ -2,12 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* SF Pro / System Font Stack */
+/* SF Pro / System Font Stack + Smooth Scroll */
 @layer base {
   html {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
   }
 }
 
