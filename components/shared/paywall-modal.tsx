@@ -22,13 +22,13 @@ export function PaywallModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
 
-  // Show close button after 5 seconds
+  // Show close button after 10 seconds
   useEffect(() => {
     if (isPaywallVisible) {
       setShowCloseButton(false);
       const timer = setTimeout(() => {
         setShowCloseButton(true);
-      }, 5000);
+      }, 10000);
       return () => clearTimeout(timer);
     } else {
       setShowCloseButton(false);
