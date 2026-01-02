@@ -122,6 +122,15 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
+
+  // Show splash screen for 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Preload paywall images early so they're ready when needed
   useEffect(() => {
@@ -165,6 +174,22 @@ function HomeContent() {
     //   showFreeTrialPaywall();
     // }
   }, [isPro, showFreeTrialPaywall]);
+
+  // Show splash screen for first 3 seconds
+  if (showSplash) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-red-600 leading-tight">
+            Learn Anything,
+          </h1>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-red-600 leading-tight">
+            about Anyone
+          </h1>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading state while checking onboarding status
   if (isCheckingOnboarding) {
