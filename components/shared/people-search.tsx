@@ -15,7 +15,6 @@ import {
   Users,
   Sparkles,
   AlertTriangle,
-  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,14 +47,6 @@ function formatAIResponse(text: string): string {
   html = html.replace(/\n/g, "<br/>");
   return html;
 }
-
-// Hero benefits list
-const heroBenefits = [
-  "People Search: Phone • Vehicle • Address",
-  "Criminal History & Records",
-  "Opt-Out: Remove Yourself From Search",
-  "Find Unclaimed Money (Free)",
-];
 
 export function PeopleSearch() {
   const { isPro } = useSubscription();
@@ -283,21 +274,9 @@ export function PeopleSearch() {
             </h1>
 
             {/* Subline */}
-            <p className="text-lg md:text-xl text-gray-700 font-medium mb-6 md:mb-8">
+            <p className="text-lg md:text-xl text-gray-700 font-medium mb-8 md:mb-10">
               People Search • Dating Apps • Records
             </p>
-
-            {/* Benefits List */}
-            <ul className="space-y-2.5 md:space-y-3 mb-8 md:mb-10 text-left max-w-sm mx-auto md:mx-0">
-              {heroBenefits.map((benefit, index) => (
-                <li key={index} className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
-                    <Check className="w-3 h-3 text-red-600" />
-                  </div>
-                  <span className="text-gray-700 text-sm md:text-base">{benefit}</span>
-                </li>
-              ))}
-            </ul>
 
             {/* CTA Button */}
             <button

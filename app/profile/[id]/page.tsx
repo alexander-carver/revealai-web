@@ -29,7 +29,11 @@ import {
   Newspaper,
   Database,
   Crown,
+  Search,
 } from "lucide-react";
+import { useSubscription } from "@/hooks/use-subscription";
+import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
+import { ResultsPaywallModal } from "@/components/shared/results-paywall-modal";
 
 // Get icon for source type
 function getSourceIcon(label: string) {
@@ -61,15 +65,38 @@ function getSourceBadgeVariant(label: string): "default" | "secondary" | "destru
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const { isPro } = useSubscription();
   const [profile, setProfile] = useState<MockProfile | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
 
   useEffect(() => {
     const id = params.id as string;
     const found = mockProfiles.find(p => p.id === id);
     setProfile(found || null);
   }, [params.id]);
+
+  // Handle Full Background Check button click
+  const handleBackgroundCheck = () => {
+    if (isPro) {
+      // Pro user - could show results directly or navigate somewhere
+      return;
+    }
+    // Show loading screen which will trigger paywall after completion
+    setShowLoadingScreen(true);
+  };
+
+  // Handle loading screen completion
+  const handleLoadingComplete = () => {
+    setShowLoadingScreen(false);
+    // If user is now pro, they can see full results
+  };
+
+  // Handle loading screen cancel (user dismissed paywall)
+  const handleLoadingCancel = () => {
+    setShowLoadingScreen(false);
+  };
 
   if (!profile) {
     return (
@@ -100,6 +127,16 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Loading Screen Overlay */}
+      <SearchLoadingScreen
+        isVisible={showLoadingScreen}
+        searchQuery={profile?.name || "Profile"}
+        onComplete={handleLoadingComplete}
+        onCancel={handleLoadingCancel}
+      />
+      {/* Results Paywall Modal */}
+      <ResultsPaywallModal />
+      
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -227,8 +264,8 @@ export default function ProfilePage() {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3">
-              <Button className="gap-2">
-                <User className="w-4 h-4" />
+              <Button className="gap-2" onClick={handleBackgroundCheck}>
+                <Search className="w-4 h-4" />
                 Full Background Check
               </Button>
               <Button variant="outline" className="gap-2">
