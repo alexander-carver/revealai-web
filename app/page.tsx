@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PeopleSearch } from "@/components/shared/people-search";
 import { FreeTrialPaywallModal } from "@/components/shared/free-trial-paywall-modal";
+import { ResultsPaywallModal } from "@/components/shared/results-paywall-modal";
 import { OnboardingFlow } from "@/components/shared/onboarding-flow";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/shared/logo";
@@ -133,11 +134,13 @@ function HomeContent() {
   }, []);
 
   // Check if user has completed onboarding
+  // NOTE: Onboarding is currently disabled. To re-enable, uncomment the condition below.
   useEffect(() => {
-    const hasCompletedOnboarding = localStorage.getItem("revealai_onboarding_completed");
-    if (!hasCompletedOnboarding && !isPro) {
-      setShowOnboarding(true);
-    }
+    // const hasCompletedOnboarding = localStorage.getItem("revealai_onboarding_completed");
+    // if (!hasCompletedOnboarding && !isPro) {
+    //   setShowOnboarding(true);
+    // }
+    setShowOnboarding(false); // Onboarding disabled for now
     setIsCheckingOnboarding(false);
   }, [isPro]);
 
@@ -153,13 +156,14 @@ function HomeContent() {
   }, [searchParams, user, refreshSubscription]);
 
   // Handle onboarding completion
+  // NOTE: Free trial paywall after onboarding is disabled. To re-enable, uncomment showFreeTrialPaywall() below.
   const handleOnboardingComplete = useCallback(() => {
     localStorage.setItem("revealai_onboarding_completed", "true");
     setShowOnboarding(false);
-    // Show free trial paywall after onboarding
-    if (!isPro) {
-      showFreeTrialPaywall();
-    }
+    // Show free trial paywall after onboarding (disabled for now)
+    // if (!isPro) {
+    //   showFreeTrialPaywall();
+    // }
   }, [isPro, showFreeTrialPaywall]);
 
   // Show loading state while checking onboarding status
@@ -262,6 +266,7 @@ function HomeContent() {
         }}
       />
       <FreeTrialPaywallModal />
+      <ResultsPaywallModal />
       <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Header - Fixed on top */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">

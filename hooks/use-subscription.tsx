@@ -23,6 +23,9 @@ interface SubscriptionContextType {
   showFreeTrialPaywall: () => void;
   hideFreeTrialPaywall: () => void;
   isFreeTrialPaywallVisible: boolean;
+  showResultsPaywall: () => void;
+  hideResultsPaywall: () => void;
+  isResultsPaywallVisible: boolean;
   checkAccess: (feature: string) => boolean;
   refreshSubscription: () => Promise<void>;
 }
@@ -47,6 +50,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isPaywallVisible, setIsPaywallVisible] = useState(false);
   const [isFreeTrialPaywallVisible, setIsFreeTrialPaywallVisible] = useState(false);
+  const [isResultsPaywallVisible, setIsResultsPaywallVisible] = useState(false);
 
   const isPro = tier === "weekly" || tier === "yearly";
 
@@ -66,6 +70,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     setIsFreeTrialPaywallVisible(false);
     // Mark free trial as dismissed so it doesn't show again
     localStorage.setItem("revealai_free_trial_dismissed", "true");
+  }, []);
+
+  const showResultsPaywall = useCallback(() => {
+    setIsResultsPaywallVisible(true);
+  }, []);
+
+  const hideResultsPaywall = useCallback(() => {
+    setIsResultsPaywallVisible(false);
   }, []);
 
   const checkAccess = useCallback(
@@ -137,6 +149,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         showFreeTrialPaywall,
         hideFreeTrialPaywall,
         isFreeTrialPaywallVisible,
+        showResultsPaywall,
+        hideResultsPaywall,
+        isResultsPaywallVisible,
         checkAccess,
         refreshSubscription,
       }}

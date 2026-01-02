@@ -58,8 +58,8 @@ const heroBenefits = [
 ];
 
 export function PeopleSearch() {
-  const { isPro, showFreeTrialPaywall } = useSubscription();
-  const [searchMode, setSearchMode] = useState<SearchMode>("cheater");
+  const { isPro } = useSubscription();
+  const [searchMode, setSearchMode] = useState<SearchMode>("name");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -86,16 +86,7 @@ export function PeopleSearch() {
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
 
-  // Show free trial paywall 10 seconds after loading screen appears (for non-pro users)
-  useEffect(() => {
-    if (showLoadingScreen && !isPro) {
-      const timer = setTimeout(() => {
-        showFreeTrialPaywall();
-      }, 10000); // 10 seconds
-
-      return () => clearTimeout(timer);
-    }
-  }, [showLoadingScreen, isPro, showFreeTrialPaywall]);
+  // NOTE: Free trial paywall trigger removed - results paywall is now handled by search-loading-screen
 
   // Hide mobile CTA when search section is in view
   useEffect(() => {
@@ -288,12 +279,12 @@ export function PeopleSearch() {
 
             {/* Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-red-600 leading-tight mb-3 md:mb-4">
-              Find Hidden Dating Apps
+              Find Everything, about Anyone
             </h1>
 
             {/* Subline */}
             <p className="text-lg md:text-xl text-gray-700 font-medium mb-6 md:mb-8">
-              Tinder • Bumble • Grindr + more
+              People Search • Dating Apps • Records
             </p>
 
             {/* Benefits List */}

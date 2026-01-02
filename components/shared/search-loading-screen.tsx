@@ -66,7 +66,7 @@ export function SearchLoadingScreen({
   onComplete,
   onCancel,
 }: SearchLoadingScreenProps) {
-  const { isPro, showPaywall, isPaywallVisible } = useSubscription();
+  const { isPro, showResultsPaywall, isResultsPaywallVisible } = useSubscription();
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
@@ -118,14 +118,14 @@ export function SearchLoadingScreen({
           // Pro user - show results immediately
           onComplete();
         } else {
-          // Non-pro user - show paywall
-          showPaywall();
+          // Non-pro user - show results paywall
+          showResultsPaywall();
         }
       }
     }, interval);
 
     return () => clearInterval(timer);
-  }, [isVisible, startTime, isPro, onComplete, showPaywall, hasTriggeredPaywall]);
+  }, [isVisible, startTime, isPro, onComplete, showResultsPaywall, hasTriggeredPaywall]);
 
   // Testimonial rotation timer (every 10 seconds)
   useEffect(() => {
@@ -151,16 +151,16 @@ export function SearchLoadingScreen({
 
   // Watch for paywall visibility changes to handle dismiss/subscribe
   useEffect(() => {
-    if (hasTriggeredPaywall && !isPaywallVisible) {
+    if (hasTriggeredPaywall && !isResultsPaywallVisible) {
       if (isPro) {
         // User subscribed via paywall
         onComplete();
       } else {
-        // User dismissed paywall without subscribing
+        // User dismissed paywall without subscribing - go back to website
         onCancel();
       }
     }
-  }, [isPaywallVisible, isPro, hasTriggeredPaywall, onCancel, onComplete]);
+  }, [isResultsPaywallVisible, isPro, hasTriggeredPaywall, onCancel, onComplete]);
 
   // Prevent body scroll when visible
   useEffect(() => {
