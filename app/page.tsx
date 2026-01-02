@@ -323,18 +323,7 @@ function HomeContent() {
                   <Button size="sm">Go to App</Button>
                 </Link>
               </>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" size="sm">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/login?signup=true">
-                  <Button size="sm">Get Started</Button>
-                </Link>
-              </>
-            )}
+            ) : null}
           </nav>
         </div>
       </header>
@@ -648,19 +637,30 @@ function HomeContent() {
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
                 Join millions of users who trust RevealAI for accurate, comprehensive people intelligence.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/search">
-                  <Button size="lg" className="gap-2 text-base">
-                    <Search className="w-5 h-5" />
-                    Start Searching Now
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-                <Link href="/login?signup=true">
-                  <Button size="lg" variant="outline" className="text-base">
-                    Create Free Account
-                  </Button>
-                </Link>
+              <div className="flex flex-col gap-4 justify-center max-w-md mx-auto">
+                {!user && (
+                  <>
+                    <Link href="/login?signup=true">
+                      <Button size="lg" className="w-full text-base">
+                        Sign Up
+                      </Button>
+                    </Link>
+                    <Link href="/login">
+                      <Button size="lg" variant="outline" className="w-full text-base">
+                        Sign In
+                      </Button>
+                    </Link>
+                  </>
+                )}
+                {user && (
+                  <Link href="/search">
+                    <Button size="lg" className="gap-2 text-base w-full">
+                      <Search className="w-5 h-5" />
+                      Start Searching Now
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </Card>
