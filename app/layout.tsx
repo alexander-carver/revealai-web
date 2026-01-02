@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { Analytics } from "@vercel/analytics/react";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -132,6 +133,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Google tag (gtag.js) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-KXNE8LSF4X"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-KXNE8LSF4X');
+            `,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -147,6 +160,7 @@ export default function RootLayout({
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
