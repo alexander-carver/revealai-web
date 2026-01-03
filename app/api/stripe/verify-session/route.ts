@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { randomBytes } from "crypto";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-11-17.clover",
@@ -43,29 +44,68 @@ export async function POST(request: NextRequest) {
 
     // Get the user ID - either from parameter, metadata, client_reference_id, or look up by email
     let finalUserId = userId || session.metadata?.userId || session.client_reference_id;
+    let customerEmail = email || session.customer_email || session.metadata?.email;
     
-    // If we still don't have a userId, try to find the user by email
-    if (!finalUserId) {
-      const customerEmail = email || session.customer_email || session.metadata?.email;
+    // If we still don't have a userId, try to find or create the user by email
+    if (!finalUserId && customerEmail) {
+      console.log("Looking up user by email:", customerEmail);
       
-      if (customerEmail) {
-        console.log("Looking up user by email:", customerEmail);
-        // Use admin API to find user by email
-        const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+      // Use admin API to find user by email
+      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+      
+      if (!userError && userData?.users) {
+        const matchingUser = userData.users.find(u => u.email === customerEmail);
+        if (matchingUser) {
+          finalUserId = matchingUser.id;
+          console.log("Found existing user by email:", finalUserId);
+        }
+      }
+      
+      // If no user found, create one automatically
+      if (!finalUserId) {
+        console.log("No user found, creating new account automatically for:", customerEmail);
         
-        if (!userError && userData?.users) {
-          const matchingUser = userData.users.find(u => u.email === customerEmail);
-          if (matchingUser) {
-            finalUserId = matchingUser.id;
-            console.log("Found user by email:", finalUserId);
+        try {
+          // Generate a random secure password (user won't need it since we'll use magic link)
+          const randomPassword = randomBytes(32).toString('hex');
+          
+          // Create user with admin API (email confirmation disabled for instant access)
+          const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+            email: customerEmail,
+            password: randomPassword,
+            email_confirm: true, // Skip email confirmation for instant access
+          });
+          
+          if (createError) {
+            console.error("Error creating user:", createError);
+            return NextResponse.json(
+              { error: "Failed to create account. Please contact support." },
+              { status: 500 }
+            );
           }
+          
+          if (newUser?.user) {
+            finalUserId = newUser.user.id;
+            console.log("Created new user account automatically:", finalUserId);
+          } else {
+            return NextResponse.json(
+              { error: "Failed to create account. Please contact support." },
+              { status: 500 }
+            );
+          }
+        } catch (err: any) {
+          console.error("Error in user creation:", err);
+          return NextResponse.json(
+            { error: "Failed to create account. Please contact support." },
+            { status: 500 }
+          );
         }
       }
     }
 
     if (!finalUserId) {
       return NextResponse.json(
-        { error: "Could not determine user. Please make sure you're signed in with the same email used for payment." },
+        { error: "Could not determine user email from payment. Please contact support." },
         { status: 400 }
       );
     }
@@ -127,6 +167,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       subscription: data,
+      userId: finalUserId,
+      email: customerEmail,
+      accountCreated: !userId, // Flag to indicate if account was auto-created
     });
   } catch (error: any) {
     console.error("Verify session error:", error);

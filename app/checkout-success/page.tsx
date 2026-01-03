@@ -78,18 +78,13 @@ function CheckoutSuccessContent() {
       return;
     }
 
-    if (!user) {
-      console.log("No user found, stopping processing");
-      setIsProcessing(false);
-      return;
-    }
-
+    // Allow processing even without user - we'll auto-create account
     hasVerified.current = true;
     console.log("User is logged in, checking subscription for:", user.id);
 
     const verifyAndCreateSubscription = async () => {
       // First, try to verify the session with Stripe and create subscription
-      // This bypasses the webhook if it's not working
+      // This will auto-create account if user doesn't exist
       try {
         console.log("Verifying Stripe session and creating subscription...");
         const response = await fetch("/api/stripe/verify-session", {
@@ -99,7 +94,8 @@ function CheckoutSuccessContent() {
           },
           body: JSON.stringify({
             sessionId,
-            userId: user.id,
+            userId: user?.id || null,
+            email: user?.email || null,
           }),
         });
 
@@ -108,6 +104,42 @@ function CheckoutSuccessContent() {
 
         if (result.success) {
           console.log("Subscription created successfully!");
+          
+          // If account was auto-created and we have an email, try to sign them in
+          if (result.email && !user) {
+            console.log("Account was auto-created, attempting sign-in for:", result.email);
+            
+            // Try to get session - might already be established if webhook created it
+            const { data: { session: existingSession } } = await supabase.auth.getSession();
+            if (existingSession?.user) {
+              console.log("Session already exists, user is signed in!");
+              setUser(existingSession.user);
+            } else {
+              // Use passwordless OTP sign-in (sends magic link email)
+              try {
+                const { error: otpError } = await supabase.auth.signInWithOtp({
+                  email: result.email,
+                  options: {
+                    shouldCreateUser: false, // User already created by API
+                    emailRedirectTo: `${window.location.origin}/checkout-success?session_id=${sessionId}`,
+                  },
+                });
+                
+                if (otpError) {
+                  console.error("Error sending OTP:", otpError);
+                  // Still proceed - subscription is active, they can sign in later
+                  console.log("Subscription active, user can sign in later");
+                } else {
+                  console.log("Magic link sent to email");
+                  // Don't show error, just proceed - they'll get email
+                }
+              } catch (signInErr: any) {
+                console.error("Error in auto-sign-in:", signInErr);
+                // Continue anyway - subscription is active
+              }
+            }
+          }
+          
           setSubscriptionActive(true);
           setIsProcessing(false);
           setError(null);
@@ -205,6 +237,7 @@ function CheckoutSuccessContent() {
   }
 
   // Manual activation function - works even if auth state is weird
+  // This will auto-create account if user doesn't exist
   const manualActivate = async () => {
     setIsProcessing(true);
     setError(null);
@@ -250,9 +283,8 @@ function CheckoutSuccessContent() {
       }
     }
     
-    // Even if we don't have the full user, we might have an email
-    // The API can look up the user by email
-    console.log("Calling verify-session with:", {
+    // The API will auto-create account if email is provided and user doesn't exist
+    console.log("Calling verify-session (will auto-create account if needed):", {
       sessionId,
       userId: currentUser?.id || null,
       email: userEmail || null,
@@ -273,6 +305,34 @@ function CheckoutSuccessContent() {
       console.log("Manual activation result:", result);
 
       if (result.success) {
+        // If account was auto-created, try to sign them in
+        if (result.email && !currentUser) {
+          console.log("Account was auto-created, attempting sign-in for:", result.email);
+          
+          // Try passwordless OTP sign-in
+          try {
+            const { error: otpError } = await supabase.auth.signInWithOtp({
+              email: result.email,
+              options: {
+                shouldCreateUser: false, // User already created
+                emailRedirectTo: `${window.location.origin}/checkout-success?session_id=${sessionId}`,
+              },
+            });
+            
+            if (!otpError) {
+              console.log("Magic link sent to email for sign-in");
+              // Check if session was auto-established
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              const { data: { session: newSession } } = await supabase.auth.getSession();
+              if (newSession) {
+                setUser(newSession.user);
+              }
+            }
+          } catch (signInErr) {
+            console.error("Error in auto-sign-in:", signInErr);
+          }
+        }
+        
         setSubscriptionActive(true);
         setIsProcessing(false);
         setError(null);
@@ -302,9 +362,19 @@ function CheckoutSuccessContent() {
             <Check className="w-16 h-16 text-green-500 mx-auto" />
             <h2 className="text-2xl font-bold">Payment Successful!</h2>
             <p className="text-muted-foreground">
-              Your payment was successful! Click below to activate your Pro subscription and return to the app.
+              Your payment was successful! We'll automatically create your account and activate your Pro subscription. 
+              {isProcessing && " Please wait..."}
             </p>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800">{error}</p>
+                {error.includes("check your email") && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    Click the link in your email to sign in and access your Pro account.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="pt-4 space-y-2">
               <Button 
                 onClick={manualActivate}
@@ -314,10 +384,10 @@ function CheckoutSuccessContent() {
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Activating...
+                    Activating Your Account...
                   </>
                 ) : (
-                  "Activate Pro & Go Home"
+                  "Activate Pro & Continue"
                 )}
               </Button>
               <Link href="/">
