@@ -100,14 +100,17 @@ export const metadata: Metadata = {
   category: "People Search",
   icons: {
     icon: [
-      { url: "/logo.png", sizes: "any" },
-      { url: "/logo.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+      { url: "/favicon-192x192.png", sizes: "192x192", type: "image/png" },
     ],
     apple: [
-      { url: "/logo.png", sizes: "180x180", type: "image/png" },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
-    shortcut: "/logo.png",
+    shortcut: "/favicon.ico",
   },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({
@@ -157,8 +160,13 @@ export default function RootLayout({
         {/* Preload hero background images to prevent layout shift */}
         <link rel="preload" href="/New_Background_RevealAIMobile.png" as="image" type="image/png" media="(max-width: 768px)" />
         <link rel="preload" href="/New_Background_RevealAIWeb.png" as="image" type="image/png" media="(min-width: 769px)" />
-        {/* Favicon for Google Search results */}
+        {/* Favicon links for better browser and search engine support */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}
