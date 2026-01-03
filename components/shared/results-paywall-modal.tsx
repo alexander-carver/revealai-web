@@ -21,14 +21,10 @@ export function ResultsPaywallModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
 
-  // Show close button after 10 seconds
+  // Show close button instantly
   useEffect(() => {
     if (isResultsPaywallVisible) {
-      setShowCloseButton(false);
-      const timer = setTimeout(() => {
-        setShowCloseButton(true);
-      }, 10000);
-      return () => clearTimeout(timer);
+      setShowCloseButton(true);
     } else {
       setShowCloseButton(false);
     }

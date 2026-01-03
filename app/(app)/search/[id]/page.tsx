@@ -91,10 +91,11 @@ export default function PersonProfilePage() {
   });
 
   useEffect(() => {
-    if (id) {
+    // Only fetch profile if user is pro
+    if (id && isPro) {
       profileMutation.mutate();
     }
-  }, [id]);
+  }, [id, isPro]);
 
   const handleCopy = (text: string, type: string) => {
     navigator.clipboard.writeText(text);

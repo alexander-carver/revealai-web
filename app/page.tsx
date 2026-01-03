@@ -133,13 +133,11 @@ function HomeContent() {
   }, []);
 
   // Check if user has completed onboarding
-  // NOTE: Onboarding is currently disabled. To re-enable, uncomment the condition below.
   useEffect(() => {
-    // const hasCompletedOnboarding = localStorage.getItem("revealai_onboarding_completed");
-    // if (!hasCompletedOnboarding && !isPro) {
-    //   setShowOnboarding(true);
-    // }
-    setShowOnboarding(false); // Onboarding disabled for now
+    const hasCompletedOnboarding = localStorage.getItem("revealai_onboarding_completed");
+    if (!hasCompletedOnboarding && !isPro) {
+      setShowOnboarding(true);
+    }
     setIsCheckingOnboarding(false);
   }, [isPro]);
 
@@ -155,14 +153,13 @@ function HomeContent() {
   }, [searchParams, user, refreshSubscription]);
 
   // Handle onboarding completion
-  // NOTE: Free trial paywall after onboarding is disabled. To re-enable, uncomment showFreeTrialPaywall() below.
   const handleOnboardingComplete = useCallback(() => {
     localStorage.setItem("revealai_onboarding_completed", "true");
     setShowOnboarding(false);
-    // Show free trial paywall after onboarding (disabled for now)
-    // if (!isPro) {
-    //   showFreeTrialPaywall();
-    // }
+    // Show free trial paywall after onboarding
+    if (!isPro) {
+      showFreeTrialPaywall();
+    }
   }, [isPro, showFreeTrialPaywall]);
 
   // Show loading state while checking onboarding status

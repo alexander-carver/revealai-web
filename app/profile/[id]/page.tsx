@@ -16,6 +16,7 @@ import {
   Share2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Twitter,
   Facebook,
   Instagram,
@@ -30,10 +31,12 @@ import {
   Database,
   Crown,
   Search,
+  Lock,
 } from "lucide-react";
 import { useSubscription } from "@/hooks/use-subscription";
 import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
 import { ResultsPaywallModal } from "@/components/shared/results-paywall-modal";
+import { FreeTrialPaywallModal } from "@/components/shared/free-trial-paywall-modal";
 
 // Get icon for source type
 function getSourceIcon(label: string) {
@@ -65,11 +68,12 @@ function getSourceBadgeVariant(label: string): "default" | "secondary" | "destru
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
-  const { isPro } = useSubscription();
+  const { isPro, showFreeTrialPaywall } = useSubscription();
   const [profile, setProfile] = useState<MockProfile | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  const [showMoreSources, setShowMoreSources] = useState(false);
 
   useEffect(() => {
     const id = params.id as string;
@@ -125,6 +129,14 @@ export default function ProfilePage() {
     setImageError(prev => ({ ...prev, [imageSrc]: true }));
   };
 
+  // Handle locked source click
+  const handleLockedSourceClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isPro) {
+      showFreeTrialPaywall();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Loading Screen Overlay */}
@@ -136,6 +148,8 @@ export default function ProfilePage() {
       />
       {/* Results Paywall Modal */}
       <ResultsPaywallModal />
+      {/* Free Trial Paywall Modal */}
+      <FreeTrialPaywallModal />
       
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -276,6 +290,165 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Sources Section - Moved here */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="w-5 h-5 text-primary" />
+              Sources ({profile.sources.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              {/* First row: 2 free sources (indices 1 and 3 from original array) */}
+              {[profile.sources[1], profile.sources[3]].filter(Boolean).map((source, idx) => (
+                <a
+                  key={`free-${idx}`}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
+                >
+                  <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
+                    <Globe className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+                      {source.label}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {source.url.replace(/^https?:\/\//, '').split('/')[0]}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-xs flex-shrink-0 bg-blue-50 text-blue-600 border-blue-200">
+                    Source
+                  </Badge>
+                </a>
+              ))}
+
+              {/* Second row: 2 locked sources (for non-pro users) or actual sources (for pro users) */}
+              {[profile.sources[0], profile.sources[2]].filter(Boolean).map((source, idx) => {
+                if (isPro) {
+                  // Pro users see actual sources as clickable links
+                  return (
+                    <a
+                      key={`locked-${idx}`}
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
+                    >
+                      <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
+                        <Globe className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+                          {source.label}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {source.url.replace(/^https?:\/\//, '').split('/')[0]}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs flex-shrink-0 bg-blue-50 text-blue-600 border-blue-200">
+                        Source
+                      </Badge>
+                    </a>
+                  );
+                } else {
+                  // Non-pro users see locked placeholders
+                  const isSensitive = idx === 0; // First locked source shows "Sensitive Info"
+                  return (
+                    <div
+                      key={`locked-${idx}`}
+                      onClick={handleLockedSourceClick}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border transition-all cursor-pointer opacity-70 hover:opacity-90 group"
+                    >
+                      <div className="p-2 rounded-lg bg-muted/50 transition-colors relative">
+                        <Globe className="w-4 h-4 text-muted-foreground" />
+                        <div className="absolute -top-1 -right-1 p-0.5 bg-blue-500 rounded-full">
+                          <Lock className="w-3 h-3 text-white" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate transition-colors">
+                          Source
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          Hidden
+                        </div>
+                      </div>
+                      {isSensitive ? (
+                        <Badge variant="outline" className="text-xs flex-shrink-0 bg-red-50 text-red-600 border-red-200">
+                          Sensitive Info
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs flex-shrink-0 bg-blue-50 text-blue-600 border-blue-200">
+                          Pro
+                        </Badge>
+                      )}
+                    </div>
+                  );
+                }
+              })}
+            </div>
+
+            {/* Dropdown for additional sources */}
+            {profile.sources.length > 4 && (
+              <div className="relative">
+                <div
+                  onClick={!isPro ? handleLockedSourceClick : () => setShowMoreSources(!showMoreSources)}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg border border-border transition-colors cursor-pointer ${
+                    !isPro ? 'opacity-70 hover:opacity-90' : 'hover:bg-muted/50'
+                  }`}
+                >
+                  <span className="text-sm font-medium">
+                    +{profile.sources.length - 4} More sources
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {!isPro && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600 border-blue-200 flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        Pro
+                      </Badge>
+                    )}
+                    {isPro && (
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showMoreSources ? 'rotate-180' : ''}`} />
+                    )}
+                  </div>
+                </div>
+                {showMoreSources && isPro && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    {profile.sources.slice(4).map((source, idx) => (
+                      <a
+                        key={idx + 4}
+                        href={source.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
+                      >
+                        <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
+                          <Globe className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+                            {source.label}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {source.url.replace(/^https?:\/\//, '').split('/')[0]}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs flex-shrink-0 bg-blue-50 text-blue-600 border-blue-200">
+                          Source
+                        </Badge>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Detailed Answer */}
         <Card className="mb-8">
           <CardHeader>
@@ -295,45 +468,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Sources Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="w-5 h-5 text-primary" />
-              Sources ({profile.sources.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {profile.sources.map((source, idx) => (
-                <a
-                  key={idx}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
-                >
-                  <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
-                    {getSourceIcon(source.label)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-                      {source.label}
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {source.url.replace(/^https?:\/\//, '').split('/')[0]}
-                    </div>
-                  </div>
-                  <Badge variant={getSourceBadgeVariant(source.label)} className="text-xs flex-shrink-0">
-                    {source.label.includes("gov") ? "Official" : 
-                     source.label.includes("media") || source.label.includes("news") ? "Media" :
-                     source.label.includes("official") ? "Verified" : "Source"}
-                  </Badge>
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Disclaimer */}
         <div className="mt-8 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">

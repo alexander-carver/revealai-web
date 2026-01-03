@@ -147,15 +147,20 @@ export default function PeopleSearchPage() {
       setPendingSearch({ type: "person", query });
       setLoadingSearchQuery(getSearchDisplayName());
       setShowLoadingScreen(true);
-      // Start actual search in background
-      personSearchMutation.mutate(query);
+      // Only run the actual search if user is pro
+      if (isPro) {
+        personSearchMutation.mutate(query);
+      }
     } else if (searchMode !== "cheater") {
       setPendingSearch({ type: "contact", query });
       setLoadingSearchQuery(getSearchDisplayName());
       setShowLoadingScreen(true);
-      contactSearchMutation.mutate(query);
+      // Only run the actual search if user is pro
+      if (isPro) {
+        contactSearchMutation.mutate(query);
+      }
     }
-  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation]);
+  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation, isPro]);
 
   const handleAISearch = useCallback(() => {
     if (!aiQuery.trim()) return;
@@ -165,8 +170,11 @@ export default function PeopleSearchPage() {
     setPendingSearch({ type: "ai", aiQuery });
     setLoadingSearchQuery(displayQuery);
     setShowLoadingScreen(true);
-    aiSearchMutation.mutate(aiQuery);
-  }, [aiQuery, aiSearchMutation]);
+    // Only run the actual search if user is pro
+    if (isPro) {
+      aiSearchMutation.mutate(aiQuery);
+    }
+  }, [aiQuery, aiSearchMutation, isPro]);
 
   // Loading screen callbacks
   const handleLoadingComplete = useCallback(() => {

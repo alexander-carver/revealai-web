@@ -50,10 +50,8 @@ export function WelcomeModal() {
       const timer = setTimeout(() => {
         console.log("Showing welcome modal");
         setIsVisible(true);
-        // Show close button after 3 seconds
-        setTimeout(() => {
-          setShowCloseButton(true);
-        }, 3000);
+        // Show close button instantly
+        setShowCloseButton(true);
       }, 500);
       return () => clearTimeout(timer);
     }
@@ -67,9 +65,8 @@ export function WelcomeModal() {
           // Small delay after Apple modal is dismissed
           setTimeout(() => {
             setIsVisible(true);
-            setTimeout(() => {
-              setShowCloseButton(true);
-            }, 3000);
+            // Show close button instantly
+            setShowCloseButton(true);
           }, 500);
         }
       }, 500);
@@ -97,7 +94,7 @@ export function WelcomeModal() {
 
       {/* Modal */}
       <div className="relative z-10 w-full max-w-md bg-card rounded-3xl border border-border shadow-2xl overflow-hidden animate-fade-in">
-        {/* Close Button - appears after 3 seconds */}
+        {/* Close Button - appears instantly */}
         {showCloseButton && (
           <button
             onClick={handleClose}
@@ -151,4 +148,3 @@ export function WelcomeModal() {
     </div>
   );
 }
-

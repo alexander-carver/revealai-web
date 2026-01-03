@@ -18,7 +18,6 @@ interface OnboardingFlowProps {
 // ============================================
 function Screen1({ onContinue }: { onContinue: () => void }) {
   const [animationPhase, setAnimationPhase] = useState(0);
-  const [canContinue, setCanContinue] = useState(false);
 
   useEffect(() => {
     // Phase 0: Initial state (just title + name faded)
@@ -30,7 +29,6 @@ function Screen1({ onContinue }: { onContinue: () => void }) {
     // Phase 6: LinkedIn appears (2600ms)
     // Phase 7: Bumble appears (2900ms)
     // Phase 8: Tinder appears (3200ms)
-    // Phase 9: Enable continue button (3500ms)
 
     const timers = [
       setTimeout(() => setAnimationPhase(1), 500),
@@ -41,7 +39,6 @@ function Screen1({ onContinue }: { onContinue: () => void }) {
       setTimeout(() => setAnimationPhase(6), 2600),
       setTimeout(() => setAnimationPhase(7), 2900),
       setTimeout(() => setAnimationPhase(8), 3200),
-      setTimeout(() => setCanContinue(true), 3500),
     ];
 
     return () => timers.forEach(clearTimeout);
@@ -179,12 +176,7 @@ function Screen1({ onContinue }: { onContinue: () => void }) {
         {/* Continue Button */}
         <button
           onClick={onContinue}
-          disabled={!canContinue}
-          className={`w-full py-3.5 sm:py-4 px-6 rounded-2xl flex items-center justify-center gap-2 font-semibold text-base sm:text-lg transition-all duration-300 ${
-            canContinue
-              ? 'bg-gray-900 text-white hover:bg-gray-800'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
+          className="w-full py-3.5 sm:py-4 px-6 rounded-2xl flex items-center justify-center gap-2 font-semibold text-base sm:text-lg transition-all duration-300 bg-gray-900 text-white hover:bg-gray-800 border-2 border-blue-500 shadow-lg shadow-blue-500/50"
         >
           Continue
           <ArrowRight className="w-5 h-5" />
@@ -198,13 +190,7 @@ function Screen1({ onContinue }: { onContinue: () => void }) {
 // SCREEN 2: Explore New Connections
 // ============================================
 function Screen2({ onContinue }: { onContinue: () => void }) {
-  const [canContinue, setCanContinue] = useState(false);
-
-  useEffect(() => {
-    // Simple timer - just wait for animation to complete then enable button
-    const timer = setTimeout(() => setCanContinue(true), 2500);
-    return () => clearTimeout(timer);
-  }, []);
+  // No need for canContinue state - button always enabled
 
   return (
     <div className="flex flex-col h-full">
@@ -272,12 +258,7 @@ function Screen2({ onContinue }: { onContinue: () => void }) {
         {/* Continue Button */}
         <button
           onClick={onContinue}
-          disabled={!canContinue}
-          className={`w-full py-3.5 sm:py-4 px-6 rounded-2xl flex items-center justify-center gap-2 font-semibold text-base sm:text-lg transition-all duration-300 ${
-            canContinue
-              ? 'bg-gray-900 text-white hover:bg-gray-800'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
+          className="w-full py-3.5 sm:py-4 px-6 rounded-2xl flex items-center justify-center gap-2 font-semibold text-base sm:text-lg transition-all duration-300 bg-gray-900 text-white hover:bg-gray-800 border-2 border-blue-500 shadow-lg shadow-blue-500/50"
         >
           Continue
           <ArrowRight className="w-5 h-5" />
@@ -292,7 +273,6 @@ function Screen2({ onContinue }: { onContinue: () => void }) {
 // ============================================
 function Screen3({ onContinue }: { onContinue: () => void }) {
   const [animationPhase, setAnimationPhase] = useState(0);
-  const [canContinue, setCanContinue] = useState(false);
 
   useEffect(() => {
     // Phase 0: Keyhole with avatar
@@ -301,7 +281,6 @@ function Screen3({ onContinue }: { onContinue: () => void }) {
     // Phase 3: Keyhole fades, avatar centers (1800ms)
     // Phase 4: Orbit items start appearing (2400ms)
     // Phase 5: All items visible, orbiting (3200ms)
-    // Phase 6: Enable continue (4000ms)
 
     const timers = [
       setTimeout(() => setAnimationPhase(1), 600),
@@ -309,7 +288,6 @@ function Screen3({ onContinue }: { onContinue: () => void }) {
       setTimeout(() => setAnimationPhase(3), 1800),
       setTimeout(() => setAnimationPhase(4), 2400),
       setTimeout(() => setAnimationPhase(5), 3200),
-      setTimeout(() => setCanContinue(true), 4000),
     ];
 
     return () => timers.forEach(clearTimeout);
@@ -473,12 +451,7 @@ function Screen3({ onContinue }: { onContinue: () => void }) {
         {/* Continue Button */}
         <button
           onClick={onContinue}
-          disabled={!canContinue}
-          className={`w-full py-3.5 sm:py-4 px-6 rounded-2xl flex items-center justify-center gap-2 font-semibold text-base sm:text-lg transition-all duration-300 ${
-            canContinue
-              ? 'bg-gray-900 text-white hover:bg-gray-800'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
+          className="w-full py-3.5 sm:py-4 px-6 rounded-2xl flex items-center justify-center gap-2 font-semibold text-base sm:text-lg transition-all duration-300 bg-gray-900 text-white hover:bg-gray-800 border-2 border-blue-500 shadow-lg shadow-blue-500/50"
         >
           Continue
           <ArrowRight className="w-5 h-5" />

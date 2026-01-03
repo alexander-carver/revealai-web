@@ -264,7 +264,7 @@ export function PeopleSearch() {
 
         {/* Hero Content */}
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-xl md:max-w-2xl mx-auto md:mx-0 text-center md:text-left py-8 md:py-0">
+          <div className="max-w-xl md:max-w-2xl mx-auto text-center py-8 md:py-0">
             {/* Brand Line */}
             <p className="text-sm md:text-base font-medium text-gray-600 tracking-wide mb-3 md:mb-4">
               Reveal AI — People Search
@@ -272,13 +272,60 @@ export function PeopleSearch() {
 
             {/* Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-red-600 leading-tight mb-3 md:mb-4">
-              Find Everything, about Anyone
+              Find Everything,
+              <br />
+              about Anyone
             </h1>
 
             {/* Subline */}
-            <p className="text-lg md:text-xl text-gray-700 font-medium mb-8 md:mb-10">
-              People Search • Dating Apps • Records
+            <p className="text-lg md:text-xl text-gray-700 font-medium mb-6 md:mb-8">
+              Tinder • Bumble • Grindr + more
             </p>
+
+            {/* Feature Checklist */}
+            <div className="space-y-3 md:space-y-4 mb-8 md:mb-10 max-w-xl mx-auto">
+              <div className="flex items-start gap-3 text-left">
+                <div className="flex-shrink-0 w-6 h-6 rounded bg-red-500 flex items-center justify-center mt-0.5">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <span className="text-base md:text-lg font-bold text-gray-900">People Search: </span>
+                  <span className="text-base md:text-lg text-gray-700">Phone • Vehicle • Address</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 text-left">
+                <div className="flex-shrink-0 w-6 h-6 rounded bg-red-500 flex items-center justify-center mt-0.5">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <span className="text-base md:text-lg font-bold text-gray-900">Criminal History & Records</span>
+              </div>
+
+              <div className="flex items-start gap-3 text-left">
+                <div className="flex-shrink-0 w-6 h-6 rounded bg-red-500 flex items-center justify-center mt-0.5">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <span className="text-base md:text-lg font-bold text-gray-900">Opt-Out: </span>
+                  <span className="text-base md:text-lg text-gray-700">Remove Yourself From Search</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 text-left">
+                <div className="flex-shrink-0 w-6 h-6 rounded bg-red-500 flex items-center justify-center mt-0.5">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <span className="text-base md:text-lg font-bold text-gray-900">Find Unclaimed Money <span className="text-gray-700">(Free)</span></span>
+              </div>
+            </div>
 
             {/* CTA Button */}
             <div className="flex flex-col items-center gap-3">
