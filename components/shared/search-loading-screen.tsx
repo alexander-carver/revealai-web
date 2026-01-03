@@ -7,10 +7,10 @@ import Image from "next/image";
 
 // Progress steps configuration
 const PROGRESS_STEPS = [
-  { id: 1, text: "Catching the signals…", completionTime: 3000 },
-  { id: 2, text: "Diving deep into the data…", completionTime: 6000 },
-  { id: 3, text: "Uncovering hidden insights…", completionTime: 9000 },
-  { id: 4, text: "Following the trail…", completionTime: 12000 },
+  { id: 1, text: "Searching 500M+ records…", completionTime: 2000 },
+  { id: 2, text: "Diving deep into the data…", completionTime: 4000 },
+  { id: 3, text: "Uncovering hidden insights…", completionTime: 6000 },
+  { id: 4, text: "Following the trail…", completionTime: 8000 },
   { id: 5, text: "Finalizing the search…", completionTime: Infinity }, // Never completes
 ];
 
@@ -88,11 +88,11 @@ export function SearchLoadingScreen({
     }
   }, [isVisible]);
 
-  // Main progress timer (12 seconds total for first 4 steps)
+  // Main progress timer (8 seconds total for first 4 steps)
   useEffect(() => {
     if (!isVisible || !startTime) return;
 
-    const totalDuration = 12000; // 12 seconds
+    const totalDuration = 8000; // 8 seconds
     const interval = 50; // Update every 50ms for smooth animation
 
     const timer = setInterval(() => {
@@ -111,7 +111,7 @@ export function SearchLoadingScreen({
         setCurrentStep(4);
       }
 
-      // At 12 seconds, check subscription status
+      // At 8 seconds, check subscription status
       if (elapsed >= totalDuration && !hasTriggeredPaywall) {
         setHasTriggeredPaywall(true);
         if (isPro) {

@@ -271,9 +271,23 @@ function HomeContent() {
       {/* Header - Fixed on top */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/">
-            <Logo size="md" />
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Logo size="md" />
+            </Link>
+            {/* Trust badges - subtle on header */}
+            <div className="hidden lg:flex items-center gap-3 text-xs text-gray-600 border-l border-gray-200 pl-4">
+              <div className="flex items-center gap-1">
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                <span className="font-medium">2M+ Users</span>
+              </div>
+              <div className="w-1 h-1 rounded-full bg-gray-300" />
+              <div className="flex items-center gap-1">
+                <Shield className="w-3 h-3 text-green-600" />
+                <span className="font-medium">Trusted</span>
+              </div>
+            </div>
+          </div>
           <div className="flex-1 flex justify-center hidden md:flex">
             <Link href="#download-app" className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted/50 transition-colors group">
               <div className="relative w-8 h-8 flex items-center justify-center">

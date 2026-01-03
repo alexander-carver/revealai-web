@@ -15,6 +15,10 @@ import {
   Users,
   Sparkles,
   AlertTriangle,
+  Star,
+  Shield,
+  Lock,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -274,19 +278,42 @@ export function PeopleSearch() {
             </h1>
 
             {/* Subline */}
-            <p className="text-lg md:text-xl text-gray-700 font-medium mb-8 md:mb-10">
+            <p className="text-lg md:text-xl text-gray-700 font-medium mb-4 md:mb-6">
               People Search • Dating Apps • Records
             </p>
 
-            {/* CTA Button */}
-            <button
-              onClick={scrollToSearch}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold text-lg rounded-full shadow-lg shadow-red-600/30 hover:shadow-xl hover:shadow-red-600/40 transition-all duration-200 transform hover:-translate-y-0.5"
-            >
-              <Search className="w-5 h-5" />
-              Search Them
-              <ArrowRight className="w-5 h-5" />
-            </button>
+            {/* Trust Signals */}
+            <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 mb-8 md:mb-10">
+              <div className="flex items-center gap-2">
+                <div className="flex">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <span className="text-sm font-semibold text-gray-700">2M+ Users</span>
+              </div>
+              <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300" />
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-semibold text-gray-700">99.9% Accurate</span>
+              </div>
+            </div>
+
+            {/* CTA Button with animated arrow */}
+            <div className="relative inline-block">
+              {/* Animated arrow pointing down */}
+              <div className="absolute -top-12 left-1/2 -translate-x-1/2 animate-bounce">
+                <ChevronDown className="w-6 h-6 text-red-600" />
+              </div>
+              <button
+                onClick={scrollToSearch}
+                className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold text-lg rounded-full shadow-lg shadow-red-600/30 hover:shadow-xl hover:shadow-red-600/40 transition-all duration-200 transform hover:-translate-y-0.5"
+              >
+                <Search className="w-5 h-5" />
+                Search Them
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -314,6 +341,18 @@ export function PeopleSearch() {
                 <CardTitle className="text-2xl md:text-3xl font-bold text-gray-900">
                   Start Your Search
                 </CardTitle>
+                {/* Security Badges */}
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                    <Lock className="w-3.5 h-3.5 text-green-600" />
+                    <span className="font-medium">Secure & Private</span>
+                  </div>
+                  <div className="w-1 h-1 rounded-full bg-gray-300" />
+                  <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                    <Shield className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="font-medium">500M+ Records</span>
+                  </div>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
