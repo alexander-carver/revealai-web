@@ -11,7 +11,6 @@ import {
   ArrowRight,
   Sparkles,
   Smartphone,
-  Download,
   CheckCircle2,
   Zap,
   Lock,
@@ -270,75 +269,28 @@ function HomeContent() {
       <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Header - Fixed on top */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Logo size="md" />
-            </Link>
-            {/* Trust badges - subtle on header */}
-            <div className="hidden lg:flex items-center gap-3 text-xs text-gray-600 border-l border-gray-200 pl-4">
-              <div className="flex items-center gap-1">
-                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                <span className="font-medium">2M+ Users</span>
-              </div>
-              <div className="w-1 h-1 rounded-full bg-gray-300" />
-              <div className="flex items-center gap-1">
-                <Shield className="w-3 h-3 text-green-600" />
-                <span className="font-medium">Trusted</span>
-              </div>
+        <div className="container mx-auto px-4 h-16 flex items-center justify-center">
+          <Link href="/">
+            <Logo size="md" />
+          </Link>
+          {user && (
+            <div className="absolute right-4 flex items-center gap-4">
+              <Link href="/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm font-medium hidden sm:inline">
+                  {user.email?.split("@")[0] || "Account"}
+                </span>
+                {isPro && (
+                  <Crown className="w-4 h-4 text-amber-500" />
+                )}
+              </Link>
+              <Link href="/search">
+                <Button size="sm">Go to App</Button>
+              </Link>
             </div>
-          </div>
-          <div className="flex-1 flex justify-center hidden md:flex">
-            <Link href="#download-app" className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted/50 transition-colors group">
-              <div className="relative w-8 h-8 flex items-center justify-center">
-                <Image
-                  src="/logo.png"
-                  alt="RevealAI App"
-                  width={32}
-                  height={32}
-                  className="object-contain"
-                />
-              </div>
-              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                Download Mobile App
-              </span>
-              <Download className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-            </Link>
-          </div>
-          <div className="md:hidden">
-            <Link href="#download-app" className="flex items-center gap-1 px-2 py-2 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="relative w-6 h-6 flex items-center justify-center">
-                <Image
-                  src="/logo.png"
-                  alt="RevealAI App"
-                  width={24}
-                  height={24}
-                  className="object-contain"
-                />
-              </div>
-              <Smartphone className="w-4 h-4 text-muted-foreground" />
-            </Link>
-          </div>
-          <nav className="flex items-center gap-4">
-            {user ? (
-              <>
-                <Link href="/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-sm font-medium hidden sm:inline">
-                    {user.email?.split("@")[0] || "Account"}
-                  </span>
-                  {isPro && (
-                    <Crown className="w-4 h-4 text-amber-500" />
-                  )}
-                </Link>
-                <Link href="/search">
-                  <Button size="sm">Go to App</Button>
-                </Link>
-              </>
-            ) : null}
-          </nav>
+          )}
         </div>
       </header>
 

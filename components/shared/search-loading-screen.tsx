@@ -7,10 +7,10 @@ import Image from "next/image";
 
 // Progress steps configuration
 const PROGRESS_STEPS = [
-  { id: 1, text: "Searching 500M+ records…", completionTime: 2000 },
-  { id: 2, text: "Diving deep into the data…", completionTime: 4000 },
-  { id: 3, text: "Uncovering hidden insights…", completionTime: 6000 },
-  { id: 4, text: "Following the trail…", completionTime: 8000 },
+  { id: 1, text: "Catching the signals…", completionTime: 3000 },
+  { id: 2, text: "Diving deep into the data…", completionTime: 6000 },
+  { id: 3, text: "Uncovering hidden insights…", completionTime: 9000 },
+  { id: 4, text: "Following the trail…", completionTime: 12000 },
   { id: 5, text: "Finalizing the search…", completionTime: Infinity }, // Never completes
 ];
 
@@ -88,17 +88,38 @@ export function SearchLoadingScreen({
     }
   }, [isVisible]);
 
-  // Main progress timer (8 seconds total for first 4 steps)
+  // Main progress timer (12 seconds total for first 4 steps)
+  // Custom easing to slow down at 3s and 9s
   useEffect(() => {
     if (!isVisible || !startTime) return;
 
-    const totalDuration = 8000; // 8 seconds
+    const totalDuration = 12000; // 12 seconds
     const interval = 50; // Update every 50ms for smooth animation
 
     const timer = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      const newProgress = Math.min((elapsed / totalDuration) * 100, 100);
-      setProgress(newProgress);
+      
+      // Custom progress calculation with slowdowns at 3s and 9s
+      let newProgress = 0;
+      if (elapsed < 3000) {
+        // 0-3s: Fast progress to 25%
+        newProgress = (elapsed / 3000) * 25;
+      } else if (elapsed < 6000) {
+        // 3-6s: Normal progress from 25% to 50%
+        newProgress = 25 + ((elapsed - 3000) / 3000) * 25;
+      } else if (elapsed < 9000) {
+        // 6-9s: Normal progress from 50% to 75%
+        newProgress = 50 + ((elapsed - 6000) / 3000) * 25;
+      } else if (elapsed < 12000) {
+        // 9-12s: Slow progress from 75% to 100%
+        const t = (elapsed - 9000) / 3000;
+        // Ease out curve for the final stretch
+        newProgress = 75 + (Math.pow(t, 0.5) * 25);
+      } else {
+        newProgress = 100;
+      }
+      
+      setProgress(Math.min(newProgress, 100));
 
       // Update current step based on elapsed time
       const newStep = PROGRESS_STEPS.findIndex(
@@ -111,7 +132,7 @@ export function SearchLoadingScreen({
         setCurrentStep(4);
       }
 
-      // At 8 seconds, check subscription status
+      // At 12 seconds, check subscription status
       if (elapsed >= totalDuration && !hasTriggeredPaywall) {
         setHasTriggeredPaywall(true);
         if (isPro) {
