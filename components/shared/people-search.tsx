@@ -235,28 +235,28 @@ export function PeopleSearch() {
       <section className="relative min-h-[85vh] md:min-h-[80vh] flex items-center overflow-hidden">
         {/* Background Images */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Mobile Background */}
+          {/* Mobile Background - First image (shocked woman) */}
           <div className="md:hidden absolute inset-0">
             <Image
-              src="/Reveal_Background_Mobile.png"
+              src="/hero-bg-mobile.jpg"
               alt=""
               fill
               className="object-cover object-top"
               priority
-              unoptimized
+              quality={90}
             />
             {/* Gradient overlay for readability */}
             <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-white/40" />
           </div>
-          {/* Desktop Background */}
+          {/* Desktop Background - Second image (people searching) */}
           <div className="hidden md:block absolute inset-0">
             <Image
-              src="/Reveal_Background_Web.png"
+              src="/hero-bg-desktop.jpg"
               alt=""
               fill
               className="object-cover object-center"
               priority
-              unoptimized
+              quality={90}
             />
             {/* Gradient overlay for readability */}
             <div className="absolute inset-0 bg-gradient-to-r from-white via-white/85 to-white/50" />

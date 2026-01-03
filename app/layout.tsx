@@ -154,6 +154,9 @@ export default function RootLayout({
         <link rel="preload" href="/paywall-header.png" as="image" type="image/png" />
         {/* Preload paywall background image for instant display */}
         <link rel="preload" href="/paywall_image_reveal2.png" as="image" type="image/png" />
+        {/* Preload hero background images to prevent layout shift */}
+        <link rel="preload" href="/hero-bg-mobile.jpg" as="image" type="image/jpeg" media="(max-width: 768px)" />
+        <link rel="preload" href="/hero-bg-desktop.jpg" as="image" type="image/jpeg" media="(min-width: 769px)" />
         {/* Favicon for Google Search results */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
