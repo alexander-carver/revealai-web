@@ -15,7 +15,6 @@ import {
   Users,
   Sparkles,
   AlertTriangle,
-  ChevronDown,
   Star,
   Shield,
 } from "lucide-react";
@@ -238,7 +237,7 @@ export function PeopleSearch() {
           {/* Mobile Background - First image (shocked woman) */}
           <div className="md:hidden absolute inset-0">
             <Image
-              src="/hero-bg-mobile.jpg"
+              src="/New_Background_RevealAIMobile.png"
               alt=""
               fill
               className="object-cover object-top"
@@ -251,7 +250,7 @@ export function PeopleSearch() {
           {/* Desktop Background - Second image (people searching) */}
           <div className="hidden md:block absolute inset-0">
             <Image
-              src="/hero-bg-desktop.jpg"
+              src="/New_Background_RevealAIWeb.png"
               alt=""
               fill
               className="object-cover object-center"
@@ -291,29 +290,6 @@ export function PeopleSearch() {
                 Search Them
                 <ArrowRight className="w-5 h-5" />
               </button>
-              
-              {/* Trust Indicators */}
-              <div className="flex items-center gap-3 text-xs text-gray-600">
-                <div className="flex items-center gap-1">
-                  <Shield className="w-3.5 h-3.5 text-green-600" />
-                  <span className="font-medium">Trusted</span>
-                </div>
-                <span className="text-gray-300">•</span>
-                <div className="flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  <span className="font-medium">4.9 star rating</span>
-                </div>
-                <span className="text-gray-300">•</span>
-                <div className="flex items-center gap-1">
-                  <Search className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="font-medium">500M+ Searches</span>
-                </div>
-              </div>
-              
-              {/* Down Arrow */}
-              <div className="mt-2 animate-bounce">
-                <ChevronDown className="w-6 h-6 text-gray-400" />
-              </div>
             </div>
           </div>
         </div>
@@ -537,16 +513,36 @@ export function PeopleSearch() {
 
               {/* Search Button (for non-AI searches) */}
               {searchMode !== "cheater" && (
-                <Button
-                  onClick={handleSearch}
-                  isLoading={showInlineLoading && !aiSearchMutation.isPending}
-                  size="lg"
-                  className="w-full mt-6 gap-2 bg-red-600 hover:bg-red-700 text-white shadow-lg"
-                >
-                  <Search className="w-5 h-5" />
-                  Search Records
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
+                <>
+                  <Button
+                    onClick={handleSearch}
+                    isLoading={showInlineLoading && !aiSearchMutation.isPending}
+                    size="lg"
+                    className="w-full mt-6 gap-2 bg-red-600 hover:bg-red-700 text-white shadow-lg"
+                  >
+                    <Search className="w-5 h-5" />
+                    Search Records
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                  
+                  {/* Trust Indicators */}
+                  <div className="flex items-center justify-center gap-3 text-xs text-gray-600 mt-4">
+                    <div className="flex items-center gap-1">
+                      <Shield className="w-3.5 h-3.5 text-green-600" />
+                      <span className="font-medium">Trusted</span>
+                    </div>
+                    <span className="text-gray-300">•</span>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                      <span className="font-medium">4.9 Star Rating</span>
+                    </div>
+                    <span className="text-gray-300">•</span>
+                    <div className="flex items-center gap-1">
+                      <Search className="w-3.5 h-3.5 text-blue-600" />
+                      <span className="font-medium">500M+ Searches</span>
+                    </div>
+                  </div>
+                </>
               )}
 
               {/* Error Message */}
