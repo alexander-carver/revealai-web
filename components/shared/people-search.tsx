@@ -51,7 +51,7 @@ function formatAIResponse(text: string): string {
 }
 
 export function PeopleSearch() {
-  const { isPro } = useSubscription();
+  const { isPro, showFreeTrialPaywall } = useSubscription();
   const [searchMode, setSearchMode] = useState<SearchMode>("name");
   const [formData, setFormData] = useState({
     firstName: "",
@@ -160,33 +160,40 @@ export function PeopleSearch() {
       if (!formData.firstName.trim() || !formData.lastName.trim()) {
         return;
       }
+      // Show free trial paywall immediately if not pro
+      if (!isPro) {
+        showFreeTrialPaywall();
+        return;
+      }
       setLoadingSearchQuery(getSearchDisplayName());
       setShowLoadingScreen(true);
-      // Only run the actual search if user is pro
-      if (isPro) {
-        personSearchMutation.mutate(query);
-      }
+      personSearchMutation.mutate(query);
     } else if (searchMode !== "cheater") {
+      // Show free trial paywall immediately if not pro
+      if (!isPro) {
+        showFreeTrialPaywall();
+        return;
+      }
       setLoadingSearchQuery(getSearchDisplayName());
       setShowLoadingScreen(true);
-      // Only run the actual search if user is pro
-      if (isPro) {
-        contactSearchMutation.mutate(query);
-      }
+      contactSearchMutation.mutate(query);
     }
-  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation, isPro]);
+  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation, isPro, showFreeTrialPaywall]);
 
   const handleAISearch = useCallback(() => {
     if (!aiQuery.trim()) return;
     
+    // Show free trial paywall immediately if not pro
+    if (!isPro) {
+      showFreeTrialPaywall();
+      return;
+    }
+    
     const displayQuery = aiQuery.split(" ").slice(0, 4).join(" ");
     setLoadingSearchQuery(displayQuery);
     setShowLoadingScreen(true);
-    // Only run the actual search if user is pro
-    if (isPro) {
-      aiSearchMutation.mutate(aiQuery);
-    }
-  }, [aiQuery, aiSearchMutation, isPro]);
+    aiSearchMutation.mutate(aiQuery);
+  }, [aiQuery, aiSearchMutation, isPro, showFreeTrialPaywall]);
 
   const handleLoadingComplete = useCallback(() => {
     setShowLoadingScreen(false);

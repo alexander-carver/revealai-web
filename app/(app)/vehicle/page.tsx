@@ -29,7 +29,7 @@ import type { VinDecodedVehicle } from "@/lib/types";
 import { useSubscription } from "@/hooks/use-subscription";
 
 export default function VehicleSearchPage() {
-  const { isPro } = useSubscription();
+  const { isPro, showFreeTrialPaywall } = useSubscription();
   const [vin, setVin] = useState("");
   const [vehicle, setVehicle] = useState<VinDecodedVehicle | null>(null);
   const [copied, setCopied] = useState(false);
@@ -52,11 +52,17 @@ export default function VehicleSearchPage() {
       return;
     }
     
+    // Show free trial paywall immediately if not pro
+    if (!isPro) {
+      showFreeTrialPaywall();
+      return;
+    }
+    
     // Show loading screen and start search
     setLoadingSearchQuery(vin.toUpperCase());
     setShowLoadingScreen(true);
     searchMutation.mutate();
-  }, [vin, searchMutation]);
+  }, [vin, searchMutation, isPro, showFreeTrialPaywall]);
 
   const handleLoadingComplete = useCallback(() => {
     setShowLoadingScreen(false);

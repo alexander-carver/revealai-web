@@ -272,8 +272,8 @@ function HomeContent() {
           }),
         }}
       />
-      {/* TEMPORARILY DISABLED: Paywall modals - keeping for later */}
-      {/* <FreeTrialPaywallModal /> */}
+      {/* Free trial paywall - shown immediately when non-pro users try to search */}
+      <FreeTrialPaywallModal />
       <ResultsPaywallModal />
       <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Header - Fixed on top */}

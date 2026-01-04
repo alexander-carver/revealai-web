@@ -27,7 +27,7 @@ import type { UsernameSearchResponse, UsernameProbe } from "@/lib/types";
 import { useSubscription } from "@/hooks/use-subscription";
 
 export default function UsernameSearchPage() {
-  const { isPro } = useSubscription();
+  const { isPro, showFreeTrialPaywall } = useSubscription();
   const [username, setUsername] = useState("");
   const [results, setResults] = useState<UsernameSearchResponse | null>(null);
   const [filter, setFilter] = useState<"all" | "found" | "not_found">("all");
@@ -50,11 +50,17 @@ export default function UsernameSearchPage() {
       return;
     }
     
+    // Show free trial paywall immediately if not pro
+    if (!isPro) {
+      showFreeTrialPaywall();
+      return;
+    }
+    
     // Show loading screen and start search
     setLoadingSearchQuery(`@${username}`);
     setShowLoadingScreen(true);
     searchMutation.mutate();
-  }, [username, searchMutation]);
+  }, [username, searchMutation, isPro, showFreeTrialPaywall]);
 
   const handleLoadingComplete = useCallback(() => {
     setShowLoadingScreen(false);

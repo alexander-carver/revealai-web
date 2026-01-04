@@ -36,7 +36,7 @@ const categoryColors: Record<string, { bg: string; text: string }> = {
 };
 
 export default function RecordsSearchPage() {
-  const { isPro } = useSubscription();
+  const { isPro, showFreeTrialPaywall } = useSubscription();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -73,12 +73,18 @@ export default function RecordsSearchPage() {
       return;
     }
     
+    // Show free trial paywall immediately if not pro
+    if (!isPro) {
+      showFreeTrialPaywall();
+      return;
+    }
+    
     // Show loading screen and start search
     const displayName = `${formData.firstName} ${formData.lastName}`.trim();
     setLoadingSearchQuery(displayName);
     setShowLoadingScreen(true);
     searchMutation.mutate();
-  }, [formData.firstName, formData.lastName, searchMutation]);
+  }, [formData.firstName, formData.lastName, searchMutation, isPro, showFreeTrialPaywall]);
 
   const handleLoadingComplete = useCallback(() => {
     setShowLoadingScreen(false);
