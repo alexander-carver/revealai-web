@@ -229,12 +229,11 @@ export function PeopleSearch() {
   return (
     <>
       {/* ========================================
-          HERO SECTION
+          HERO SECTION - TEMPORARILY DISABLED
           ======================================== */}
-      <section className="relative min-h-[85vh] md:min-h-[80vh] flex items-center overflow-hidden">
-        {/* Background Images */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Mobile Background - First image (shocked woman) */}
+      {/* <section className="relative min-h-[85vh] md:min-h-[80vh] flex items-center overflow-hidden"> */}
+        {/* Background Images - COMMENTED OUT FOR NOW */}
+        {/* <div className="absolute inset-0 pointer-events-none">
           <div className="md:hidden absolute inset-0">
             <Image
               src="/New_Background_RevealAIMobile.png"
@@ -244,10 +243,8 @@ export function PeopleSearch() {
               priority
               quality={90}
             />
-            {/* Gradient overlay for readability */}
             <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-white/40" />
           </div>
-          {/* Desktop Background - Second image (people searching) */}
           <div className="hidden md:block absolute inset-0">
             <Image
               src="/New_Background_RevealAIWeb.png"
@@ -257,32 +254,27 @@ export function PeopleSearch() {
               priority
               quality={90}
             />
-            {/* Gradient overlay for readability */}
             <div className="absolute inset-0 bg-gradient-to-r from-white via-white/85 to-white/50" />
           </div>
-        </div>
+        </div> */}
 
-        {/* Hero Content */}
-        <div className="container mx-auto px-4 relative z-10">
+        {/* Hero Content - COMMENTED OUT FOR NOW */}
+        {/* <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-xl md:max-w-2xl mx-auto text-center py-8 md:py-0">
-            {/* Brand Line */}
             <p className="text-sm md:text-base font-medium text-gray-600 tracking-wide mb-3 md:mb-4">
               Reveal AI — People Search
             </p>
 
-            {/* Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-red-600 leading-tight mb-3 md:mb-4">
               Find Everything,
               <br />
               about Anyone
             </h1>
 
-            {/* Subline */}
             <p className="text-lg md:text-xl text-gray-700 font-medium mb-6 md:mb-8">
               Tinder • Bumble • Grindr + more
             </p>
 
-            {/* Feature Checklist */}
             <div className="space-y-3 md:space-y-4 mb-8 md:mb-10 max-w-xl mx-auto">
               <div className="flex items-start gap-3 text-left">
                 <div className="flex-shrink-0 w-6 h-6 rounded bg-red-500 flex items-center justify-center mt-0.5">
@@ -327,7 +319,6 @@ export function PeopleSearch() {
               </div>
             </div>
 
-            {/* CTA Button */}
             <div className="flex flex-col items-center gap-3">
               <button
                 onClick={scrollToSearch}
@@ -340,13 +331,13 @@ export function PeopleSearch() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* ========================================
           SEARCH SECTION
           ======================================== */}
-      <section id="search" className="py-12 md:py-16 bg-gray-50 scroll-mt-20">
-        <div className="container mx-auto px-4">
+      <section id="search" className="min-h-screen flex items-center justify-center py-12 md:py-16 bg-gray-50">
+        <div className="container mx-auto px-4 max-w-4xl">
           {/* Loading Screen Overlay */}
           <SearchLoadingScreen
             isVisible={showLoadingScreen}
@@ -739,9 +730,9 @@ export function PeopleSearch() {
       </section>
 
       {/* ========================================
-          MOBILE STICKY CTA
+          MOBILE STICKY CTA - TEMPORARILY DISABLED
           ======================================== */}
-      <div
+      {/* <div
         className={`md:hidden fixed bottom-0 left-0 right-0 z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg transition-transform duration-300 ${
           showMobileCTA ? "translate-y-0" : "translate-y-full"
         }`}
@@ -753,7 +744,7 @@ export function PeopleSearch() {
           <Search className="w-5 h-5" />
           Search Them
         </button>
-      </div>
+      </div> */}
     </>
   );
 }

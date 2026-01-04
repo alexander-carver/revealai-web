@@ -186,9 +186,9 @@ export default function RootLayout({
         <link rel="preload" href="/paywall-header.png" as="image" type="image/png" />
         {/* Preload paywall background image for instant display */}
         <link rel="preload" href="/paywall_image_reveal2.png" as="image" type="image/png" />
-        {/* Preload hero background images to prevent layout shift */}
-        <link rel="preload" href="/New_Background_RevealAIMobile.png" as="image" type="image/png" media="(max-width: 768px)" />
-        <link rel="preload" href="/New_Background_RevealAIWeb.png" as="image" type="image/png" media="(min-width: 769px)" />
+        {/* Preload hero background images to prevent layout shift - TEMPORARILY DISABLED */}
+        {/* <link rel="preload" href="/New_Background_RevealAIMobile.png" as="image" type="image/png" media="(max-width: 768px)" />
+        <link rel="preload" href="/New_Background_RevealAIWeb.png" as="image" type="image/png" media="(min-width: 769px)" /> */}
         {/* Favicon links for better browser and search engine support */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
