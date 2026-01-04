@@ -129,15 +129,19 @@ export async function POST(request: NextRequest) {
       ],
       // Use existing customer if found, otherwise let Stripe create one
       ...(customerId && { customer: customerId }),
-      // If no existing customer, pre-fill email
+      // If no existing customer, pre-fill email (or Stripe will collect it)
       ...(!customerId && customerEmail && { customer_email: customerEmail }),
       // Store userId if available for direct linking
       ...(userId && { client_reference_id: userId }),
+      // Always collect billing address (ensures email is collected)
+      billing_address_collection: "required",
       success_url: `${request.nextUrl.origin}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/?canceled=true`,
       metadata: {
         ...(userId && { userId }),
         plan,
+        // Store email in metadata as backup
+        ...(customerEmail && { email: customerEmail }),
       },
     };
 

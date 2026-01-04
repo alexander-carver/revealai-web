@@ -44,7 +44,20 @@ export async function POST(request: NextRequest) {
 
     // Get the user ID - either from parameter, metadata, client_reference_id, or look up by email
     let finalUserId = userId || session.metadata?.userId || session.client_reference_id;
-    let customerEmail = email || session.customer_email || session.metadata?.email;
+    
+    // Get customer email from multiple possible sources
+    let customerEmail = email || 
+                        session.customer_email || 
+                        session.customer_details?.email || 
+                        session.metadata?.email;
+    
+    console.log("Email sources:", {
+      fromParam: email,
+      customer_email: session.customer_email,
+      customer_details_email: session.customer_details?.email,
+      metadata_email: session.metadata?.email,
+      finalEmail: customerEmail
+    });
     
     // If we still don't have a userId, try to find or create the user by email
     if (!finalUserId && customerEmail) {
