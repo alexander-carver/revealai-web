@@ -354,7 +354,7 @@ export function PeopleSearch() {
                   <span>AI-Powered Search</span>
                 </div>
                 <CardTitle className="text-2xl md:text-3xl font-bold text-gray-900">
-                  Start a Search to Find Dirt on Anyone
+                  Search to Find Dirt on Anyone
                 </CardTitle>
               </div>
             </CardHeader>
