@@ -28,8 +28,8 @@ import { Card } from "@/components/ui/card";
 import { PeopleSearch } from "@/components/shared/people-search";
 import { FreeTrialPaywallModal } from "@/components/shared/free-trial-paywall-modal";
 import { ResultsPaywallModal } from "@/components/shared/results-paywall-modal";
-import { OnboardingFlow } from "@/components/shared/onboarding-flow";
-import { InitialLoadingScreen } from "@/components/shared/initial-loading-screen";
+// TEMPORARILY DISABLED: Onboarding flow
+// import { OnboardingFlow } from "@/components/shared/onboarding-flow";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/shared/logo";
 import { useAuth } from "@/hooks/use-auth";
@@ -119,11 +119,11 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 function HomeContent() {
   const { user } = useAuth();
-  const { isPro, refreshSubscription, showFreeTrialPaywall } = useSubscription();
+  const { isPro, refreshSubscription } = useSubscription();
   const searchParams = useSearchParams();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
-  const [showInitialLoading, setShowInitialLoading] = useState(true);
+  // TEMPORARILY DISABLED: Onboarding flow
+  // const [showOnboarding, setShowOnboarding] = useState(false);
+  // const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
   // Preload paywall images early so they're ready when needed
   useEffect(() => {
@@ -135,31 +135,22 @@ function HomeContent() {
     img2.src = '/paywall_image_reveal2.png';
   }, []);
 
-  // Show initial loading screen for 1 second
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowInitialLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
   // Track landing page view
   useEffect(() => {
-    if (!showOnboarding && !showInitialLoading) {
+    // TEMPORARILY DISABLED: Onboarding check
+    // if (!showOnboarding) {
       trackViewContent();
-    }
-  }, [showOnboarding, showInitialLoading]);
+    // }
+  }, []); // Removed showOnboarding dependency
 
-  // Check if user has completed onboarding
-  useEffect(() => {
-    if (!showInitialLoading) {
-      const hasCompletedOnboarding = localStorage.getItem("revealai_onboarding_completed");
-      if (!hasCompletedOnboarding && !isPro) {
-        setShowOnboarding(true);
-      }
-      setIsCheckingOnboarding(false);
-    }
-  }, [isPro, showInitialLoading]);
+  // TEMPORARILY DISABLED: Check if user has completed onboarding
+  // useEffect(() => {
+  //   const hasCompletedOnboarding = localStorage.getItem("revealai_onboarding_completed");
+  //   if (!hasCompletedOnboarding && !isPro) {
+  //     setShowOnboarding(true);
+  //   }
+  //   setIsCheckingOnboarding(false);
+  // }, [isPro]);
 
   // Refresh subscription when returning from checkout
   useEffect(() => {
@@ -172,34 +163,29 @@ function HomeContent() {
     }
   }, [searchParams, user, refreshSubscription]);
 
-  // Handle onboarding completion
-  const handleOnboardingComplete = useCallback(() => {
-    localStorage.setItem("revealai_onboarding_completed", "true");
-    setShowOnboarding(false);
-    // Show free trial paywall after onboarding
-    if (!isPro) {
-      showFreeTrialPaywall();
-    }
-  }, [isPro, showFreeTrialPaywall]);
+  // TEMPORARILY DISABLED: Handle onboarding completion
+  // const handleOnboardingComplete = useCallback(() => {
+  //   localStorage.setItem("revealai_onboarding_completed", "true");
+  //   setShowOnboarding(false);
+  //   // Show free trial paywall after onboarding
+  //   if (!isPro) {
+  //     showFreeTrialPaywall();
+  //   }
+  // }, [isPro, showFreeTrialPaywall]);
 
-  // Show initial loading screen
-  if (showInitialLoading) {
-    return <InitialLoadingScreen />;
-  }
+  // TEMPORARILY DISABLED: Show loading state while checking onboarding status
+  // if (isCheckingOnboarding) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-background">
+  //       <Loader2 className="w-8 h-8 animate-spin text-primary" />
+  //     </div>
+  //   );
+  // }
 
-  // Show loading state while checking onboarding status
-  if (isCheckingOnboarding) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Show onboarding flow for first-time users
-  if (showOnboarding) {
-    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
-  }
+  // TEMPORARILY DISABLED: Show onboarding flow for first-time users
+  // if (showOnboarding) {
+  //   return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  // }
 
   return (
     <>
@@ -286,7 +272,8 @@ function HomeContent() {
           }),
         }}
       />
-      <FreeTrialPaywallModal />
+      {/* TEMPORARILY DISABLED: Paywall modals - keeping for later */}
+      {/* <FreeTrialPaywallModal /> */}
       <ResultsPaywallModal />
       <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Header - Fixed on top */}
