@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
             // If we still don't have a user ID, return error
             if (!finalUserId) {
               return NextResponse.json(
-                { error: createError.message || "Failed to create account. Please contact support." },
+                { error: "Failed to create account. Please contact support." },
                 { status: 500 }
               );
             }
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
           
           if (!finalUserId) {
             return NextResponse.json(
-              { error: err.message || "Failed to create account. Please contact support." },
+              { error: "Failed to create account. Please contact support." },
               { status: 500 }
             );
           }
