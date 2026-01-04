@@ -269,7 +269,7 @@ export default function RemoveFromSearchPage() {
                     </p>
                   </div>
                   <Button
-                    onClick={showPaywall}
+                    onClick={showFreeTrialPaywall}
                     className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
                   >
                     <Crown className="w-4 h-4 mr-2" />
