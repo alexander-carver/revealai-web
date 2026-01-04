@@ -173,12 +173,12 @@ function Screen1({ onContinue }: { onContinue: () => void }) {
           <div className="w-2 h-2 rounded-full bg-gray-300" />
         </div>
 
-        {/* Continue Button */}
+        {/* Next Button */}
         <button
           onClick={onContinue}
           className="w-full py-3.5 sm:py-4 px-6 rounded-2xl flex items-center justify-center gap-2 font-semibold text-base sm:text-lg transition-all duration-300 bg-gray-900 text-white hover:bg-gray-800 border-2 border-blue-500 shadow-lg shadow-blue-500/50"
         >
-          Continue
+          Next
           <ArrowRight className="w-5 h-5" />
         </button>
       </div>
@@ -255,12 +255,12 @@ function Screen2({ onContinue }: { onContinue: () => void }) {
           <div className="w-2 h-2 rounded-full bg-gray-300" />
         </div>
 
-        {/* Continue Button */}
+        {/* Next Button */}
         <button
           onClick={onContinue}
           className="w-full py-3.5 sm:py-4 px-6 rounded-2xl flex items-center justify-center gap-2 font-semibold text-base sm:text-lg transition-all duration-300 bg-gray-900 text-white hover:bg-gray-800 border-2 border-blue-500 shadow-lg shadow-blue-500/50"
         >
-          Continue
+          Next
           <ArrowRight className="w-5 h-5" />
         </button>
       </div>
@@ -448,12 +448,12 @@ function Screen3({ onContinue }: { onContinue: () => void }) {
           <div className="w-2 h-2 rounded-full bg-gray-800" />
         </div>
 
-        {/* Continue Button */}
+        {/* Next Button */}
         <button
           onClick={onContinue}
           className="w-full py-3.5 sm:py-4 px-6 rounded-2xl flex items-center justify-center gap-2 font-semibold text-base sm:text-lg transition-all duration-300 bg-gray-900 text-white hover:bg-gray-800 border-2 border-blue-500 shadow-lg shadow-blue-500/50"
         >
-          Continue
+          Next
           <ArrowRight className="w-5 h-5" />
         </button>
       </div>
