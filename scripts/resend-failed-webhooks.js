@@ -38,8 +38,8 @@ async function getFailedEventIds() {
   let hasMore = true;
   let startingAfter = null;
   
-  // Get events from the last 30 days (to catch all failed events)
-  const thirtyDaysAgo = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+  // Get events from the last 60 days (to catch all failed events)
+  const sixtyDaysAgo = Math.floor((Date.now() - 60 * 24 * 60 * 60 * 1000) / 1000);
   
   const eventTypes = [
     'checkout.session.completed',
@@ -50,12 +50,12 @@ async function getFailedEventIds() {
   ];
   
   try {
-    console.log('   Fetching events from the last 30 days...\n');
+    console.log('   Fetching events from the last 60 days...\n');
     
     while (hasMore) {
       const params = {
         limit: 100,
-        created: { gte: thirtyDaysAgo },
+        created: { gte: sixtyDaysAgo },
         types: eventTypes
       };
       
@@ -83,7 +83,7 @@ async function getFailedEventIds() {
     throw error;
   }
   
-  console.log(`\n   Found ${eventIds.size} events in the last 30 days`);
+  console.log(`\n   Found ${eventIds.size} events in the last 60 days`);
   console.log('   ⚠️  Note: This includes all events, not just failed ones.');
   console.log('   The webhook uses upsert, so resending is safe (won\'t create duplicates).\n');
   
