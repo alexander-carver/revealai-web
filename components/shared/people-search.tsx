@@ -380,8 +380,8 @@ export function PeopleSearch() {
                 <TabsList className="w-full grid grid-cols-5 mb-6 h-auto p-1 bg-gray-100">
                   <TabsTrigger value="cheater" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">
                     <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
-                    <span className="hidden sm:inline">Dating Apps</span>
-                    <span className="sm:hidden">Apps</span>
+                    <span className="hidden sm:inline">Dating</span>
+                    <span className="sm:hidden">Dating</span>
                   </TabsTrigger>
                   <TabsTrigger value="name" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     <User className="w-4 h-4 md:w-5 md:h-5" />
