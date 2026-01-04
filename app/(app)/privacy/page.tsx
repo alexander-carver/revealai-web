@@ -37,7 +37,7 @@ const MOCK_EXPOSED = [
 ];
 
 export default function PrivacyPage() {
-  const { isPro, showPaywall } = useSubscription();
+  const { isPro, showFreeTrialPaywall } = useSubscription();
   const exposureData = calculateExposureScore(MOCK_EXPOSED);
   const { level, color } = getExposureLevel(
     exposureData.score,
@@ -97,13 +97,24 @@ export default function PrivacyPage() {
                 Your personal data is exposed in {MOCK_EXPOSED.length} categories.
                 Remove your information from data brokers to lower your score.
               </p>
-              <Link href="/privacy/scan">
-                <Button className="gap-2">
+              {isPro ? (
+                <Link href="/privacy/scan">
+                  <Button className="gap-2">
+                    <Eye className="w-4 h-4" />
+                    Run Full Privacy Scan
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              ) : (
+                <Button 
+                  className="gap-2"
+                  onClick={showFreeTrialPaywall}
+                >
                   <Eye className="w-4 h-4" />
                   Run Full Privacy Scan
                   <ArrowRight className="w-4 h-4" />
                 </Button>
-              </Link>
+              )}
             </div>
           </div>
         </CardContent>

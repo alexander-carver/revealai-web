@@ -23,7 +23,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 
 export default function RemoveFromSearchPage() {
   const { user } = useAuth();
-  const { isPro, showPaywall, tier } = useSubscription();
+  const { isPro, showFreeTrialPaywall, tier } = useSubscription();
   const [isOptedOut, setIsOptedOut] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -41,11 +41,13 @@ export default function RemoveFromSearchPage() {
   });
 
   const handleOptOut = () => {
+    // Show free trial paywall if not pro
     if (!isPro) {
-      showPaywall();
+      showFreeTrialPaywall();
       return;
     }
 
+    // Only require sign in if pro
     if (!user) {
       return;
     }
@@ -73,7 +75,7 @@ export default function RemoveFromSearchPage() {
         iconBgColor="bg-rose-500/10"
       />
 
-      {!user && (
+      {!user && isPro && (
         <Alert variant="warning" className="mb-6">
           <AlertCircle className="w-4 h-4" />
           You must be signed in to manage your search visibility.
@@ -130,7 +132,7 @@ export default function RemoveFromSearchPage() {
 
             <Button
               onClick={handleOptOut}
-              disabled={!user || optOutMutation.isPending}
+              disabled={(isPro && !user) || optOutMutation.isPending}
               variant={isOptedOut ? "outline" : "default"}
               className="gap-2"
             >
