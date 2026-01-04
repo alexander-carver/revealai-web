@@ -30,7 +30,7 @@ serve(async (req) => {
     let event: stripe.Stripe.Event;
 
     try {
-      event = stripeClient.webhooks.constructEvent(
+      event = await stripeClient.webhooks.constructEventAsync(
         body,
         signature,
         webhookSecret
