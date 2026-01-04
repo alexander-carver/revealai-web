@@ -186,7 +186,7 @@ export function PeopleSearch() {
         contactSearchMutation.mutate(query);
       }
     }
-  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation, isPro, showFreeTrialPaywall]);
+  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation, isPro]);
 
   const handleAISearch = useCallback(() => {
     if (!aiQuery.trim()) return;
@@ -203,7 +203,7 @@ export function PeopleSearch() {
     if (isPro) {
       aiSearchMutation.mutate(aiQuery);
     }
-  }, [aiQuery, aiSearchMutation, isPro, showFreeTrialPaywall]);
+  }, [aiQuery, aiSearchMutation, isPro]);
 
   const handleLoadingComplete = useCallback(() => {
     setShowLoadingScreen(false);
