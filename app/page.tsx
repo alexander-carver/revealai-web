@@ -36,6 +36,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import Image from "next/image";
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { trackViewContent } from "@/lib/analytics";
 
 const features = [
   {
@@ -131,6 +132,13 @@ function HomeContent() {
     const img2 = new window.Image();
     img2.src = '/paywall_image_reveal2.png';
   }, []);
+
+  // Track landing page view
+  useEffect(() => {
+    if (!showOnboarding) {
+      trackViewContent();
+    }
+  }, [showOnboarding]);
 
   // Check if user has completed onboarding
   useEffect(() => {

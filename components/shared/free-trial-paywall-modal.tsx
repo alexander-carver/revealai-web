@@ -5,6 +5,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
 
 // Benefits with styled text
 const benefits = [
@@ -33,8 +34,14 @@ export function FreeTrialPaywallModal() {
   if (!isFreeTrialPaywallVisible) return null;
 
   const handleStartFreeTrial = async () => {
+    // Track CTA click
+    trackCTAClick("Free Trial Paywall - Continue");
+    
     setIsLoading(true);
     try {
+      // Track initiate checkout
+      trackInitiateCheckout("free_trial");
+      
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: {

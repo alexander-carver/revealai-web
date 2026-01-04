@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Check, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/shared/logo";
+import { trackPurchase } from "@/lib/analytics";
 
 function CheckoutSuccessContent() {
   const router = useRouter();
@@ -80,11 +81,32 @@ function CheckoutSuccessContent() {
 
     // Allow processing even without user - we'll auto-create account
     hasVerified.current = true;
-    console.log("User is logged in, checking subscription for:", user.id);
+    console.log("User is logged in, checking subscription for:", user?.id);
 
     const verifyAndCreateSubscription = async () => {
-      // First, try to verify the session with Stripe and create subscription
-      // This will auto-create account if user doesn't exist
+      // First, verify the Stripe session and get payment details
+      try {
+        console.log("Fetching Stripe session details for purchase tracking...");
+        const sessionResponse = await fetch(`/api/stripe/session?session_id=${sessionId}`);
+        const sessionData = await sessionResponse.json();
+        
+        if (sessionData.success && sessionData.payment_status === 'paid') {
+          console.log("✅ Payment verified:", sessionData);
+          
+          // Track the purchase event with verified Stripe data
+          trackPurchase({
+            value: sessionData.value,
+            currency: sessionData.currency,
+            transaction_id: sessionData.transaction_id,
+            plan: sessionData.plan,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching session for analytics:", err);
+        // Continue with subscription creation even if tracking fails
+      }
+
+      // Now create/verify subscription in our database
       try {
         console.log("Verifying Stripe session and creating subscription...");
         const response = await fetch("/api/stripe/verify-session", {
@@ -241,6 +263,28 @@ function CheckoutSuccessContent() {
   const manualActivate = async () => {
     setIsProcessing(true);
     setError(null);
+    
+    // First, verify the Stripe session and track the purchase
+    try {
+      console.log("Fetching Stripe session details for purchase tracking...");
+      const sessionResponse = await fetch(`/api/stripe/session?session_id=${sessionId}`);
+      const sessionData = await sessionResponse.json();
+      
+      if (sessionData.success && sessionData.payment_status === 'paid') {
+        console.log("✅ Payment verified:", sessionData);
+        
+        // Track the purchase event with verified Stripe data
+        trackPurchase({
+          value: sessionData.value,
+          currency: sessionData.currency,
+          transaction_id: sessionData.transaction_id,
+          plan: sessionData.plan,
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching session for analytics:", err);
+      // Continue with activation even if tracking fails
+    }
     
     // Try to get current session - multiple methods
     let currentUser = null;
