@@ -13,6 +13,7 @@ import {
   Users,
   Eye
 } from "lucide-react";
+import { trackMostSearchedClick } from "@/lib/analytics";
 
 interface MostSearchedProps {
   onSelectProfile?: (profile: MockProfile) => void;
@@ -50,6 +51,9 @@ export function MostSearched({ onSelectProfile }: MostSearchedProps) {
             onMouseEnter={() => setHoveredId(profile.id)}
             onMouseLeave={() => setHoveredId(null)}
             onClick={(e) => {
+              // Track the click
+              trackMostSearchedClick(profile.name, profile.id);
+              
               if (onSelectProfile) {
                 e.preventDefault();
                 onSelectProfile(profile);
@@ -141,6 +145,9 @@ export function MostSearchedCompact({ onSelectProfile }: MostSearchedProps) {
             href={`/profile/${profile.id}`}
             className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
             onClick={(e) => {
+              // Track the click
+              trackMostSearchedClick(profile.name, profile.id);
+              
               if (onSelectProfile) {
                 e.preventDefault();
                 onSelectProfile(profile);

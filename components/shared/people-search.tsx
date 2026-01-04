@@ -41,6 +41,7 @@ import Link from "next/link";
 import { useSubscription } from "@/hooks/use-subscription";
 import Image from "next/image";
 import { MostSearched } from "./most-searched";
+import { trackSearchButtonClick } from "@/lib/analytics";
 
 // Convert markdown links to clickable HTML links
 function formatAIResponse(text: string): string {
@@ -160,39 +161,48 @@ export function PeopleSearch() {
       if (!formData.firstName.trim() || !formData.lastName.trim()) {
         return;
       }
-      // Show free trial paywall immediately if not pro
-      if (!isPro) {
-        showFreeTrialPaywall();
-        return;
-      }
+      
+      // Track search button click
+      trackSearchButtonClick('name');
+      
+      // Show loading screen first, then trigger paywall or search
       setLoadingSearchQuery(getSearchDisplayName());
       setShowLoadingScreen(true);
-      personSearchMutation.mutate(query);
+      
+      // Only run the actual search if user is pro
+      if (isPro) {
+        personSearchMutation.mutate(query);
+      }
     } else if (searchMode !== "cheater") {
-      // Show free trial paywall immediately if not pro
-      if (!isPro) {
-        showFreeTrialPaywall();
-        return;
-      }
+      // Track search button click
+      trackSearchButtonClick(searchMode);
+      
+      // Show loading screen first, then trigger paywall or search
       setLoadingSearchQuery(getSearchDisplayName());
       setShowLoadingScreen(true);
-      contactSearchMutation.mutate(query);
+      
+      // Only run the actual search if user is pro
+      if (isPro) {
+        contactSearchMutation.mutate(query);
+      }
     }
   }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation, isPro, showFreeTrialPaywall]);
 
   const handleAISearch = useCallback(() => {
     if (!aiQuery.trim()) return;
     
-    // Show free trial paywall immediately if not pro
-    if (!isPro) {
-      showFreeTrialPaywall();
-      return;
-    }
+    // Track search button click
+    trackSearchButtonClick('ai_dating_apps');
     
+    // Show loading screen first, then trigger paywall or search
     const displayQuery = aiQuery.split(" ").slice(0, 4).join(" ");
     setLoadingSearchQuery(displayQuery);
     setShowLoadingScreen(true);
-    aiSearchMutation.mutate(aiQuery);
+    
+    // Only run the actual search if user is pro
+    if (isPro) {
+      aiSearchMutation.mutate(aiQuery);
+    }
   }, [aiQuery, aiSearchMutation, isPro, showFreeTrialPaywall]);
 
   const handleLoadingComplete = useCallback(() => {

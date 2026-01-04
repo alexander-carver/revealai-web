@@ -127,3 +127,33 @@ export function initAnalytics() {
   }
 }
 
+// Track search button clicks on homepage
+export function trackSearchButtonClick(searchType: string) {
+  trackGA4('search_button_click', {
+    search_type: searchType,
+    event_category: 'search',
+    page_location: 'homepage',
+  });
+  
+  trackMetaPixel('Search', {
+    search_string: searchType,
+    content_category: 'people_search',
+  });
+}
+
+// Track Most Searched profile clicks
+export function trackMostSearchedClick(profileName: string, profileId: string) {
+  trackGA4('most_searched_click', {
+    profile_name: profileName,
+    profile_id: profileId,
+    event_category: 'engagement',
+    page_location: 'homepage',
+  });
+  
+  trackMetaPixel('ViewContent', {
+    content_name: profileName,
+    content_type: 'profile',
+    content_id: profileId,
+  });
+}
+
