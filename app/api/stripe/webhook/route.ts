@@ -8,14 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-if (!webhookSecret) {
-  throw new Error("STRIPE_WEBHOOK_SECRET environment variable is required");
-}
-
-// TypeScript type assertion - we've already checked it's not undefined above
-const webhookSecretString: string = webhookSecret;
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 
 // Disable body parsing for webhook
 export const runtime = "nodejs";
@@ -37,7 +30,7 @@ export async function POST(request: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecretString);
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     console.log("Webhook event verified:", event.type);
   } catch (err: any) {
     console.error("Webhook signature verification failed:", err.message);

@@ -19,8 +19,10 @@ function CheckoutSuccessContent() {
   const [user, setUser] = useState<any>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showManualActivation, setShowManualActivation] = useState(false);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasVerified = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check auth state directly from Supabase (don't rely on context after redirect)
   useEffect(() => {
@@ -29,7 +31,7 @@ function CheckoutSuccessContent() {
       
       // Try multiple times as session might take a moment to be available after redirect
       let attempts = 0;
-      const maxAttempts = 5;
+      const maxAttempts = 3; // Reduced from 5 to be faster
       
       const tryGetSession = async (): Promise<any> => {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -46,11 +48,11 @@ function CheckoutSuccessContent() {
         attempts++;
         if (attempts < maxAttempts) {
           console.log(`No session found, retrying... (${attempts}/${maxAttempts})`);
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 300));
           return tryGetSession();
         }
         
-        console.log("No session found after all attempts");
+        console.log("No session found after all attempts - will try guest activation");
         return null;
       };
       
@@ -61,6 +63,12 @@ function CheckoutSuccessContent() {
 
     checkAuth();
 
+    // Show manual activation button after 10 seconds if still processing
+    timeoutRef.current = setTimeout(() => {
+      console.log("⚠️ Activation taking too long, showing manual button");
+      setShowManualActivation(true);
+    }, 10000);
+
     // Also listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state changed in checkout-success:", event, session?.user?.email);
@@ -70,7 +78,12 @@ function CheckoutSuccessContent() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
   // Check subscription status and verify with Stripe
@@ -81,7 +94,7 @@ function CheckoutSuccessContent() {
 
     // Allow processing even without user - we'll auto-create account
     hasVerified.current = true;
-    console.log("User is logged in, checking subscription for:", user?.id);
+    console.log("Starting verification. User:", user?.id || "guest", "Email:", user?.email || "unknown");
 
     const verifyAndCreateSubscription = async () => {
       // First, verify the Stripe session and get payment details
@@ -125,7 +138,12 @@ function CheckoutSuccessContent() {
         console.log("Verify session result:", result);
 
         if (result.success) {
-          console.log("Subscription created successfully!");
+          console.log("✅ Subscription created successfully!");
+          
+          // Clear the timeout for manual activation
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+          }
           
           // If account was auto-created and we have an email, try to sign them in
           if (result.email && !user) {
@@ -137,28 +155,7 @@ function CheckoutSuccessContent() {
               console.log("Session already exists, user is signed in!");
               setUser(existingSession.user);
             } else {
-              // Use passwordless OTP sign-in (sends magic link email)
-              try {
-                const { error: otpError } = await supabase.auth.signInWithOtp({
-                  email: result.email,
-                  options: {
-                    shouldCreateUser: false, // User already created by API
-                    emailRedirectTo: `${window.location.origin}/checkout-success?session_id=${sessionId}`,
-                  },
-                });
-                
-                if (otpError) {
-                  console.error("Error sending OTP:", otpError);
-                  // Still proceed - subscription is active, they can sign in later
-                  console.log("Subscription active, user can sign in later");
-                } else {
-                  console.log("Magic link sent to email");
-                  // Don't show error, just proceed - they'll get email
-                }
-              } catch (signInErr: any) {
-                console.error("Error in auto-sign-in:", signInErr);
-                // Continue anyway - subscription is active
-              }
+              console.log("No existing session, will redirect to home for manual sign-in");
             }
           }
           
@@ -178,58 +175,66 @@ function CheckoutSuccessContent() {
         setError(err.message || "Failed to verify payment");
       }
 
-      // If verify-session didn't work, poll the database
-      let attempts = 0;
-      const maxAttempts = 10; // 20 seconds total
+      // If verify-session didn't work and we have a user, poll the database
+      if (user?.id) {
+        let attempts = 0;
+        const maxAttempts = 5; // 10 seconds total
 
-      const poll = async () => {
-        console.log(`Polling subscription... attempt ${attempts + 1}`);
-        
-        const { data, error: pollError } = await supabase
-          .from("subscriptions")
-          .select("tier, status, current_period_end")
-          .eq("user_id", user.id)
-          .eq("status", "active")
-          .maybeSingle();
+        const poll = async () => {
+          console.log(`Polling subscription... attempt ${attempts + 1}`);
+          
+          const { data, error: pollError } = await supabase
+            .from("subscriptions")
+            .select("tier, status, current_period_end")
+            .eq("user_id", user.id)
+            .eq("status", "active")
+            .maybeSingle();
 
-        if (pollError && pollError.code !== "PGRST116") {
-          console.error("Error checking subscription:", pollError);
-        }
+          if (pollError && pollError.code !== "PGRST116") {
+            console.error("Error checking subscription:", pollError);
+          }
 
-        console.log("Subscription check result:", data);
+          console.log("Subscription check result:", data);
 
-        if (data && data.status === "active") {
-          const periodEnd = new Date(data.current_period_end);
-          if (periodEnd > new Date()) {
-            console.log("Subscription is active!");
-            setSubscriptionActive(true);
+          if (data && data.status === "active") {
+            const periodEnd = new Date(data.current_period_end);
+            if (periodEnd > new Date()) {
+              console.log("✅ Subscription found in database!");
+              setSubscriptionActive(true);
+              setIsProcessing(false);
+              setError(null);
+              if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+              }
+              if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+              }
+              setTimeout(() => {
+                router.push("/?pro=true");
+              }, 1000);
+              return true;
+            }
+          }
+
+          attempts++;
+          if (attempts >= maxAttempts) {
+            console.log("⚠️ Max polling attempts reached");
             setIsProcessing(false);
-            setError(null);
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
             }
-            setTimeout(() => {
-              router.push("/?pro=true");
-            }, 1000);
-            return true;
           }
-        }
+          return false;
+        };
 
-        attempts++;
-        if (attempts >= maxAttempts) {
-          console.log("Max attempts reached, stopping poll");
-          setIsProcessing(false);
-          if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-          }
+        // Check immediately
+        const found = await poll();
+        if (!found) {
+          pollIntervalRef.current = setInterval(poll, 2000);
         }
-        return false;
-      };
-
-      // Check immediately
-      const found = await poll();
-      if (!found) {
-        pollIntervalRef.current = setInterval(poll, 2000);
+      } else {
+        console.log("No user ID, skipping database polling");
+        setIsProcessing(false);
       }
     };
 
@@ -242,9 +247,59 @@ function CheckoutSuccessContent() {
     };
   }, [sessionId, user, authChecked, router]);
 
+  // Manual activation function - defined before use
+  const handleManualActivation = async () => {
+    console.log("🔄 Manual activation triggered by user");
+    setIsProcessing(true);
+    setShowManualActivation(false);
+    hasVerified.current = false; // Reset to allow re-verification
+    
+    // Clear timeouts
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    if (!sessionId) return;
+    
+    try {
+      const response = await fetch("/api/stripe/verify-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId,
+          userId: user?.id || null,
+          email: user?.email || null,
+        }),
+      });
+
+      const result = await response.json();
+      console.log("Manual verification result:", result);
+
+      if (result.success) {
+        setSubscriptionActive(true);
+        setIsProcessing(false);
+        setError(null);
+        setTimeout(() => {
+          router.push("/?pro=true");
+        }, 1000);
+      } else {
+        setError(result.error || "Activation failed. Please contact support.");
+        setIsProcessing(false);
+        setShowManualActivation(true);
+      }
+    } catch (err: any) {
+      console.error("Manual activation error:", err);
+      setError("Activation failed. Please contact support.");
+      setIsProcessing(false);
+      setShowManualActivation(true);
+    }
+  };
+
   if (!authChecked || isProcessing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center">
             <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
@@ -252,6 +307,16 @@ function CheckoutSuccessContent() {
             <p className="text-muted-foreground">
               Please wait while we activate your Pro membership.
             </p>
+            {showManualActivation && (
+              <div className="mt-6">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Taking longer than expected?
+                </p>
+                <Button onClick={handleManualActivation} variant="outline">
+                  Activate Manually
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
