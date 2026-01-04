@@ -38,7 +38,11 @@ export async function GET(request: NextRequest) {
     // Get plan name from metadata or line item
     let planName = session.metadata?.plan || 'subscription';
     if (lineItem?.price?.product && typeof lineItem.price.product === 'object') {
-      planName = lineItem.price.product.name || planName;
+      // Check if it's a Product (not DeletedProduct) before accessing name
+      const product = lineItem.price.product;
+      if ('name' in product && product.name) {
+        planName = product.name;
+      }
     }
 
     return NextResponse.json({
