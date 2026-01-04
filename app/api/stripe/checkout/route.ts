@@ -98,6 +98,34 @@ export async function POST(request: NextRequest) {
       customerEmail = userData?.user?.email;
     }
 
+    // Try to find or create Stripe customer for saved payment methods
+    let customerId: string | undefined;
+    if (customerEmail) {
+      try {
+        // Search for existing customer by email
+        const existingCustomers = await stripe.customers.list({
+          email: customerEmail,
+          limit: 1,
+        });
+        
+        if (existingCustomers.data.length > 0) {
+          customerId = existingCustomers.data[0].id;
+        } else {
+          // Create new customer for saved payment methods
+          const customer = await stripe.customers.create({
+            email: customerEmail,
+            metadata: {
+              ...(userId && { userId }),
+            },
+          });
+          customerId = customer.id;
+        }
+      } catch (error) {
+        console.error("Error creating/finding customer:", error);
+        // Continue without customer - Stripe will create one during checkout
+      }
+    }
+
     // Create Stripe checkout session - works with or without signed in user
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
@@ -108,15 +136,30 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      // If we have an email, pre-fill it. Otherwise Stripe will collect it.
-      ...(customerEmail && { customer_email: customerEmail }),
+      // Use customer ID if available (enables saved payment methods)
+      ...(customerId && { customer: customerId }),
+      // If we have an email but no customer, pre-fill it
+      ...(!customerId && customerEmail && { customer_email: customerEmail }),
+      // Allow customers to save payment methods for future use
+      payment_method_options: {
+        card: {
+          setup_future_usage: "off_session", // Save card for future payments
+        },
+      },
       // Store userId if available for direct linking
       ...(userId && { client_reference_id: userId }),
       success_url: `${request.nextUrl.origin}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/?canceled=true`,
+      // Enable automatic tax calculation if needed
+      automatic_tax: {
+        enabled: false, // Set to true if you want Stripe to calculate tax
+      },
+      // Allow promotion codes
+      allow_promotion_codes: true,
       metadata: {
         ...(userId && { userId }),
         plan,
+        ...(customerEmail && { email: customerEmail }),
       },
     };
 
