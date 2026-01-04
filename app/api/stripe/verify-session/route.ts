@@ -133,7 +133,8 @@ export async function POST(request: NextRequest) {
 
     // Determine plan from metadata or default
     const plan = session.metadata?.plan || "yearly";
-    const tier = plan === "weekly" ? "weekly" : "yearly";
+    // free_trial uses weekly billing, so treat it as weekly tier
+    const tier = (plan === "weekly" || plan === "free_trial") ? "weekly" : "yearly";
 
     console.log("Creating subscription for user:", finalUserId, "tier:", tier);
 
