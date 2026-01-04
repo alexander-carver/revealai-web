@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       customerEmail = userData?.user?.email;
     }
 
-    // Try to find or create Stripe customer for saved payment methods
+    // Try to find or create Stripe customer for returning customers
     let customerId: string | undefined;
     if (customerEmail) {
       try {
@@ -110,19 +110,10 @@ export async function POST(request: NextRequest) {
         
         if (existingCustomers.data.length > 0) {
           customerId = existingCustomers.data[0].id;
-        } else {
-          // Create new customer for saved payment methods
-          const customer = await stripe.customers.create({
-            email: customerEmail,
-            metadata: {
-              ...(userId && { userId }),
-            },
-          });
-          customerId = customer.id;
         }
       } catch (error) {
-        console.error("Error creating/finding customer:", error);
-        // Continue without customer - Stripe will create one during checkout
+        console.error("Error finding customer:", error);
+        // Continue without customer
       }
     }
 
@@ -136,30 +127,17 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      // Use customer ID if available (enables saved payment methods)
+      // Use existing customer if found, otherwise let Stripe create one
       ...(customerId && { customer: customerId }),
-      // If we have an email but no customer, pre-fill it
+      // If no existing customer, pre-fill email
       ...(!customerId && customerEmail && { customer_email: customerEmail }),
-      // Allow customers to save payment methods for future use
-      payment_method_options: {
-        card: {
-          setup_future_usage: "off_session", // Save card for future payments
-        },
-      },
       // Store userId if available for direct linking
       ...(userId && { client_reference_id: userId }),
       success_url: `${request.nextUrl.origin}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/?canceled=true`,
-      // Enable automatic tax calculation if needed
-      automatic_tax: {
-        enabled: false, // Set to true if you want Stripe to calculate tax
-      },
-      // Allow promotion codes
-      allow_promotion_codes: true,
       metadata: {
         ...(userId && { userId }),
         plan,
-        ...(customerEmail && { email: customerEmail }),
       },
     };
 
