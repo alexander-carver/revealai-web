@@ -63,11 +63,13 @@ export async function POST(request: NextRequest) {
     if (!finalUserId && customerEmail) {
       console.log("Looking up user by email:", customerEmail);
       
-      // Use admin API to find user by email
+      // Use admin API to find user by email (case-insensitive search)
       const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
       
       if (!userError && userData?.users) {
-        const matchingUser = userData.users.find(u => u.email === customerEmail);
+        const matchingUser = userData.users.find(
+          u => u.email?.toLowerCase() === customerEmail.toLowerCase()
+        );
         if (matchingUser) {
           finalUserId = matchingUser.id;
           console.log("Found existing user by email:", finalUserId);
@@ -91,13 +93,31 @@ export async function POST(request: NextRequest) {
           
           if (createError) {
             console.error("Error creating user:", createError);
-            return NextResponse.json(
-              { error: "Failed to create account. Please contact support." },
-              { status: 500 }
-            );
-          }
-          
-          if (newUser?.user) {
+            
+            // If user already exists, try to find them again (race condition)
+            if (createError.message?.toLowerCase().includes('already exists') || 
+                createError.message?.toLowerCase().includes('already registered')) {
+              console.log("User already exists, searching again...");
+              const { data: retryUserData } = await supabase.auth.admin.listUsers();
+              if (retryUserData?.users) {
+                const existingUser = retryUserData.users.find(
+                  u => u.email?.toLowerCase() === customerEmail.toLowerCase()
+                );
+                if (existingUser) {
+                  finalUserId = existingUser.id;
+                  console.log("Found existing user after create error:", finalUserId);
+                }
+              }
+            }
+            
+            // If we still don't have a user ID, return error
+            if (!finalUserId) {
+              return NextResponse.json(
+                { error: createError.message || "Failed to create account. Please contact support." },
+                { status: 500 }
+              );
+            }
+          } else if (newUser?.user) {
             finalUserId = newUser.user.id;
             console.log("Created new user account automatically:", finalUserId);
           } else {
@@ -108,10 +128,29 @@ export async function POST(request: NextRequest) {
           }
         } catch (err: any) {
           console.error("Error in user creation:", err);
-          return NextResponse.json(
-            { error: "Failed to create account. Please contact support." },
-            { status: 500 }
-          );
+          
+          // If user already exists, try to find them
+          if (err.message?.toLowerCase().includes('already exists') || 
+              err.message?.toLowerCase().includes('already registered')) {
+            console.log("User already exists (exception), searching again...");
+            const { data: retryUserData } = await supabase.auth.admin.listUsers();
+            if (retryUserData?.users) {
+              const existingUser = retryUserData.users.find(
+                u => u.email?.toLowerCase() === customerEmail.toLowerCase()
+              );
+              if (existingUser) {
+                finalUserId = existingUser.id;
+                console.log("Found existing user after exception:", finalUserId);
+              }
+            }
+          }
+          
+          if (!finalUserId) {
+            return NextResponse.json(
+              { error: err.message || "Failed to create account. Please contact support." },
+              { status: 500 }
+            );
+          }
         }
       }
     }
