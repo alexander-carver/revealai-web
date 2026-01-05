@@ -3,8 +3,22 @@ import type { NextRequest } from "next/server";
 import { checkRateLimit, getClientIdentifier } from "@/lib/ratelimit";
 
 export async function middleware(request: NextRequest) {
-  // Only rate limit API routes and search-related endpoints
   const pathname = request.nextUrl.pathname;
+  const hostname = request.headers.get("host") || "";
+  
+  // Force redirect to main domain (revealai-peoplesearch.com)
+  // Skip for localhost/development
+  const isLocalhost = hostname.includes("localhost") || hostname.includes("127.0.0.1");
+  const isMainDomain = hostname === "revealai-peoplesearch.com" || hostname === "www.revealai-peoplesearch.com";
+  const isVercelDomain = hostname.includes("vercel.app");
+  
+  if (!isLocalhost && !isMainDomain && isVercelDomain) {
+    // Redirect Vercel domains to main domain
+    const url = request.nextUrl.clone();
+    url.host = "revealai-peoplesearch.com";
+    url.protocol = "https:";
+    return NextResponse.redirect(url, 301); // Permanent redirect
+  }
   
   // Rate limit API routes
   if (pathname.startsWith("/api/")) {
@@ -48,7 +62,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/api/:path*",
+    // Match all paths for domain redirect
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
 
