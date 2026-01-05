@@ -40,6 +40,26 @@ export function Navigation() {
 
   return (
     <>
+      {/* Desktop Top Header */}
+      <header className="hidden lg:flex fixed top-0 left-64 right-0 h-16 border-b border-border bg-card/80 backdrop-blur-xl z-30">
+        <div className="flex items-center justify-between h-full px-6">
+          <div className="flex-1" /> {/* Spacer */}
+          {user && (
+            <div className="flex items-center gap-3">
+              <div className="px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-xs font-mono text-foreground select-all cursor-text max-w-[300px] truncate" title={user.id}>
+                ID: {user.id}
+              </div>
+              {isPro && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
+                  <Crown className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs font-medium text-amber-500">Pro</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </header>
+
       {/* Desktop Navigation */}
       <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col border-r border-border bg-card/50 backdrop-blur-xl z-40">
         {/* Logo */}
@@ -98,11 +118,6 @@ export function Navigation() {
         <div className="p-4 border-t border-border">
           {user ? (
             <div className="space-y-2">
-              {/* User ID Display (for debugging) */}
-              <div className="px-2 py-1 rounded-lg bg-muted/50 text-[10px] font-mono text-muted-foreground select-all cursor-text break-all">
-                ID: {user.id}
-              </div>
-              
               <Link
                 href="/settings"
                 className={cn(
@@ -142,9 +157,12 @@ export function Navigation() {
           <div className="flex items-center gap-2">
             {/* User ID (mobile) */}
             {user && (
-              <div className="px-2 py-1 rounded bg-muted/50 text-[9px] font-mono text-muted-foreground select-all cursor-text max-w-[120px] truncate">
-                {user.id}
+              <div className="px-2 py-1 rounded bg-muted/50 border border-border text-[9px] font-mono text-foreground select-all cursor-text max-w-[140px] truncate" title={user.id}>
+                {user.id.substring(0, 8)}...
               </div>
+            )}
+            {user && isPro && (
+              <Crown className="w-4 h-4 text-amber-500" />
             )}
             <button
               onClick={() => setMobileMenuOpen(true)}
