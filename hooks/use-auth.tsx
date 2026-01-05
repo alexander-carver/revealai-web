@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       // Try to find existing user with this device email
-      const { data: existingSession } = await supabase.auth.getSession();
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
       if (existingSession?.user?.email === deviceEmail) {
         return existingSession.user.id;
       }
