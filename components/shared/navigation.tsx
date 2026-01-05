@@ -98,6 +98,11 @@ export function Navigation() {
         <div className="p-4 border-t border-border">
           {user ? (
             <div className="space-y-2">
+              {/* User ID Display (for debugging) */}
+              <div className="px-2 py-1 rounded-lg bg-muted/50 text-[10px] font-mono text-muted-foreground select-all cursor-text break-all">
+                ID: {user.id}
+              </div>
+              
               <Link
                 href="/settings"
                 className={cn(
@@ -134,12 +139,20 @@ export function Navigation() {
           <Link href="/">
             <Logo size="sm" />
           </Link>
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="p-2 rounded-lg hover:bg-muted transition-colors"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* User ID (mobile) */}
+            {user && (
+              <div className="px-2 py-1 rounded bg-muted/50 text-[9px] font-mono text-muted-foreground select-all cursor-text max-w-[120px] truncate">
+                {user.id}
+              </div>
+            )}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 rounded-lg hover:bg-muted transition-colors"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
         </div>
       </header>
 
