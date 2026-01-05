@@ -239,3 +239,13 @@
   animation: fade-in 0.5s ease-out forwards;
 }
 
+/* Horizontal scroll animation for features slider */
+@keyframes scroll-horizontal {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
