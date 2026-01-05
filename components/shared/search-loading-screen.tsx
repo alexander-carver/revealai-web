@@ -240,6 +240,8 @@ export function SearchLoadingScreen({
                 width={42}
                 height={42}
                 className="w-full h-full object-cover blur-[3px]"
+                loading="lazy"
+                quality={75}
               />
             </div>
           );
@@ -262,6 +264,8 @@ export function SearchLoadingScreen({
                   width={120}
                   height={120}
                   className="w-full h-full object-cover blur-[8px] scale-110"
+                  loading="lazy"
+                  quality={75}
                 />
               </div>
             ))}
@@ -348,6 +352,8 @@ export function SearchLoadingScreen({
               width={16}
               height={16}
               className="w-[12px] h-[12px] md:w-[16px] md:h-[16px] object-contain"
+              loading="lazy"
+              quality={75}
             />
           </div>
         ))}

@@ -25,7 +25,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
+import dynamic from "next/dynamic";
+
+// Lazy load SearchLoadingScreen to reduce initial bundle size
+const SearchLoadingScreen = dynamic(
+  () => import("@/components/shared/search-loading-screen").then((mod) => ({ default: mod.SearchLoadingScreen })),
+  { ssr: false }
+);
 import {
   searchPersonCandidates,
   lookupContactMatches,

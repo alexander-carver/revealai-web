@@ -66,6 +66,13 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Prevent double-tap zoom on mobile */
+    touch-action: manipulation;
+  }
+  /* Prevent text selection zoom on iOS */
+  input, textarea, select, button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
