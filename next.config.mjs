@@ -14,15 +14,34 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
-  // Add headers to prevent aggressive caching
+  // Add headers to prevent aggressive caching and force fresh loads
   async headers() {
     return [
       {
+        // Force no-cache for HTML pages
         source: '/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=0, must-revalidate',
+            value: 'public, max-age=0, must-revalidate, proxy-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
+          },
+        ],
+      },
+      // Allow caching of static assets (Next.js handles versioning)
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },
