@@ -14,6 +14,20 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  // Add headers to prevent aggressive caching
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
+    ];
+  },
   webpack: (config) => {
     // Ignore Supabase Edge Functions (Deno files)
     config.resolve.alias = {
