@@ -111,6 +111,14 @@ export function trackPurchase({
     currency,
     content_name: `Reveal AI ${plan}`,
     content_type: 'product',
+    content_ids: [transaction_id], // Helps Facebook match events better
+    contents: [{
+      id: transaction_id,
+      quantity: 1,
+      item_price: value,
+    }],
+    num_items: 1, // Standard Facebook parameter
+    content_category: 'subscription', // Helps with ad optimization
   });
   
   if (isDev) {
