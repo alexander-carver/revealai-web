@@ -113,7 +113,22 @@ export default function CancelSubscriptionPage() {
     }
   };
 
-  const progress = ((currentQuestion + 1) / CANCELLATION_QUESTIONS.length) * 100;
+  // Progressive percentage: Q1=1%, Q2=2%, Q3=3%, Q4=4%, Q5=5%, then Q6-Q10 add 19% each (24%, 43%, 62%, 81%, 100%)
+  const getProgress = () => {
+    if (currentQuestion === 0) return 1;
+    if (currentQuestion === 1) return 2;
+    if (currentQuestion === 2) return 3;
+    if (currentQuestion === 3) return 4;
+    if (currentQuestion === 4) return 5;
+    if (currentQuestion === 5) return 24;
+    if (currentQuestion === 6) return 43;
+    if (currentQuestion === 7) return 62;
+    if (currentQuestion === 8) return 81;
+    if (currentQuestion === 9) return 100;
+    return 0;
+  };
+
+  const progress = getProgress();
   const allQuestionsAnswered = answers.every((a) => a.length >= MIN_CHARACTERS);
 
   return (
@@ -137,12 +152,9 @@ export default function CancelSubscriptionPage() {
         <CardContent className="p-6">
           {/* Progress Bar */}
           <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex justify-end items-center mb-2">
               <span className="text-sm font-medium text-muted-foreground">
-                Question {currentQuestion + 1} of {CANCELLATION_QUESTIONS.length}
-              </span>
-              <span className="text-sm font-medium text-muted-foreground">
-                {Math.round(progress)}%
+                {progress}%
               </span>
             </div>
             <div className="w-full bg-muted rounded-full h-2">
@@ -232,35 +244,6 @@ export default function CancelSubscriptionPage() {
             </div>
           </div>
 
-          {/* Question List Preview */}
-          <div className="mt-8 pt-6 border-t">
-            <p className="text-sm font-medium text-muted-foreground mb-3">
-              Question Progress:
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              {CANCELLATION_QUESTIONS.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setCurrentQuestion(index);
-                    setError(null);
-                  }}
-                  className={`p-2 rounded text-xs font-medium transition-colors ${
-                    index === currentQuestion
-                      ? "bg-primary text-primary-foreground"
-                      : answers[index].length >= MIN_CHARACTERS
-                      ? "bg-green-100 text-green-700 hover:bg-green-200"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  Q{index + 1}
-                  {answers[index].length >= MIN_CHARACTERS && (
-                    <Check className="inline w-3 h-3 ml-1" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

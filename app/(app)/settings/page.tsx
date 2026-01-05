@@ -191,20 +191,6 @@ function SettingsContent() {
               </Button>
             </div>
 
-            <Link href="/privacy/remove">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer group">
-                <div className="flex items-center gap-3">
-                  <Shield className="w-5 h-5" />
-                  <div>
-                    <p className="font-medium">Privacy Settings</p>
-                    <p className="text-sm text-muted-foreground">
-                      Manage your search visibility
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-              </div>
-            </Link>
           </CardContent>
         </Card>
 
@@ -247,21 +233,14 @@ function SettingsContent() {
           </CardHeader>
           <CardContent className="space-y-4">
             {isPro ? (
-              <div className="space-y-3">
-                <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Crown className="w-5 h-5 text-amber-500" />
-                    <span className="font-semibold text-amber-500">Pro Member</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    You're on the {tier === "weekly" ? "Weekly" : "Yearly"} plan
-                  </p>
+              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Crown className="w-5 h-5 text-amber-500" />
+                  <span className="font-semibold text-amber-500">Pro Member</span>
                 </div>
-                <Link href="/settings/cancel">
-                  <Button variant="outline" className="w-full">
-                    Cancel Subscription
-                  </Button>
-                </Link>
+                <p className="text-sm text-muted-foreground">
+                  You're on the {tier === "weekly" ? "Weekly" : "Yearly"} plan
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
