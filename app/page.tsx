@@ -284,7 +284,7 @@ function HomeContent() {
           </Link>
           {user && (
             <div className="absolute right-4 flex items-center gap-4">
-              <Link href="/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors">
+              <Link href="/search" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="w-4 h-4 text-primary" />
                 </div>
@@ -294,9 +294,6 @@ function HomeContent() {
                 {isPro && (
                   <Crown className="w-4 h-4 text-amber-500" />
                 )}
-              </Link>
-              <Link href="/search">
-                <Button size="sm">Go to App</Button>
               </Link>
             </div>
           )}

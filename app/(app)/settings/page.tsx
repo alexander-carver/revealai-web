@@ -260,41 +260,6 @@ function SettingsContent() {
                 </Button>
               </div>
             )}
-            
-            {/* Test Payment Button - For testing real payments */}
-            <div className="pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground mb-2">
-                Test Payment {process.env.NEXT_PUBLIC_STRIPE_TEST_PRODUCT_ID ? "($0.01/month)" : "(uses Weekly plan)"}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={async () => {
-                  try {
-                    const response = await fetch("/api/stripe/checkout", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        plan: "test", // Uses STRIPE_TEST_PRODUCT_ID or falls back to weekly
-                        userId: user?.id,
-                        email: user?.email,
-                      }),
-                    });
-                    const data = await response.json();
-                    if (data.url) {
-                      window.location.href = data.url;
-                    } else {
-                      alert(data.error || "Failed to create checkout");
-                    }
-                  } catch (error: any) {
-                    alert(error.message || "Failed to start checkout");
-                  }
-                }}
-              >
-                Test Payment
-              </Button>
-            </div>
           </CardContent>
         </Card>
 

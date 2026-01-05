@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/shared/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const navItems = [
   { href: "/search", label: "People Search", icon: Search },
@@ -32,6 +32,116 @@ const navItems = [
   { href: "/unclaimed", label: "Unclaimed $", icon: DollarSign, badge: "try" },
 ];
 
+// Desktop Header Component (hides on scroll)
+function DesktopHeader({ user, isPro }: { user: any; isPro: boolean }) {
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show header when scrolling up, hide when scrolling down
+      if (currentScrollY < lastScrollY || currentScrollY < 10) {
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setIsVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
+  return (
+    <header 
+      className={`hidden lg:flex fixed top-0 left-64 right-0 h-16 border-b border-border bg-card/80 backdrop-blur-xl z-30 transition-transform duration-300 ${
+        isVisible ? "translate-y-0" : "-translate-y-full"
+      }`}
+    >
+      <div className="flex items-center justify-between h-full px-6">
+        <div className="flex-1" /> {/* Spacer */}
+        {user && (
+          <div className="flex items-center gap-3">
+            <div 
+              className="px-2 py-1 rounded bg-muted/50 border border-border text-[10px] font-mono text-foreground select-all cursor-text" 
+              title={user.id}
+            >
+              {user.id.substring(0, 8)}...
+            </div>
+            {isPro && (
+              <div className="flex items-center gap-2 px-2 py-1 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
+                <Crown className="w-3 h-3 text-amber-500" />
+                <span className="text-[10px] font-medium text-amber-500">Pro</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
+
+// Mobile Header Component (hides on scroll)
+function MobileHeader({ user, isPro, onMenuClick }: { user: any; isPro: boolean; onMenuClick: () => void }) {
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show header when scrolling up, hide when scrolling down
+      if (currentScrollY < lastScrollY || currentScrollY < 10) {
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setIsVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
+  return (
+    <header 
+      className={`lg:hidden fixed top-0 left-0 right-0 h-16 border-b border-border bg-card/80 backdrop-blur-xl z-40 transition-transform duration-300 ${
+        isVisible ? "translate-y-0" : "-translate-y-full"
+      }`}
+    >
+      <div className="flex items-center justify-between h-full px-4">
+        <Link href="/">
+          <Logo size="sm" />
+        </Link>
+        <div className="flex items-center gap-2">
+          {/* User ID (mobile) */}
+          {user && (
+            <div 
+              className="px-2 py-1 rounded bg-muted/50 border border-border text-[9px] font-mono text-foreground select-all cursor-text max-w-[100px] truncate" 
+              title={user.id}
+            >
+              {user.id.substring(0, 8)}...
+            </div>
+          )}
+          {user && isPro && (
+            <Crown className="w-4 h-4 text-amber-500" />
+          )}
+          <button
+            onClick={onMenuClick}
+            className="p-2 rounded-lg hover:bg-muted transition-colors"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 export function Navigation() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
@@ -40,25 +150,8 @@ export function Navigation() {
 
   return (
     <>
-      {/* Desktop Top Header */}
-      <header className="hidden lg:flex fixed top-0 left-64 right-0 h-16 border-b border-border bg-card/80 backdrop-blur-xl z-30">
-        <div className="flex items-center justify-between h-full px-6">
-          <div className="flex-1" /> {/* Spacer */}
-          {user && (
-            <div className="flex items-center gap-3">
-              <div className="px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-xs font-mono text-foreground select-all cursor-text max-w-[300px] truncate" title={user.id}>
-                ID: {user.id}
-              </div>
-              {isPro && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
-                  <Crown className="w-4 h-4 text-amber-500" />
-                  <span className="text-xs font-medium text-amber-500">Pro</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </header>
+      {/* Desktop Top Header - Hide on scroll */}
+      <DesktopHeader user={user} isPro={isPro} />
 
       {/* Desktop Navigation */}
       <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col border-r border-border bg-card/50 backdrop-blur-xl z-40">
@@ -148,31 +241,8 @@ export function Navigation() {
         </div>
       </nav>
 
-      {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b border-border bg-card/80 backdrop-blur-xl z-40">
-        <div className="flex items-center justify-between h-full px-4">
-          <Link href="/">
-            <Logo size="sm" />
-          </Link>
-          <div className="flex items-center gap-2">
-            {/* User ID (mobile) */}
-            {user && (
-              <div className="px-2 py-1 rounded bg-muted/50 border border-border text-[9px] font-mono text-foreground select-all cursor-text max-w-[140px] truncate" title={user.id}>
-                {user.id.substring(0, 8)}...
-              </div>
-            )}
-            {user && isPro && (
-              <Crown className="w-4 h-4 text-amber-500" />
-            )}
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="p-2 rounded-lg hover:bg-muted transition-colors"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Mobile Header - Hide on scroll */}
+      <MobileHeader user={user} isPro={isPro} onMenuClick={() => setMobileMenuOpen(true)} />
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
@@ -247,31 +317,37 @@ export function Navigation() {
         </div>
       )}
 
-      {/* Mobile Bottom Tab Bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-border bg-card/80 backdrop-blur-xl z-40">
-        <div className="flex items-center justify-around h-full">
-          {navItems.slice(0, 5).map((item) => {
+      {/* Mobile Bottom Tab Bar - Show all 6 nav items */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 border-t border-border bg-card/80 backdrop-blur-xl z-40">
+        <div className="flex items-center justify-between h-full px-1">
+          {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors relative",
+                  "flex flex-col items-center justify-center gap-0.5 flex-1 py-2 rounded-lg transition-colors relative",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 <div className="relative">
-                  <item.icon className="w-5 h-5" />
+                  <item.icon className="w-4 h-4" />
                   {item.badge && (
                     <Badge
-                      className={`absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold px-1 py-0 rounded-full h-3 min-w-[12px] flex items-center justify-center`}
+                      className={`absolute -top-1 -right-1 bg-red-500 text-white text-[7px] font-bold px-0.5 py-0 rounded-full h-2.5 min-w-[10px] flex items-center justify-center`}
                     >
                       {item.badge}
                     </Badge>
                   )}
                 </div>
-                <span className="text-[10px] font-medium">{item.label.split(" ")[0]}</span>
+                <span className="text-[8px] font-medium leading-tight text-center px-0.5">
+                  {item.label === "Remove YOUR sensitive Info" 
+                    ? "Remove" 
+                    : item.label === "Unclaimed $"
+                    ? "Unclaimed"
+                    : item.label.split(" ")[0]}
+                </span>
               </Link>
             );
           })}
