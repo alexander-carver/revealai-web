@@ -22,20 +22,15 @@ const CANCELLATION_QUESTIONS = [
   "What features or improvements would have made you want to keep your subscription?",
   "How did you primarily use RevealAI during your subscription?",
   "What alternatives are you considering instead of RevealAI?",
-  "On a scale of 1-10, how satisfied were you with the search results quality? Please explain your rating.",
-  "Did you encounter any technical issues or bugs that affected your experience? If so, please describe them.",
-  "What price point would make RevealAI more appealing to you?",
-  "How did you first hear about RevealAI, and did it meet your initial expectations?",
-  "Would you consider resubscribing in the future if certain changes were made? What would those changes need to be?",
   "Is there anything else you'd like to share about your experience with RevealAI?",
 ];
 
-const MIN_CHARACTERS = 250;
+const MIN_CHARACTERS = 25;
 
 export default function CancelSubscriptionPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [answers, setAnswers] = useState<string[]>(Array(10).fill(""));
+  const [answers, setAnswers] = useState<string[]>(Array(5).fill(""));
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +67,7 @@ export default function CancelSubscriptionPage() {
     // Validate all answers
     const allValid = answers.every((answer) => answer.length >= MIN_CHARACTERS);
     if (!allValid) {
-      setError("Please complete all questions with at least 250 characters each.");
+      setError(`Please complete all questions with at least ${MIN_CHARACTERS} characters each.`);
       setCurrentQuestion(answers.findIndex((a) => a.length < MIN_CHARACTERS));
       return;
     }
@@ -113,18 +108,13 @@ export default function CancelSubscriptionPage() {
     }
   };
 
-  // Progressive percentage: Q1=1%, Q2=2%, Q3=3%, Q4=4%, Q5=5%, then Q6-Q10 add 19% each (24%, 43%, 62%, 81%, 100%)
+  // Progressive percentage: Q1=1%, Q2=2%, Q3=3%, then Q4=50%, Q5=100%
   const getProgress = () => {
     if (currentQuestion === 0) return 1;
     if (currentQuestion === 1) return 2;
     if (currentQuestion === 2) return 3;
-    if (currentQuestion === 3) return 4;
-    if (currentQuestion === 4) return 5;
-    if (currentQuestion === 5) return 24;
-    if (currentQuestion === 6) return 43;
-    if (currentQuestion === 7) return 62;
-    if (currentQuestion === 8) return 81;
-    if (currentQuestion === 9) return 100;
+    if (currentQuestion === 3) return 50;
+    if (currentQuestion === 4) return 100;
     return 0;
   };
 

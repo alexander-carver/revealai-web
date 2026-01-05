@@ -20,15 +20,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!questionnaire || !Array.isArray(questionnaire) || questionnaire.length !== 10) {
+    if (!questionnaire || !Array.isArray(questionnaire) || questionnaire.length !== 5) {
       return NextResponse.json(
-        { error: "Questionnaire must contain 10 questions and answers" },
+        { error: "Questionnaire must contain 5 questions and answers" },
         { status: 400 }
       );
     }
 
     // Validate all answers meet minimum character requirement
-    const MIN_CHARACTERS = 250;
+    const MIN_CHARACTERS = 25;
     for (const item of questionnaire) {
       if (!item.answer || item.answer.length < MIN_CHARACTERS) {
         return NextResponse.json(
