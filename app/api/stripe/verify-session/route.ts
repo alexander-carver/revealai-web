@@ -42,8 +42,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the user ID - either from parameter, metadata, client_reference_id, or look up by email
+    // Get the user ID - either from parameter, metadata, client_reference_id, or look up by device ID or email
     let finalUserId = userId || session.metadata?.userId || session.client_reference_id;
+    const deviceId = session.metadata?.deviceId;
     
     // Get customer email from multiple possible sources
     let customerEmail = email || 
@@ -59,7 +60,77 @@ export async function POST(request: NextRequest) {
       finalEmail: customerEmail
     });
     
-    // If we still don't have a userId, try to find or create the user by email
+    // If we still don't have a userId, try to find or create the user by device ID first (like mobile apps)
+    // Device ID creates a consistent user per device, not per email
+    if (!finalUserId && deviceId) {
+      console.log("Looking up user by device ID:", deviceId);
+      
+      // Create device-based email format (consistent per device)
+      const deviceEmail = `device_${deviceId}@revealai.device`;
+      
+      // Use admin API to find user by device email
+      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+      
+      if (!userError && userData?.users) {
+        const matchingUser = userData.users.find(
+          u => u.email?.toLowerCase() === deviceEmail.toLowerCase()
+        );
+        if (matchingUser) {
+          finalUserId = matchingUser.id;
+          console.log("Found existing user by device ID:", finalUserId);
+          customerEmail = customerEmail || deviceEmail; // Use device email if no customer email
+        }
+      }
+      
+      // If no user found, create one with device ID
+      if (!finalUserId) {
+        console.log("No user found, creating device-based user for:", deviceId);
+        
+        try {
+          const randomPassword = randomBytes(32).toString('hex');
+          
+          const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+            email: deviceEmail,
+            password: randomPassword,
+            email_confirm: true,
+            user_metadata: {
+              device_id: deviceId,
+              is_device_user: true,
+            },
+          });
+          
+          if (createError) {
+            // If user already exists, try to find them again
+            if (createError.message?.toLowerCase().includes('already exists') || 
+                createError.message?.toLowerCase().includes('already registered')) {
+              console.log("User already exists, searching again...");
+              const { data: retryUserData } = await supabase.auth.admin.listUsers();
+              if (retryUserData?.users) {
+                const existingUser = retryUserData.users.find(
+                  u => u.email?.toLowerCase() === deviceEmail.toLowerCase()
+                );
+                if (existingUser) {
+                  finalUserId = existingUser.id;
+                  console.log("Found existing device user after create error:", finalUserId);
+                }
+              }
+            }
+            
+            if (!finalUserId) {
+              console.error("Error creating device user:", createError);
+            }
+          } else if (newUser?.user) {
+            finalUserId = newUser.user.id;
+            console.log("Created device-based user:", finalUserId);
+            customerEmail = customerEmail || deviceEmail;
+          }
+        } catch (err: any) {
+          console.error("Error creating device user:", err);
+        }
+      }
+    }
+    
+    // If we still don't have a userId, try to find or create the user by email (fallback)
     if (!finalUserId && customerEmail) {
       console.log("Looking up user by email:", customerEmail);
       

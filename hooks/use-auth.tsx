@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { getDeviceId } from "@/lib/device-id";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   signInWithOAuth: (provider: "google" | "apple") => Promise<void>;
+  getDeviceUserId: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +29,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Get or create a device-based user ID for subscriptions
+  // This creates a persistent user tied to the device, not an email
+  const getDeviceUserId = useCallback(async (): Promise<string | null> => {
+    // If user is already logged in, use their ID
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      return session.user.id;
+    }
+
+    // Get device ID
+    const deviceId = getDeviceId();
+    const deviceEmail = `device_${deviceId}@revealai.device`;
+
+    try {
+      // Try to find existing user with this device email
+      const { data: existingSession } = await supabase.auth.getSession();
+      if (existingSession?.user?.email === deviceEmail) {
+        return existingSession.user.id;
+      }
+
+      // Try to sign in with device email (will fail if doesn't exist, that's ok)
+      const { data: signInData } = await supabase.auth.signInWithPassword({
+        email: deviceEmail,
+        password: deviceId, // Use device ID as password
+      });
+
+      if (signInData?.user?.id) {
+        return signInData.user.id;
+      }
+    } catch (error) {
+      // User doesn't exist yet, that's ok
+    }
+
+    // Create new device-based user
+    try {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: deviceEmail,
+        password: deviceId,
+        options: {
+          data: {
+            device_id: deviceId,
+            is_device_user: true,
+          },
+          emailRedirectTo: undefined, // Don't send email
+        },
+      });
+
+      if (signUpError) {
+        // If user already exists, try sign in again
+        if (signUpError.message.includes('already registered')) {
+          const { data: retrySignIn } = await supabase.auth.signInWithPassword({
+            email: deviceEmail,
+            password: deviceId,
+          });
+          if (retrySignIn?.user?.id) {
+            return retrySignIn.user.id;
+          }
+        }
+        console.error("Error creating device user:", signUpError);
+        return null;
+      }
+
+      if (signUpData?.user?.id) {
+        console.log("✅ Created device-based user:", signUpData.user.id);
+        return signUpData.user.id;
+      }
+    } catch (error) {
+      console.error("Error in getDeviceUserId:", error);
+    }
+
+    return null;
+  }, []);
 
   useEffect(() => {
     // Get initial session
@@ -85,7 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider
+      <AuthContext.Provider
       value={{
         user,
         session,
@@ -94,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         signInWithOAuth,
+        getDeviceUserId,
       }}
     >
       {children}

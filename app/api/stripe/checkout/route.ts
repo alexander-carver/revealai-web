@@ -11,7 +11,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
-    const { plan, userId, email } = await request.json();
+    const { plan, userId, email, deviceId } = await request.json();
 
     if (!plan) {
       return NextResponse.json(
@@ -142,6 +142,8 @@ export async function POST(request: NextRequest) {
         plan,
         // Store email in metadata as backup
         ...(customerEmail && { email: customerEmail }),
+        // Store device ID for consistent user creation (like mobile apps)
+        ...(deviceId && { deviceId }),
       },
     };
 
