@@ -2,7 +2,6 @@
   "name": "Reveal AI - People Search",
   "short_name": "Reveal AI",
   "description": "AI-powered people search, safety lookup, and privacy toolkit",
-  "version": "2.0.0",
   "icons": [
     {
       "src": "/favicon-32x32.png",
@@ -23,7 +22,7 @@
   "theme_color": "#dc2626",
   "background_color": "#ffffff",
   "display": "standalone",
-  "start_url": "/?v=2",
+  "start_url": "/",
   "scope": "/"
 }
 

@@ -195,9 +195,7 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
         <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/site.webmanifest?v=2" />
-        {/* Version meta tag to force cache refresh */}
-        <meta name="app-version" content="2.0.0" />
+        <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}
