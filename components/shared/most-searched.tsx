@@ -14,6 +14,7 @@ import {
   Eye
 } from "lucide-react";
 import { trackMostSearchedClick } from "@/lib/analytics";
+import { FeaturesSlider } from "./features-slider";
 
 interface MostSearchedProps {
   onSelectProfile?: (profile: MockProfile) => void;
@@ -115,16 +116,8 @@ export function MostSearched({ onSelectProfile }: MostSearchedProps) {
         ))}
       </div>
 
-      {/* View All Link */}
-      <div className="mt-6 text-center">
-        <Link 
-          href="/search"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
-        >
-          <span>Search for anyone</span>
-          <ChevronRight className="w-4 h-4" />
-        </Link>
-      </div>
+      {/* Features Slider */}
+      <FeaturesSlider />
     </section>
   );
 }
