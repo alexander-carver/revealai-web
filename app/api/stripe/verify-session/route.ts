@@ -242,12 +242,24 @@ export async function POST(request: NextRequest) {
       if (typeof session.subscription === 'string') {
         subscriptionId = session.subscription;
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+        const periodEnd = (subscription as any).current_period_end;
+        if (periodEnd) {
+          currentPeriodEnd = new Date(periodEnd * 1000);
+        } else {
+          // Fallback if no period_end
+          currentPeriodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+        }
       } else {
         // Subscription is already expanded
         const expandedSub = session.subscription as Stripe.Subscription;
         subscriptionId = expandedSub.id;
-        currentPeriodEnd = new Date((expandedSub as any).current_period_end * 1000);
+        const periodEnd = (expandedSub as any).current_period_end;
+        if (periodEnd) {
+          currentPeriodEnd = new Date(periodEnd * 1000);
+        } else {
+          // Fallback if no period_end
+          currentPeriodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+        }
       }
     } else {
       // Default to 1 year if no subscription (one-time payment)

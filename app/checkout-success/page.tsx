@@ -143,21 +143,10 @@ function CheckoutSuccessContent() {
           </p>
           <div className="space-y-3">
             <Button 
-              onClick={() => {
-                hasVerified.current = false;
-                activateSubscription();
-              }}
-              className="w-full"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
-            <Button 
-              variant="outline"
               onClick={() => router.push("/")}
               className="w-full"
             >
-              Go to Homepage
+              Return to Homepage
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-4">
