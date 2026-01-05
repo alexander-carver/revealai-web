@@ -38,6 +38,8 @@ function SettingsContent() {
   // Handle Stripe checkout success (if redirected from success page)
   useEffect(() => {
     const success = searchParams.get("success");
+    const canceled = searchParams.get("canceled");
+    const message = searchParams.get("message");
     
     if (success === "true") {
       setSuccessMessage("Subscription activated! Welcome to Pro!");
@@ -50,6 +52,17 @@ function SettingsContent() {
         // Clean up URL
         window.history.replaceState({}, "", "/settings");
       }, 5000);
+    } else if (canceled === "true") {
+      setSuccessMessage(message || "Your subscription has been canceled.");
+      // Refresh subscription status
+      refreshSubscription();
+      
+      // Clear the success message after 8 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+        // Clean up URL
+        window.history.replaceState({}, "", "/settings");
+      }, 8000);
     }
   }, [searchParams, refreshSubscription]);
 
@@ -234,14 +247,21 @@ function SettingsContent() {
           </CardHeader>
           <CardContent className="space-y-4">
             {isPro ? (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <Crown className="w-5 h-5 text-amber-500" />
-                  <span className="font-semibold text-amber-500">Pro Member</span>
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Crown className="w-5 h-5 text-amber-500" />
+                    <span className="font-semibold text-amber-500">Pro Member</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    You're on the {tier === "weekly" ? "Weekly" : "Yearly"} plan
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  You're on the {tier === "weekly" ? "Weekly" : "Yearly"} plan
-                </p>
+                <Link href="/settings/cancel">
+                  <Button variant="outline" className="w-full">
+                    Cancel Subscription
+                  </Button>
+                </Link>
               </div>
             ) : (
               <div className="space-y-3">

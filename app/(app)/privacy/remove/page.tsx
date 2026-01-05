@@ -217,30 +217,14 @@ export default function RemoveFromSearchPage() {
                       </p>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        const response = await fetch("/api/stripe/customer-portal", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ userId: user.id }),
-                        });
-                        const data = await response.json();
-                        if (data.url) {
-                          window.location.href = data.url;
-                        } else {
-                          alert(data.error || "Failed to open customer portal");
-                        }
-                      } catch (error) {
-                        console.error("Error opening customer portal:", error);
-                        alert("Failed to open customer portal. Please try again.");
-                      }
-                    }}
-                  >
-                    Manage
-                  </Button>
+                  <Link href="/settings/cancel">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                    >
+                      Cancel Subscription
+                    </Button>
+                  </Link>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   {[
