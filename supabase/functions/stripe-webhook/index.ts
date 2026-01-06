@@ -74,7 +74,22 @@ serve(async (req) => {
           try {
             subscription = await stripeClient.subscriptions.retrieve(subscriptionId);
             console.log("Retrieved subscription:", subscription.id);
-            currentPeriodEnd = new Date((subscription.current_period_end || Date.now() / 1000 + 365 * 24 * 60 * 60) * 1000);
+            
+            // Safely parse current_period_end
+            if (subscription.current_period_end && 
+                typeof subscription.current_period_end === 'number' && 
+                subscription.current_period_end > 0) {
+              const timestamp = subscription.current_period_end * 1000;
+              currentPeriodEnd = new Date(timestamp);
+              // Validate the date
+              if (isNaN(currentPeriodEnd.getTime())) {
+                console.warn("Invalid current_period_end, using fallback");
+                currentPeriodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+              }
+            } else {
+              console.warn("No valid current_period_end in subscription, using fallback");
+              currentPeriodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+            }
           } catch (err: any) {
             console.error("Error retrieving subscription:", err.message);
             // Fallback to default period end
@@ -166,6 +181,14 @@ serve(async (req) => {
         const subscription = event.data.object as stripe.Stripe.Subscription;
         const customerId = subscription.customer as string;
 
+        console.log(`Processing ${event.type} for customer: ${customerId}`);
+        console.log("Subscription data:", {
+          id: subscription.id,
+          status: subscription.status,
+          current_period_end: subscription.current_period_end,
+          customer: customerId,
+        });
+
         // Find user by customer ID
         const { data: subData, error: findError } = await supabase
           .from("subscriptions")
@@ -175,6 +198,12 @@ serve(async (req) => {
 
         if (findError) {
           console.error("Error finding subscription:", findError);
+          // Don't fail the webhook - subscription might not exist yet
+          break;
+        }
+
+        if (!subData) {
+          console.log("No subscription found for customer:", customerId);
           break;
         }
 
@@ -201,14 +230,32 @@ serve(async (req) => {
             }
           }
 
+          // Safely handle current_period_end - validate it's a valid number
+          let periodEndDate: Date;
+          if (subscription.current_period_end && 
+              typeof subscription.current_period_end === 'number' && 
+              subscription.current_period_end > 0) {
+            try {
+              periodEndDate = new Date(subscription.current_period_end * 1000);
+              // Validate the date is valid
+              if (isNaN(periodEndDate.getTime())) {
+                console.warn("Invalid current_period_end timestamp, using fallback");
+                periodEndDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+              }
+            } catch (err) {
+              console.error("Error parsing current_period_end:", err);
+              periodEndDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+            }
+          } else {
+            periodEndDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+          }
+
           const { error: updateError } = await supabase
             .from("subscriptions")
             .update({
               status,
               tier,
-              current_period_end: subscription.current_period_end
-                ? new Date(subscription.current_period_end * 1000).toISOString()
-                : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+              current_period_end: periodEndDate.toISOString(),
               updated_at: new Date().toISOString(),
             })
             .eq("user_id", subData.user_id);
