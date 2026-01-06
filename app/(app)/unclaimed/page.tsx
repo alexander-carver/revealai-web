@@ -17,11 +17,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/alert";
 import { US_STATES, getStateUrl, getStateName } from "@/lib/services/unclaimed-money";
+import { useSubscription } from "@/hooks/use-subscription";
 
 export default function UnclaimedMoneyPage() {
   const [selectedState, setSelectedState] = useState("TX");
   const [showDisclaimer, setShowDisclaimer] = useState(true);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [hasShownPaywall, setHasShownPaywall] = useState(false);
+  const { showFreeTrialPaywall, isFreeTrialPaywallVisible, isPro } = useSubscription();
 
   const handleContinue = () => {
     if (dontShowAgain) {
@@ -31,6 +34,21 @@ export default function UnclaimedMoneyPage() {
   };
 
   const handleOpenSearch = () => {
+    // If user is Pro, skip paywall and redirect immediately
+    if (isPro) {
+      const url = getStateUrl(selectedState);
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    // First click: show paywall
+    if (!hasShownPaywall) {
+      setHasShownPaywall(true);
+      showFreeTrialPaywall();
+      return;
+    }
+    
+    // Second click (after paywall was shown): redirect
     const url = getStateUrl(selectedState);
     window.open(url, "_blank", "noopener,noreferrer");
   };
