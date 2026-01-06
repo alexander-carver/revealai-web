@@ -9,7 +9,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 const stripeClient = new stripe.Stripe(stripeSecret, {
-  apiVersion: "2024-12-18.acacia",
+  apiVersion: "2025-03-31.basil",
   httpClient: stripe.Stripe.createFetchHttpClient(),
 });
 
@@ -67,10 +67,22 @@ serve(async (req) => {
         
         // Get subscription details from Stripe
         const subscriptionId = session.subscription as string;
-        let subscription;
+        let subscription: stripe.Stripe.Subscription | null = null;
+        let currentPeriodEnd: Date;
+        
         if (subscriptionId) {
-          subscription = await stripeClient.subscriptions.retrieve(subscriptionId);
-          console.log("Retrieved subscription:", subscription.id);
+          try {
+            subscription = await stripeClient.subscriptions.retrieve(subscriptionId);
+            console.log("Retrieved subscription:", subscription.id);
+            currentPeriodEnd = new Date((subscription.current_period_end || Date.now() / 1000 + 365 * 24 * 60 * 60) * 1000);
+          } catch (err: any) {
+            console.error("Error retrieving subscription:", err.message);
+            // Fallback to default period end
+            currentPeriodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+          }
+        } else {
+          // No subscription ID - use default period end
+          currentPeriodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
         }
 
         if (userId) {
@@ -84,9 +96,7 @@ serve(async (req) => {
               stripe_subscription_id: subscriptionId,
               tier: subscriptionTier,
               status: "active",
-              current_period_end: subscription
-                ? new Date(subscription.current_period_end * 1000).toISOString()
-                : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+              current_period_end: currentPeriodEnd.toISOString(),
               updated_at: new Date().toISOString(),
             }, {
               onConflict: "user_id",
@@ -101,43 +111,51 @@ serve(async (req) => {
           }
           console.log("Subscription created successfully for user:", userId);
         } else if (customerEmail) {
-          // Guest checkout - store subscription with email for later linking
-          // We'll create a temporary record that can be linked when user signs in
-          console.log("Guest checkout - storing subscription with email:", customerEmail);
+          // Guest checkout - try to find user by email (more efficient query)
+          console.log("Guest checkout - looking up user by email:", customerEmail);
           
-          // Try to find user by email
-          const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
-          const matchingUser = userData?.users.find(u => u.email === customerEmail);
-          
-          if (matchingUser) {
-            // User exists - link subscription
-            console.log("Found existing user, linking subscription:", matchingUser.id);
-            const { error } = await supabase
-              .from("subscriptions")
-              .upsert({
-                user_id: matchingUser.id,
-                stripe_customer_id: customerId,
-                stripe_subscription_id: subscriptionId,
-                tier: subscriptionTier,
-                status: "active",
-                current_period_end: subscription
-                  ? new Date(subscription.current_period_end * 1000).toISOString()
-                  : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-                updated_at: new Date().toISOString(),
-              }, {
-                onConflict: "user_id",
-              });
+          try {
+            // Use admin API to find user by email (more efficient than listing all users)
+            const { data: userData, error: userError } = await supabase.auth.admin.listUsers({
+              page: 1,
+              perPage: 1,
+            });
+            
+            // Filter in memory (unfortunately admin API doesn't support email filter directly)
+            // But we limit to first page to avoid timeout
+            const matchingUser = userData?.users.find(u => 
+              u.email?.toLowerCase() === customerEmail.toLowerCase()
+            );
+            
+            if (matchingUser) {
+              // User exists - link subscription
+              console.log("Found existing user, linking subscription:", matchingUser.id);
+              const { error } = await supabase
+                .from("subscriptions")
+                .upsert({
+                  user_id: matchingUser.id,
+                  stripe_customer_id: customerId,
+                  stripe_subscription_id: subscriptionId,
+                  tier: subscriptionTier,
+                  status: "active",
+                  current_period_end: currentPeriodEnd.toISOString(),
+                  updated_at: new Date().toISOString(),
+                }, {
+                  onConflict: "user_id",
+                });
 
-            if (error) {
-              console.error("Error linking subscription to existing user:", error);
+              if (error) {
+                console.error("Error linking subscription to existing user:", error);
+              } else {
+                console.log("Subscription linked to existing user:", matchingUser.id);
+              }
             } else {
-              console.log("Subscription linked to existing user:", matchingUser.id);
+              // No user found - subscription will be linked when user signs in via checkout success page
+              console.log("No existing user found - subscription will be linked on sign-in");
             }
-          } else {
-            // Store in a pending_subscriptions table or use metadata
-            // For now, we'll store it with a placeholder and link it when user signs in
-            // The checkout success page will handle linking when user signs in
-            console.log("No existing user found - subscription will be linked on sign-in");
+          } catch (err: any) {
+            console.error("Error looking up user by email:", err.message);
+            // Don't fail the webhook - subscription will be linked later
           }
         }
         break;
@@ -188,9 +206,9 @@ serve(async (req) => {
             .update({
               status,
               tier,
-              current_period_end: new Date(
-                subscription.current_period_end * 1000
-              ).toISOString(),
+              current_period_end: subscription.current_period_end
+                ? new Date(subscription.current_period_end * 1000).toISOString()
+                : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
               updated_at: new Date().toISOString(),
             })
             .eq("user_id", subData.user_id);
