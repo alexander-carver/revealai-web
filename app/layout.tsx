@@ -117,7 +117,9 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  minimumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -203,6 +205,63 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
+        {/* Disable zoom with JavaScript for better mobile app experience */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                // Prevent pinch-to-zoom on touchmove (most reliable method)
+                document.addEventListener('touchmove', function(e) {
+                  if (e.touches.length > 1) {
+                    e.preventDefault();
+                  }
+                }, { passive: false });
+                
+                // Prevent iOS Safari gesture zoom
+                document.addEventListener('gesturestart', function(e) {
+                  e.preventDefault();
+                }, { passive: false });
+                document.addEventListener('gesturechange', function(e) {
+                  e.preventDefault();
+                }, { passive: false });
+                document.addEventListener('gestureend', function(e) {
+                  e.preventDefault();
+                }, { passive: false });
+                
+                // Prevent double-tap zoom (faster threshold)
+                let lastTouchEnd = 0;
+                document.addEventListener('touchend', function(e) {
+                  const now = Date.now();
+                  if (now - lastTouchEnd <= 500) {
+                    e.preventDefault();
+                  }
+                  lastTouchEnd = now;
+                }, { passive: false });
+                
+                // Prevent zoom with keyboard shortcuts
+                document.addEventListener('keydown', function(e) {
+                  if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) {
+                    e.preventDefault();
+                  }
+                });
+                
+                // Prevent zoom with wheel + Ctrl/Cmd
+                document.addEventListener('wheel', function(e) {
+                  if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                  }
+                }, { passive: false });
+                
+                // Force reset zoom if it somehow changes
+                window.addEventListener('resize', function() {
+                  if (window.visualViewport && window.visualViewport.scale !== 1) {
+                    document.body.style.transform = 'scale(1)';
+                  }
+                });
+              })();
+            `,
+          }}
+        />
       </head>
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}

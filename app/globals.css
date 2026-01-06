@@ -63,16 +63,42 @@
   * {
     @apply border-border;
   }
+  html {
+    /* Prevent zoom on iOS */
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Prevent overscroll/bounce that can trigger zoom */
+    overscroll-behavior: none;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
     /* Prevent double-tap zoom on mobile */
-    touch-action: manipulation;
+    touch-action: pan-x pan-y;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    /* Lock zoom level */
+    zoom: 1;
+    /* Prevent overscroll that can feel like zoom */
+    overscroll-behavior: none;
+    overflow-x: hidden;
   }
-  /* Prevent text selection zoom on iOS */
+  /* Prevent text selection zoom on iOS - CRITICAL: font-size must be 16px+ */
   input, textarea, select, button {
+    font-size: 16px !important; /* Prevents iOS auto-zoom on focus */
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: text;
+    /* Prevent iOS zoom on input focus */
+    font-size: 16px;
+  }
+  /* Prevent zoom on input focus for iOS */
+  @media screen and (max-width: 767px) {
+    input, textarea, select {
+      font-size: 16px !important;
+    }
   }
 }
 
