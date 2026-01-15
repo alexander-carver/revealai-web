@@ -23,9 +23,13 @@ interface SubscriptionContextType {
   showFreeTrialPaywall: () => void;
   hideFreeTrialPaywall: () => void;
   isFreeTrialPaywallVisible: boolean;
+  showFreeTrialPaywallDirectly: () => void;
   showResultsPaywall: () => void;
   hideResultsPaywall: () => void;
   isResultsPaywallVisible: boolean;
+  showAbandonedPaywall: () => void;
+  hideAbandonedPaywall: () => void;
+  isAbandonedPaywallVisible: boolean;
   checkAccess: (feature: string) => boolean;
   refreshSubscription: () => Promise<void>;
 }
@@ -51,6 +55,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [isPaywallVisible, setIsPaywallVisible] = useState(false);
   const [isFreeTrialPaywallVisible, setIsFreeTrialPaywallVisible] = useState(false);
   const [isResultsPaywallVisible, setIsResultsPaywallVisible] = useState(false);
+  const [isAbandonedPaywallVisible, setIsAbandonedPaywallVisible] = useState(false);
 
   const isPro = tier === "weekly" || tier === "yearly";
 
@@ -63,6 +68,12 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const showFreeTrialPaywall = useCallback(() => {
+    // Show main paywall instead of free trial paywall (for backward compatibility)
+    setIsPaywallVisible(true);
+  }, []);
+
+  const showFreeTrialPaywallDirectly = useCallback(() => {
+    // Directly show the free trial paywall (used only from abandoned paywall)
     setIsFreeTrialPaywallVisible(true);
   }, []);
 
@@ -78,6 +89,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const hideResultsPaywall = useCallback(() => {
     setIsResultsPaywallVisible(false);
+  }, []);
+
+  const showAbandonedPaywall = useCallback(() => {
+    setIsAbandonedPaywallVisible(true);
+  }, []);
+
+  const hideAbandonedPaywall = useCallback(() => {
+    setIsAbandonedPaywallVisible(false);
   }, []);
 
   const checkAccess = useCallback(
@@ -149,9 +168,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         showFreeTrialPaywall,
         hideFreeTrialPaywall,
         isFreeTrialPaywallVisible,
+        showFreeTrialPaywallDirectly,
         showResultsPaywall,
         hideResultsPaywall,
         isResultsPaywallVisible,
+        showAbandonedPaywall,
+        hideAbandonedPaywall,
+        isAbandonedPaywallVisible,
         checkAccess,
         refreshSubscription,
       }}

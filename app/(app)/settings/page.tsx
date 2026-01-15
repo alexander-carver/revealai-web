@@ -231,6 +231,7 @@ function SettingsContent() {
           </CardHeader>
           <CardContent className="space-y-4">
             {isPro ? (
+              <div className="space-y-3">
               <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Crown className="w-5 h-5 text-amber-500" />
@@ -239,6 +240,15 @@ function SettingsContent() {
                 <p className="text-sm text-muted-foreground">
                   You're on the {tier === "weekly" ? "Weekly" : "Yearly"} plan
                 </p>
+                </div>
+                <Link href="/settings/cancel">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Cancel Subscription
+                  </Button>
+                </Link>
               </div>
             ) : (
               <div className="space-y-3">

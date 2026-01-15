@@ -1,18 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
   User,
-  Phone,
-  Mail,
   MapPin,
   ArrowRight,
-  ChevronRight,
-  Calendar,
-  Home,
-  Users,
   Sparkles,
   AlertTriangle,
   Star,
@@ -22,65 +16,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Alert } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import { SearchLoadingScreen } from "./search-loading-screen";
-import {
-  searchPersonCandidates,
-  lookupContactMatches,
-  runAIProfileSearch,
-} from "@/lib/services/people-search";
-import type {
-  SearchQuery,
-  SearchMode,
-  PersonSearchCandidate,
-  EnformionContactMatch,
-} from "@/lib/types";
-import Link from "next/link";
 import { useSubscription } from "@/hooks/use-subscription";
-import Image from "next/image";
 import { MostSearched } from "./most-searched";
 import { trackSearchButtonClick } from "@/lib/analytics";
-
-// Convert markdown links to clickable HTML links
-function formatAIResponse(text: string): string {
-  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-  let html = text.replace(linkRegex, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>');
-  html = html.replace(/\n/g, "<br/>");
-  return html;
-}
+import { SearchLoadingScreen } from "./search-loading-screen";
 
 export function PeopleSearch() {
-  const { isPro, showFreeTrialPaywall } = useSubscription();
-  const [searchMode, setSearchMode] = useState<SearchMode>("name");
+  const router = useRouter();
+  const { isPro, showFreeTrialPaywall, isFreeTrialPaywallVisible } = useSubscription();
+  const [searchType, setSearchType] = useState<"fullreport" | "datingapps">("fullreport");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    phone: "",
-    email: "",
-    street: "",
     city: "",
     state: "",
-    zip: "",
   });
+
+  // Loading screen state for non-Pro users
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const paywallWasShown = useRef(false);
 
   // Mobile sticky CTA visibility
   const [showMobileCTA, setShowMobileCTA] = useState(true);
 
-  // AI Search state (Dating App Finder)
-  const [aiQuery, setAiQuery] = useState("");
-  const [aiResult, setAiResult] = useState<string | null>(null);
+  // Track when paywall becomes visible
+  useEffect(() => {
+    if (isFreeTrialPaywallVisible && showLoadingScreen) {
+      paywallWasShown.current = true;
+    }
+  }, [isFreeTrialPaywallVisible, showLoadingScreen]);
 
-  // Results state
-  const [candidates, setCandidates] = useState<PersonSearchCandidate[]>([]);
-  const [contactMatches, setContactMatches] = useState<EnformionContactMatch[]>([]);
-
-  // Loading screen state
-  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
-  const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
-
-  // NOTE: Free trial paywall trigger removed - results paywall is now handled by search-loading-screen
+  // Close loading screen when paywall is closed (only if paywall was actually shown)
+  useEffect(() => {
+    if (!isFreeTrialPaywallVisible && paywallWasShown.current && showLoadingScreen) {
+      setShowLoadingScreen(false);
+      paywallWasShown.current = false; // Reset for next time
+    }
+  }, [isFreeTrialPaywallVisible, showLoadingScreen]);
 
   // Hide mobile CTA when search section is in view
   useEffect(() => {
@@ -98,135 +71,45 @@ export function PeopleSearch() {
     return () => observer.disconnect();
   }, []);
 
-  // Mutations
-  const personSearchMutation = useMutation({
-    mutationFn: async (query: SearchQuery) => {
-      return searchPersonCandidates(query);
-    },
-    onSuccess: (data) => {
-      setCandidates(data);
-      setContactMatches([]);
-    },
-  });
-
-  const contactSearchMutation = useMutation({
-    mutationFn: async (query: SearchQuery) => {
-      return lookupContactMatches(query);
-    },
-    onSuccess: (data) => {
-      setContactMatches(data);
-      setCandidates([]);
-    },
-  });
-
-  const aiSearchMutation = useMutation({
-    mutationFn: async (query: string) => {
-      return runAIProfileSearch(query);
-    },
-    onSuccess: (data) => {
-      setAiResult(data);
-    },
-  });
-
-  // Get display name for the loading screen
-  const getSearchDisplayName = useCallback(() => {
-    if (searchMode === "name" || searchMode === "cheater") {
-      const name = `${formData.firstName} ${formData.lastName}`.trim();
-      if (name) return name;
-      if (aiQuery) return aiQuery.split(" ").slice(0, 3).join(" ");
-    }
-    if (searchMode === "phone") return formData.phone || "Phone Number";
-    if (searchMode === "email") return formData.email || "Email Address";
-    if (searchMode === "address") {
-      const addr = [formData.street, formData.city, formData.state].filter(Boolean).join(", ");
-      return addr || "Address";
-    }
-    return "Unknown";
-  }, [searchMode, formData, aiQuery]);
-
+  // Handle main search
   const handleSearch = useCallback(() => {
-    const query: SearchQuery = {
-      mode: searchMode,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      phone: formData.phone,
-      email: formData.email,
-      street: formData.street,
-      city: formData.city,
-      state: formData.state,
-      zip: formData.zip,
-    };
-
-    if (searchMode === "name") {
-      if (!formData.firstName.trim() || !formData.lastName.trim()) {
-        return;
-      }
-      
-      // Track search button click
-      trackSearchButtonClick('name');
-      
-      // Show loading screen first, then trigger paywall or search
-      setLoadingSearchQuery(getSearchDisplayName());
-      setShowLoadingScreen(true);
-      
-      // Only run the actual search if user is pro
-      if (isPro) {
-        personSearchMutation.mutate(query);
-      }
-    } else if (searchMode !== "cheater") {
-      // Track search button click
-      trackSearchButtonClick(searchMode);
-      
-      // Show loading screen first, then trigger paywall or search
-      setLoadingSearchQuery(getSearchDisplayName());
-      setShowLoadingScreen(true);
-      
-      // Only run the actual search if user is pro
-      if (isPro) {
-        contactSearchMutation.mutate(query);
-      }
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      return;
     }
-  }, [searchMode, formData, getSearchDisplayName, personSearchMutation, contactSearchMutation, isPro]);
 
-  const handleAISearch = useCallback(() => {
-    if (!aiQuery.trim()) return;
-    
     // Track search button click
-    trackSearchButtonClick('ai_dating_apps');
-    
-    // Show loading screen first, then trigger paywall or search
-    const displayQuery = aiQuery.split(" ").slice(0, 4).join(" ");
-    setLoadingSearchQuery(displayQuery);
-    setShowLoadingScreen(true);
-    
-    // Only run the actual search if user is pro
-    if (isPro) {
-      aiSearchMutation.mutate(aiQuery);
+    trackSearchButtonClick(searchType === 'fullreport' ? 'full_report' : 'dating_apps');
+
+    const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
+
+    // NON-PRO USERS: Show loading screen on homepage, then paywall after 8 seconds
+    if (!isPro) {
+      setSearchQuery(fullName);
+      setShowLoadingScreen(true);
+      
+      // After 8 seconds, show paywall (loading screen stays visible until paywall closes)
+      setTimeout(() => {
+        showFreeTrialPaywall();
+      }, 8000);
+      return;
     }
-  }, [aiQuery, aiSearchMutation, isPro]);
 
-  const handleLoadingComplete = useCallback(() => {
-    setShowLoadingScreen(false);
-  }, []);
+    // PRO USERS: Navigate to search results page
+    const params = new URLSearchParams({
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
+      type: searchType,
+    });
 
-  const handleLoadingCancel = useCallback(() => {
-    setShowLoadingScreen(false);
-    setCandidates([]);
-    setContactMatches([]);
-    setAiResult(null);
-  }, []);
+    if (formData.city.trim()) {
+      params.set("city", formData.city.trim());
+    }
+    if (formData.state.trim()) {
+      params.set("state", formData.state.trim());
+    }
 
-  const isLoading =
-    personSearchMutation.isPending ||
-    contactSearchMutation.isPending ||
-    aiSearchMutation.isPending;
-
-  const error =
-    personSearchMutation.error ||
-    contactSearchMutation.error ||
-    aiSearchMutation.error;
-
-  const showInlineLoading = isLoading && !showLoadingScreen;
+    router.push(`/search/result?${params.toString()}`);
+  }, [formData, searchType, router, isPro, showFreeTrialPaywall]);
 
   // Smooth scroll to search section with header offset
   const scrollToSearch = () => {
@@ -242,6 +125,18 @@ export function PeopleSearch() {
       });
     }
   };
+
+  // Show loading screen for non-Pro users
+  if (showLoadingScreen) {
+    return (
+      <SearchLoadingScreen
+        isVisible={showLoadingScreen}
+        searchQuery={searchQuery}
+        onComplete={() => {}} // Do nothing on complete - paywall will handle flow
+        onCancel={() => setShowLoadingScreen(false)}
+      />
+    );
+  }
 
   return (
     <>
@@ -355,14 +250,6 @@ export function PeopleSearch() {
           ======================================== */}
       <section id="search" className="min-h-screen flex items-center justify-center py-12 md:py-16 bg-gray-50">
         <div className="container mx-auto px-4 max-w-4xl">
-          {/* Loading Screen Overlay */}
-          <SearchLoadingScreen
-            isVisible={showLoadingScreen}
-            searchQuery={loadingSearchQuery}
-            onComplete={handleLoadingComplete}
-            onCancel={handleLoadingCancel}
-          />
-
           <Card className="border-0 shadow-2xl bg-white">
             <CardHeader className="pb-4 md:pb-6">
               <div className="text-center space-y-3">
@@ -376,73 +263,20 @@ export function PeopleSearch() {
               </div>
             </CardHeader>
             <CardContent>
-              <Tabs value={searchMode} onValueChange={(v) => setSearchMode(v as SearchMode)}>
-                <TabsList className="w-full grid grid-cols-5 mb-6 h-auto p-1 bg-gray-100">
-                  <TabsTrigger value="cheater" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">
+              <Tabs value={searchType} onValueChange={(v) => setSearchType(v as "fullreport" | "datingapps")}>
+                <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1 bg-gray-100">
+                  <TabsTrigger value="fullreport" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">
+                    <Search className="w-4 h-4 md:w-5 md:h-5" />
+                    <span>Full Report</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="datingapps" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">
                     <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
-                    <span className="hidden sm:inline">Dating</span>
-                    <span className="sm:hidden">Dating</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="name" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                    <User className="w-4 h-4 md:w-5 md:h-5" />
-                    <span className="hidden sm:inline">Name</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="phone" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                    <Phone className="w-4 h-4 md:w-5 md:h-5" />
-                    <span className="hidden sm:inline">Phone</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="email" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                    <Mail className="w-4 h-4 md:w-5 md:h-5" />
-                    <span className="hidden sm:inline">Email</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="address" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                    <MapPin className="w-4 h-4 md:w-5 md:h-5" />
-                    <span className="hidden sm:inline">Address</span>
+                    <span>Dating Apps</span>
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Dating App Finder (AI Search) */}
-                <TabsContent value="cheater" className="space-y-4">
-                  <div className="bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200 rounded-xl p-4 mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-5 h-5 text-red-500" />
-                      <h3 className="font-semibold text-lg text-gray-900">Find Dating Apps and Profiles</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Use AI to find dating apps and profiles. Perfect for discovering hidden accounts, verifying identities, and comprehensive background checks.
-                    </p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Input
-                      placeholder="'Find everything about John Smith from Austin, TX' or 'Tell me about Sarah Johnson who lives in Miami'"
-                      value={aiQuery}
-                      onChange={(e) => setAiQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAISearch()}
-                      className="flex-1"
-                      icon={<Sparkles className="w-4 h-4" />}
-                    />
-                    <Button
-                      onClick={handleAISearch}
-                      isLoading={aiSearchMutation.isPending && !showLoadingScreen}
-                      size="lg"
-                      className="gap-2 bg-red-600 hover:bg-red-700 text-white shadow-lg"
-                    >
-                      <Search className="w-5 h-5" />
-                      <span>Search</span>
-                    </Button>
-                  </div>
-
-                  {aiResult && !showLoadingScreen && (
-                    <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-200">
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <div dangerouslySetInnerHTML={{ __html: formatAIResponse(aiResult) }} />
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* Name Search */}
-                <TabsContent value="name">
+                {/* Full Report Search */}
+                <TabsContent value="fullreport">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input
                       placeholder="First Name *"
@@ -450,6 +284,7 @@ export function PeopleSearch() {
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, firstName: e.target.value }))
                       }
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                       icon={<User className="w-4 h-4" />}
                     />
                     <Input
@@ -458,6 +293,7 @@ export function PeopleSearch() {
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, lastName: e.target.value }))
                       }
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                       icon={<User className="w-4 h-4" />}
                     />
                     <Input
@@ -466,6 +302,7 @@ export function PeopleSearch() {
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, city: e.target.value }))
                       }
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                       icon={<MapPin className="w-4 h-4" />}
                     />
                     <Input
@@ -474,270 +311,92 @@ export function PeopleSearch() {
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, state: e.target.value }))
                       }
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                       icon={<MapPin className="w-4 h-4" />}
                     />
                   </div>
-                  {/* AI Quick Search Button */}
-                  {formData.firstName && formData.lastName && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-4 gap-2 text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={() => {
-                        const name = `${formData.firstName} ${formData.lastName}`;
-                        const location = [formData.city, formData.state].filter(Boolean).join(", ");
-                        const query = location 
-                          ? `Tell me everything about ${name} from ${location}`
-                          : `Tell me everything about ${name}`;
-                        setAiQuery(query);
-                        setSearchMode("cheater");
-                        handleAISearch();
-                      }}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      AI Search: &quot;Tell me everything about {formData.firstName} {formData.lastName}&quot;
-                    </Button>
-                  )}
                 </TabsContent>
 
-                {/* Phone Search */}
-                <TabsContent value="phone">
-                  <Input
-                    placeholder="Phone Number"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                    }
-                    icon={<Phone className="w-4 h-4" />}
-                    type="tel"
-                  />
-                </TabsContent>
-
-                {/* Email Search */}
-                <TabsContent value="email">
-                  <Input
-                    placeholder="Email Address"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, email: e.target.value }))
-                    }
-                    icon={<Mail className="w-4 h-4" />}
-                    type="email"
-                  />
-                </TabsContent>
-
-                {/* Address Search */}
-                <TabsContent value="address">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <Input
-                        placeholder="Street Address"
-                        value={formData.street}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, street: e.target.value }))
-                        }
-                        icon={<Home className="w-4 h-4" />}
-                      />
+                {/* Dating Apps Search */}
+                <TabsContent value="datingapps">
+                  <div className="bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200 rounded-xl p-4 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-5 h-5 text-red-500" />
+                      <h3 className="font-semibold text-lg text-gray-900">Find Dating App Profiles</h3>
                     </div>
+                    <p className="text-sm text-gray-600">
+                      Search Tinder, Bumble, Hinge, Match, eHarmony, OkCupid, Plenty of Fish, Grindr, and more.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input
-                      placeholder="City"
+                      placeholder="First Name *"
+                      value={formData.firstName}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, firstName: e.target.value }))
+                      }
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      icon={<User className="w-4 h-4" />}
+                    />
+                    <Input
+                      placeholder="Last Name *"
+                      value={formData.lastName}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, lastName: e.target.value }))
+                      }
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      icon={<User className="w-4 h-4" />}
+                    />
+                    <Input
+                      placeholder="City (optional)"
                       value={formData.city}
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, city: e.target.value }))
                       }
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      icon={<MapPin className="w-4 h-4" />}
                     />
-                    <div className="grid grid-cols-2 gap-4">
-                      <Input
-                        placeholder="State"
-                        value={formData.state}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, state: e.target.value }))
-                        }
-                      />
-                      <Input
-                        placeholder="ZIP"
-                        value={formData.zip}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, zip: e.target.value }))
-                        }
-                      />
-                    </div>
+                    <Input
+                      placeholder="State (optional)"
+                      value={formData.state}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, state: e.target.value }))
+                      }
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      icon={<MapPin className="w-4 h-4" />}
+                    />
                   </div>
                 </TabsContent>
               </Tabs>
 
-              {/* Search Button (for non-AI searches) */}
-              {searchMode !== "cheater" && (
-                <>
-                  <Button
-                    onClick={handleSearch}
-                    isLoading={showInlineLoading && !aiSearchMutation.isPending}
-                    size="lg"
-                    className="w-full mt-6 gap-2 bg-red-600 hover:bg-red-700 text-white shadow-lg"
-                  >
-                    <Search className="w-5 h-5" />
-                    Search Records
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                  
-                  {/* Trust Indicators */}
-                  <div className="flex items-center justify-center gap-3 text-xs text-gray-600 mt-4">
-                    <div className="flex items-center gap-1">
-                      <Shield className="w-3.5 h-3.5 text-green-600" />
-                      <span className="font-medium">Trusted</span>
-                    </div>
-                    <span className="text-gray-300">•</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span className="font-medium">4.9 Star Rating</span>
-                    </div>
-                    <span className="text-gray-300">•</span>
-                    <div className="flex items-center gap-1">
-                      <Search className="w-3.5 h-3.5 text-blue-600" />
-                      <span className="font-medium">500M+ Searches</span>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Error Message */}
-              {error && !showLoadingScreen && (
-                <Alert variant="destructive" className="mt-6">
-                  {(() => {
-                    const err = error as any;
-                    if (err?.message) {
-                      const msg = err.message;
-                      if (msg.includes("{") && msg.includes("}")) {
-                        try {
-                          const parsed = JSON.parse(msg);
-                          return parsed.message || parsed.error || "Search failed. Please try again.";
-                        } catch {
-                          return "Search failed. Please try again.";
-                        }
-                      }
-                      return msg;
-                    }
-                    return "An error occurred during the search. Please try again.";
-                  })()}
-                </Alert>
-              )}
-
-              {/* Loading State */}
-              {showInlineLoading && !aiSearchMutation.isPending && searchMode !== "cheater" && (
-                <div className="mt-6 space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <Card key={i} className="p-4">
-                      <div className="flex items-center gap-4">
-                        <Skeleton className="w-12 h-12 rounded-full" />
-                        <div className="flex-1 space-y-2">
-                          <Skeleton className="h-5 w-48" />
-                          <Skeleton className="h-4 w-32" />
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
+              {/* Search Button */}
+              <Button
+                onClick={handleSearch}
+                size="lg"
+                className="w-full mt-6 gap-2 bg-red-600 hover:bg-red-700 text-white shadow-lg"
+              >
+                <Search className="w-5 h-5" />
+                Search Records
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+              
+              {/* Trust Indicators */}
+              <div className="flex items-center justify-center gap-3 text-xs text-gray-600 mt-4">
+                <div className="flex items-center gap-1">
+                  <Shield className="w-3.5 h-3.5 text-green-600" />
+                  <span className="font-medium">Trusted</span>
                 </div>
-              )}
-
-              {/* Person Candidates Results */}
-              {candidates.length > 0 && !showLoadingScreen && (
-                <div className="mt-6">
-                  <h2 className="text-lg font-semibold mb-4">
-                    Found {candidates.length} result{candidates.length !== 1 ? "s" : ""}
-                  </h2>
-                  <div className="space-y-3">
-                    {candidates.map((candidate) => (
-                      <Link
-                        key={candidate.id}
-                        href={`/search/${candidate.id}?firstName=${encodeURIComponent(
-                          candidate.firstName
-                        )}&lastName=${encodeURIComponent(candidate.lastName)}`}
-                      >
-                        <Card className="p-4 hover:border-red-300 transition-all cursor-pointer group">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-                              <User className="w-6 h-6 text-red-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold truncate">
-                                  {candidate.firstName} {candidate.lastName}
-                                </h3>
-                                {candidate.age && (
-                                  <Badge variant="secondary">
-                                    <Calendar className="w-3 h-3 mr-1" />
-                                    {candidate.age}
-                                  </Badge>
-                                )}
-                              </div>
-                              {(candidate.city || candidate.state) && (
-                                <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                                  <MapPin className="w-3 h-3" />
-                                  {[candidate.city, candidate.state].filter(Boolean).join(", ")}
-                                </p>
-                              )}
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-red-600 transition-colors" />
-                          </div>
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
+                <span className="text-gray-300">•</span>
+                <div className="flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  <span className="font-medium">4.9 Star Rating</span>
                 </div>
-              )}
-
-              {/* Contact Matches Results */}
-              {contactMatches.length > 0 && !showLoadingScreen && (
-                <div className="mt-6">
-                  <h2 className="text-lg font-semibold mb-4">
-                    Found {contactMatches.length} result{contactMatches.length !== 1 ? "s" : ""}
-                  </h2>
-                  <div className="space-y-3">
-                    {contactMatches.map((match) => (
-                      <Card key={match.id} className="p-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-                            <Users className="w-6 h-6 text-red-600" />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-semibold">{match.fullName || "Unknown"}</h3>
-                            {match.address && (
-                              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                                <MapPin className="w-3 h-3" />
-                                {[
-                                  match.address.street,
-                                  match.address.city,
-                                  match.address.state,
-                                ]
-                                  .filter(Boolean)
-                                  .join(", ")}
-                              </p>
-                            )}
-                          </div>
-                          {match.enformionId && (
-                            <Link href={`/search/${match.enformionId}`}>
-                              <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50">
-                                View Profile
-                              </Button>
-                            </Link>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+                <span className="text-gray-300">•</span>
+                <div className="flex items-center gap-1">
+                  <Search className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="font-medium">500M+ Searches</span>
                 </div>
-              )}
-
-              {/* No Results Message */}
-              {!isLoading &&
-                !showLoadingScreen &&
-                candidates.length === 0 &&
-                contactMatches.length === 0 &&
-                (personSearchMutation.isSuccess || contactSearchMutation.isSuccess) && (
-                  <Alert variant="info" className="mt-6">
-                    No results found. Try adjusting your search criteria.
-                  </Alert>
-                )}
+              </div>
             </CardContent>
           </Card>
 

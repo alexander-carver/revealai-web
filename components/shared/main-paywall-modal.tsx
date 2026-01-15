@@ -10,66 +10,39 @@ import { getDeviceId } from "@/lib/device-id";
 
 // Benefits with styled text
 const benefits = [
-  <>Find Hidden <span className="text-red-600 font-semibold">Dating Apps</span> (Tinder, Bumble, Grindr)</>,
-  <>People Search: <span className="font-bold">Vehicle</span>, Reverse Phone, Address</>,
-  <>Look into <span className="italic">Criminal</span> History</>,
-  <>Remove <span className="underline">Yourself</span> from Reveal AI Search</>,
-  <>Find Unclaimed <span className="font-bold">Money</span> for Free</>,
+  <>Find Hidden <span className="text-red-600 font-semibold text-lg">Dating Apps</span></>,
+  <><span className="font-bold text-lg">Vehicle</span>, Reverse Phone, Address</>,
+  <>Look into <span className="italic text-lg">Criminal</span> History</>,
+  <>Remove <span className="underline text-lg">Yourself</span> from Reveal AI Search</>,
+  <>Find Unclaimed <span className="font-bold text-lg">Money</span> for Free</>,
 ];
 
-const INITIAL_COUNTDOWN_SECONDS = 300; // 5 minutes
-
-export function FreeTrialPaywallModal() {
-  const { isFreeTrialPaywallVisible, hideFreeTrialPaywall } = useSubscription();
+export function MainPaywallModal() {
+  const { isPaywallVisible, hidePaywall } = useSubscription();
   const { user } = useAuth();
+  const [selectedPlan, setSelectedPlan] = useState<"weekly" | "yearly">("yearly");
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
-  const [countdown, setCountdown] = useState(INITIAL_COUNTDOWN_SECONDS);
-
-  // Initialize countdown timer when paywall becomes visible
-  useEffect(() => {
-    if (!isFreeTrialPaywallVisible) return;
-
-    // Reset countdown to 5 minutes when paywall appears
-    setCountdown(INITIAL_COUNTDOWN_SECONDS);
-
-    // Update countdown every second
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        const newValue = Math.max(0, prev - 1);
-        return newValue;
-      });
-    }, 1000); // Update every second
-
-    return () => clearInterval(interval);
-  }, [isFreeTrialPaywallVisible]);
-
-  // Format countdown as MM:SS
-  const formatCountdown = (totalSeconds: number) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = Math.floor(totalSeconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
 
   // Show close button instantly
   useEffect(() => {
-    if (isFreeTrialPaywallVisible) {
+    if (isPaywallVisible) {
       setShowCloseButton(true);
     } else {
       setShowCloseButton(false);
     }
-  }, [isFreeTrialPaywallVisible]);
+  }, [isPaywallVisible]);
 
-  if (!isFreeTrialPaywallVisible) return null;
+  if (!isPaywallVisible) return null;
 
-  const handleStartFreeTrial = async () => {
+  const handleSubscribe = async () => {
     // Track CTA click
-    trackCTAClick("Free Trial Paywall - Continue");
+    trackCTAClick(`Main Paywall - ${selectedPlan === "yearly" ? "Yearly" : "Weekly"}`);
     
     setIsLoading(true);
     try {
       // Track initiate checkout
-      trackInitiateCheckout("free_trial");
+      trackInitiateCheckout(selectedPlan);
       
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
@@ -77,7 +50,7 @@ export function FreeTrialPaywallModal() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          plan: "free_trial",
+          plan: selectedPlan,
           userId: user?.id || undefined,
           email: user?.email || undefined,
           deviceId: getDeviceId(), // Pass device ID for consistent user creation
@@ -87,6 +60,9 @@ export function FreeTrialPaywallModal() {
       const data = await response.json();
 
       if (data.url) {
+        // Track that checkout was initiated (for abandoned transaction detection)
+        localStorage.setItem("revealai_checkout_initiated", "true");
+        localStorage.setItem("revealai_checkout_timestamp", Date.now().toString());
         window.location.href = data.url;
       } else {
         throw new Error(data.error || "Failed to create checkout session");
@@ -97,6 +73,14 @@ export function FreeTrialPaywallModal() {
       setIsLoading(false);
     }
   };
+
+  // Calculate savings for yearly plan
+  const weeklyPrice = 6.99;
+  const yearlyPrice = 39.99;
+  const weeklyYearlyTotal = weeklyPrice * 52;
+  const savings = weeklyYearlyTotal - yearlyPrice;
+  const savingsPercent = Math.round((savings / weeklyYearlyTotal) * 100);
+  const yearlyWeeklyEquivalent = (yearlyPrice / 52).toFixed(2);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -119,7 +103,7 @@ export function FreeTrialPaywallModal() {
           
           {/* Close Button - Inside card, top left */}
           <button
-            onClick={hideFreeTrialPaywall}
+            onClick={hidePaywall}
             className={`absolute left-3 top-3 p-2 z-20 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-500 ${
               showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
@@ -130,57 +114,75 @@ export function FreeTrialPaywallModal() {
           
           {/* Card Content */}
           <div className="relative z-10 px-6 sm:px-8 py-8 sm:py-10">
-            {/* Countdown Timer - Large and Prominent at Top */}
-            <div className="mb-8 flex flex-col items-center">
-              <div className="text-center mb-2">
-                <span className="text-red-600 font-bold text-lg sm:text-xl">FREE limited time only</span>
-              </div>
-              <div className="text-center">
-                <span className="text-red-600 font-mono font-black text-5xl sm:text-6xl tabular-nums tracking-tight">
-                  {formatCountdown(countdown)}
-                </span>
-              </div>
-            </div>
-
             {/* Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                GET <span className="text-red-600">FREE</span> ACCESS
+                GET <span className="text-red-600">PRO</span> ACCESS
               </h2>
-              <p className="text-gray-500 text-sm">Start your free trial today</p>
             </div>
 
             {/* Benefits List */}
             <div className="space-y-3 mb-8">
               {benefits.map((benefit, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
-                    <Check className="w-3 h-3 text-red-600" />
+                <div key={index} className="relative flex items-center justify-center">
+                  <div className="absolute left-0 w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                    <Check className="w-4 h-4 text-red-600" />
                   </div>
-                  <span className="text-gray-700 text-sm leading-relaxed">{benefit}</span>
+                  <span className="text-gray-700 text-base leading-relaxed text-center">{benefit}</span>
                 </div>
               ))}
             </div>
 
-            {/* Plan Selection - Single Option for Free Trial */}
-            <div className="mb-6">
-              {/* Free Trial Plan */}
-              <div className="relative w-full p-4 rounded-xl border-2 border-red-500 bg-red-50">
-                {/* FREE Badge */}
-                <div className="absolute -top-2.5 right-4 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
-                  FREE!
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="font-bold text-gray-900">FREE ACCESS</div>
-                    <div className="text-gray-400 text-sm line-through decoration-2">Then $9.99 per week</div>
+            {/* Plan Selection - Weekly and Yearly */}
+            <div className="mb-6 space-y-2.5">
+              {/* Yearly Plan */}
+              <button
+                onClick={() => setSelectedPlan("yearly")}
+                className={`relative w-full p-[18px] rounded-xl border-2 transition-all ${
+                  selectedPlan === "yearly"
+                    ? "border-red-500 bg-red-50"
+                    : "border-black bg-white hover:border-gray-700"
+                }`}
+              >
+                {/* SAVE Badge - positioned on top right */}
+                {selectedPlan === "yearly" && (
+                  <div className="absolute -top-2.5 right-3">
+                    <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
+                      SAVE {savingsPercent}%
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-between items-start">
+                  <div className="text-left">
+                    <div className="font-bold text-gray-900 text-base mb-0.5">YEARLY ACCESS</div>
+                    <div className="text-gray-500 text-xs">Just ${yearlyPrice.toFixed(2)} per year</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-red-600">FREE ACCESS</div>
+                    <div className="text-gray-900 font-semibold text-base">${yearlyWeeklyEquivalent}</div>
+                    <div className="text-gray-900 text-sm font-bold">per week</div>
                   </div>
                 </div>
-              </div>
+              </button>
+
+              {/* Weekly Plan */}
+              <button
+                onClick={() => setSelectedPlan("weekly")}
+                className={`relative w-full p-[18px] rounded-xl border-2 transition-all ${
+                  selectedPlan === "weekly"
+                    ? "border-red-500 bg-red-50"
+                    : "border-black bg-white hover:border-gray-700"
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <div className="text-left">
+                    <div className="font-bold text-gray-900 text-base">WEEKLY ACCESS</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-gray-900 font-semibold text-base">${weeklyPrice.toFixed(2)}</div>
+                    <div className="text-gray-900 text-sm font-bold">per week</div>
+                  </div>
+                </div>
+              </button>
             </div>
 
             {/* Auto-renew notice */}
@@ -190,7 +192,7 @@ export function FreeTrialPaywallModal() {
 
             {/* CTA Button */}
             <button
-              onClick={handleStartFreeTrial}
+              onClick={handleSubscribe}
               disabled={isLoading}
               className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-600/25 hover:shadow-xl hover:shadow-red-600/30 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
             >
@@ -218,3 +220,4 @@ export function FreeTrialPaywallModal() {
     </div>
   );
 }
+

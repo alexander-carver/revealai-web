@@ -17,59 +17,37 @@ const benefits = [
   <>Find Unclaimed <span className="font-bold">Money</span> for Free</>,
 ];
 
-const INITIAL_COUNTDOWN_SECONDS = 300; // 5 minutes
-
-export function FreeTrialPaywallModal() {
-  const { isFreeTrialPaywallVisible, hideFreeTrialPaywall } = useSubscription();
+export function AbandonedPaywallModal() {
+  const { isAbandonedPaywallVisible, hideAbandonedPaywall, showFreeTrialPaywallDirectly } = useSubscription();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
-  const [countdown, setCountdown] = useState(INITIAL_COUNTDOWN_SECONDS);
-
-  // Initialize countdown timer when paywall becomes visible
-  useEffect(() => {
-    if (!isFreeTrialPaywallVisible) return;
-
-    // Reset countdown to 5 minutes when paywall appears
-    setCountdown(INITIAL_COUNTDOWN_SECONDS);
-
-    // Update countdown every second
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        const newValue = Math.max(0, prev - 1);
-        return newValue;
-      });
-    }, 1000); // Update every second
-
-    return () => clearInterval(interval);
-  }, [isFreeTrialPaywallVisible]);
-
-  // Format countdown as MM:SS
-  const formatCountdown = (totalSeconds: number) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = Math.floor(totalSeconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
 
   // Show close button instantly
   useEffect(() => {
-    if (isFreeTrialPaywallVisible) {
+    if (isAbandonedPaywallVisible) {
       setShowCloseButton(true);
     } else {
       setShowCloseButton(false);
     }
-  }, [isFreeTrialPaywallVisible]);
+  }, [isAbandonedPaywallVisible]);
 
-  if (!isFreeTrialPaywallVisible) return null;
+  if (!isAbandonedPaywallVisible) return null;
 
-  const handleStartFreeTrial = async () => {
+  const handleClose = () => {
+    hideAbandonedPaywall();
+    // Show free trial paywall when closing abandoned paywall
+    showFreeTrialPaywallDirectly();
+  };
+
+  const handleSubscribe = async () => {
     // Track CTA click
-    trackCTAClick("Free Trial Paywall - Continue");
+    trackCTAClick("Abandoned Paywall - Continue");
     
     setIsLoading(true);
     try {
       // Track initiate checkout
-      trackInitiateCheckout("free_trial");
+      trackInitiateCheckout("abandoned_trial");
       
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
@@ -77,10 +55,10 @@ export function FreeTrialPaywallModal() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          plan: "free_trial",
+          plan: "abandoned_trial",
           userId: user?.id || undefined,
           email: user?.email || undefined,
-          deviceId: getDeviceId(), // Pass device ID for consistent user creation
+          deviceId: getDeviceId(),
         }),
       });
 
@@ -119,7 +97,7 @@ export function FreeTrialPaywallModal() {
           
           {/* Close Button - Inside card, top left */}
           <button
-            onClick={hideFreeTrialPaywall}
+            onClick={handleClose}
             className={`absolute left-3 top-3 p-2 z-20 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-500 ${
               showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
@@ -130,24 +108,17 @@ export function FreeTrialPaywallModal() {
           
           {/* Card Content */}
           <div className="relative z-10 px-6 sm:px-8 py-8 sm:py-10">
-            {/* Countdown Timer - Large and Prominent at Top */}
-            <div className="mb-8 flex flex-col items-center">
-              <div className="text-center mb-2">
-                <span className="text-red-600 font-bold text-lg sm:text-xl">FREE limited time only</span>
-              </div>
-              <div className="text-center">
-                <span className="text-red-600 font-mono font-black text-5xl sm:text-6xl tabular-nums tracking-tight">
-                  {formatCountdown(countdown)}
-                </span>
-              </div>
-            </div>
-
             {/* Header */}
             <div className="text-center mb-6">
+              {/* 72% OFF Badge */}
+              <div className="mb-4">
+                <div className="inline-block bg-red-600 text-white text-base font-bold px-6 py-2.5 rounded-full shadow-lg">
+                  72% OFF
+                </div>
+              </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                GET <span className="text-red-600">FREE</span> ACCESS
+                GET <span className="text-red-600">PRO</span> ACCESS
               </h2>
-              <p className="text-gray-500 text-sm">Start your free trial today</p>
             </div>
 
             {/* Benefits List */}
@@ -162,25 +133,30 @@ export function FreeTrialPaywallModal() {
               ))}
             </div>
 
-            {/* Plan Selection - Single Option for Free Trial */}
+            {/* Special Offer - Single Plan */}
             <div className="mb-6">
-              {/* Free Trial Plan */}
-              <div className="relative w-full p-4 rounded-xl border-2 border-red-500 bg-red-50">
-                {/* FREE Badge */}
-                <div className="absolute -top-2.5 right-4 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
-                  FREE!
+              <button
+                onClick={handleSubscribe}
+                disabled={isLoading}
+                className="relative w-full p-[18px] rounded-xl border-2 border-red-500 bg-red-50 transition-all"
+              >
+                {/* SAVE 72% Badge - positioned on top right */}
+                <div className="absolute -top-2.5 right-3">
+                  <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
+                    SAVE 72%
+                  </div>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="font-bold text-gray-900">FREE ACCESS</div>
-                    <div className="text-gray-400 text-sm line-through decoration-2">Then $9.99 per week</div>
+                <div className="flex justify-between items-start">
+                  <div className="text-left">
+                    <div className="font-bold text-gray-900 text-base mb-0.5">WEEKLY ACCESS</div>
+                    <div className="text-gray-500 text-xs">Then $6.99 per week</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-red-600">FREE ACCESS</div>
+                    <div className="text-gray-900 font-semibold text-sm">ONLY $1.99</div>
+                    <div className="text-gray-900 text-xs font-bold">First Week</div>
                   </div>
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* Auto-renew notice */}
@@ -190,7 +166,7 @@ export function FreeTrialPaywallModal() {
 
             {/* CTA Button */}
             <button
-              onClick={handleStartFreeTrial}
+              onClick={handleSubscribe}
               disabled={isLoading}
               className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-600/25 hover:shadow-xl hover:shadow-red-600/30 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
             >
@@ -218,3 +194,4 @@ export function FreeTrialPaywallModal() {
     </div>
   );
 }
+

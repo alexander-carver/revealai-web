@@ -1,7 +1,8 @@
 "use client";
 
 import { Navigation } from "./navigation";
-import { FreeTrialPaywallModal } from "./free-trial-paywall-modal";
+import { MainPaywallModal } from "./main-paywall-modal";
+import { AbandonedPaywallModal } from "./abandoned-paywall-modal";
 import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
@@ -23,8 +24,10 @@ export function AppLayout({ children, className }: AppLayoutProps) {
           {children}
         </div>
       </main>
-      {/* Free trial paywall - shown immediately when non-pro users try to search */}
-      <FreeTrialPaywallModal />
+      {/* Main paywall - shown immediately when non-pro users try to search */}
+      <MainPaywallModal />
+      {/* Abandoned paywall - shown for transaction abandoned scenarios */}
+      <AbandonedPaywallModal />
     </div>
   );
 }

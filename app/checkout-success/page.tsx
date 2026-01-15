@@ -40,6 +40,10 @@ function CheckoutSuccessContent() {
       console.log("✅ Verification result:", result);
 
       if (result.success) {
+        // Clear checkout initiated flag since checkout succeeded
+        localStorage.removeItem("revealai_checkout_initiated");
+        localStorage.removeItem("revealai_checkout_timestamp");
+        
         // Track purchase for analytics
         try {
           const sessionResponse = await fetch(`/api/stripe/session?session_id=${sessionId}`);

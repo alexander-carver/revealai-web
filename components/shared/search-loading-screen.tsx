@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Check, Lock, Star, Loader2 } from "lucide-react";
-import { useSubscription } from "@/hooks/use-subscription";
 import Image from "next/image";
 
 // Progress steps configuration
@@ -66,12 +65,12 @@ export function SearchLoadingScreen({
   onComplete,
   onCancel,
 }: SearchLoadingScreenProps) {
-  const { isPro, showResultsPaywall, isResultsPaywallVisible } = useSubscription();
+  // NOTE: Paywall is now handled by the parent component (people-search.tsx)
+  // This loading screen just shows the animation
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [currentCenterAvatar, setCurrentCenterAvatar] = useState(0);
-  const [hasTriggeredPaywall, setHasTriggeredPaywall] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
 
   // Reset state when visibility changes
@@ -81,7 +80,6 @@ export function SearchLoadingScreen({
       setProgress(0);
       setCurrentTestimonial(0);
       setCurrentCenterAvatar(0);
-      setHasTriggeredPaywall(false);
       setStartTime(Date.now());
     } else {
       setStartTime(null);
@@ -132,21 +130,13 @@ export function SearchLoadingScreen({
         setCurrentStep(4);
       }
 
-      // At 12 seconds, check subscription status
-      if (elapsed >= totalDuration && !hasTriggeredPaywall) {
-        setHasTriggeredPaywall(true);
-        if (isPro) {
-          // Pro user - show results immediately
-          onComplete();
-        } else {
-          // Non-pro user - show results paywall
-          showResultsPaywall();
-        }
-      }
+      // At 12 seconds, animation is complete
+      // NOTE: Paywall logic is handled by parent component (people-search.tsx)
+      // This just keeps showing the loading animation indefinitely for non-Pro users
     }, interval);
 
     return () => clearInterval(timer);
-  }, [isVisible, startTime, isPro, onComplete, showResultsPaywall, hasTriggeredPaywall]);
+  }, [isVisible, startTime]);
 
   // Testimonial rotation timer (every 10 seconds)
   useEffect(() => {
@@ -169,19 +159,6 @@ export function SearchLoadingScreen({
 
     return () => clearInterval(timer);
   }, [isVisible]);
-
-  // Watch for paywall visibility changes to handle dismiss/subscribe
-  useEffect(() => {
-    if (hasTriggeredPaywall && !isResultsPaywallVisible) {
-      if (isPro) {
-        // User subscribed via paywall
-        onComplete();
-      } else {
-        // User dismissed paywall without subscribing - go back to website
-        onCancel();
-      }
-    }
-  }, [isResultsPaywallVisible, isPro, hasTriggeredPaywall, onCancel, onComplete]);
 
   // Prevent body scroll when visible
   useEffect(() => {

@@ -26,8 +26,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PeopleSearch } from "@/components/shared/people-search";
-import { FreeTrialPaywallModal } from "@/components/shared/free-trial-paywall-modal";
+import { MainPaywallModal } from "@/components/shared/main-paywall-modal";
 import { ResultsPaywallModal } from "@/components/shared/results-paywall-modal";
+import { AbandonedPaywallModal } from "@/components/shared/abandoned-paywall-modal";
+import { FreeTrialPaywallModal } from "@/components/shared/free-trial-paywall-modal";
 // TEMPORARILY DISABLED: Onboarding flow
 // import { OnboardingFlow } from "@/components/shared/onboarding-flow";
 import { Badge } from "@/components/ui/badge";
@@ -119,7 +121,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 function HomeContent() {
   const { user } = useAuth();
-  const { isPro, refreshSubscription } = useSubscription();
+  const { isPro, refreshSubscription, showAbandonedPaywall } = useSubscription();
   const searchParams = useSearchParams();
   // TEMPORARILY DISABLED: Onboarding flow
   // const [showOnboarding, setShowOnboarding] = useState(false);
@@ -158,10 +160,31 @@ function HomeContent() {
     if (proParam === "true" && user) {
       // Refresh subscription status
       refreshSubscription();
+      // Clear checkout initiated flag since checkout succeeded
+      localStorage.removeItem("revealai_checkout_initiated");
+      localStorage.removeItem("revealai_checkout_timestamp");
       // Clean up URL
       window.history.replaceState({}, "", "/");
     }
   }, [searchParams, user, refreshSubscription]);
+
+  // Check for abandoned transaction (user went to Stripe and came back without completing)
+  useEffect(() => {
+    const canceled = searchParams.get("canceled");
+    const checkoutInitiated = localStorage.getItem("revealai_checkout_initiated");
+    
+    // If user came back from Stripe with canceled=true and they're not Pro
+    if (canceled === "true" && checkoutInitiated === "true" && !isPro) {
+      // Show abandoned paywall
+      showAbandonedPaywall();
+      // Clear the canceled param from URL
+      window.history.replaceState({}, "", "/");
+    } else if (isPro && checkoutInitiated === "true") {
+      // If user is now Pro, clear the flag (checkout succeeded)
+      localStorage.removeItem("revealai_checkout_initiated");
+      localStorage.removeItem("revealai_checkout_timestamp");
+    }
+  }, [searchParams, isPro, showAbandonedPaywall]);
 
   // TEMPORARILY DISABLED: Handle onboarding completion
   // const handleOnboardingComplete = useCallback(() => {
@@ -272,9 +295,13 @@ function HomeContent() {
           }),
         }}
       />
-      {/* Free trial paywall - shown immediately when non-pro users try to search */}
-      <FreeTrialPaywallModal />
+      {/* Main paywall - shown immediately when non-pro users try to search */}
+      <MainPaywallModal />
       <ResultsPaywallModal />
+      {/* Abandoned paywall - shown when user returns from Stripe without completing checkout */}
+      <AbandonedPaywallModal />
+      {/* Free trial paywall - shown when user closes abandoned paywall */}
+      <FreeTrialPaywallModal />
       <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Header - Fixed on top */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">

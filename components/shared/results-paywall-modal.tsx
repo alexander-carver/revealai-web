@@ -8,6 +8,9 @@ import Image from "next/image";
 import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
 import { getDeviceId } from "@/lib/device-id";
 
+const INITIAL_COUNTDOWN_SECONDS = 472; // 7 minutes 52 seconds
+const COUNTDOWN_STORAGE_KEY = "revealai_paywall_countdown";
+
 // Benefits with styled text
 const benefits = [
   <>Find Hidden <span className="text-red-600 font-semibold">Dating Apps</span> (Tinder, Bumble, Grindr)</>,
@@ -22,6 +25,62 @@ export function ResultsPaywallModal() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
+  const [countdown, setCountdown] = useState(INITIAL_COUNTDOWN_SECONDS);
+
+  // Initialize and manage persistent countdown timer
+  useEffect(() => {
+    if (!isResultsPaywallVisible) return;
+
+    // Get stored countdown or initialize
+    const storedData = typeof window !== "undefined" ? localStorage.getItem(COUNTDOWN_STORAGE_KEY) : null;
+    let initialCountdown = INITIAL_COUNTDOWN_SECONDS;
+    let storedTimestamp = Date.now();
+
+    if (storedData) {
+      try {
+        const { remaining, timestamp } = JSON.parse(storedData);
+        const elapsed = (Date.now() - timestamp) / 1000; // in seconds with decimals
+        initialCountdown = Math.max(0, remaining - elapsed);
+        storedTimestamp = timestamp;
+      } catch (e) {
+        // Invalid data, reset to initial
+        initialCountdown = INITIAL_COUNTDOWN_SECONDS;
+        storedTimestamp = Date.now();
+      }
+    }
+
+    setCountdown(initialCountdown);
+
+    // Update countdown every second
+    const interval = setInterval(() => {
+      if (storedTimestamp) {
+        const elapsed = (Date.now() - storedTimestamp) / 1000;
+        const newValue = Math.max(0, INITIAL_COUNTDOWN_SECONDS - elapsed);
+        
+        setCountdown(newValue);
+        
+        // Save to localStorage
+        if (typeof window !== "undefined") {
+          localStorage.setItem(
+            COUNTDOWN_STORAGE_KEY,
+            JSON.stringify({
+              remaining: Math.floor(newValue),
+              timestamp: storedTimestamp,
+            })
+          );
+        }
+      }
+    }, 1000); // Update every second
+
+    return () => clearInterval(interval);
+  }, [isResultsPaywallVisible]);
+
+  // Format countdown as MM:SS
+  const formatCountdown = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = Math.floor(totalSeconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   // Show close button instantly
   useEffect(() => {
@@ -102,10 +161,22 @@ export function ResultsPaywallModal() {
           
           {/* Card Content */}
           <div className="relative z-10 px-6 sm:px-8 py-8 sm:py-10">
+            {/* Countdown Timer - Large and Prominent at Top */}
+            <div className="mb-8 flex flex-col items-center">
+              <div className="text-center mb-2">
+                <span className="text-red-600 font-bold text-lg sm:text-xl">FREE limited time only</span>
+              </div>
+              <div className="text-center">
+                <span className="text-red-600 font-mono font-black text-5xl sm:text-6xl tabular-nums tracking-tight">
+                  {formatCountdown(countdown)}
+                </span>
+              </div>
+            </div>
+
             {/* Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                GET <span className="text-red-600">RESULTS</span> FOR FREE
+                GET <span className="text-red-600">FREE</span> ACCESS
               </h2>
               <p className="text-gray-500 text-sm">Start your free trial today</p>
             </div>

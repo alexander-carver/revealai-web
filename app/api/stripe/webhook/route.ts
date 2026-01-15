@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
         console.log("Session data:", { userId, plan, customer: session.customer });
 
         if (userId) {
-          const subscriptionTier = plan === "weekly" ? "weekly" : "yearly";
+          // free_trial converts to weekly after trial, abandoned_trial also converts to weekly
+          const subscriptionTier = plan === "weekly" || plan === "free_trial" || plan === "abandoned_trial" ? "weekly" : "yearly";
           
           // Get subscription details
           const subscriptionId = session.subscription as string;
@@ -86,6 +87,58 @@ export async function POST(request: NextRequest) {
             console.error("Error updating subscription:", error);
           } else {
             console.log("Subscription created for user:", userId);
+          }
+        }
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        // Handle upgrade from $1.99 to $6.99 for abandoned_trial subscriptions
+        const invoice = event.data.object as Stripe.Invoice;
+        const subscriptionId = invoice.subscription as string;
+
+        // Only process subscription invoices (not one-time payments)
+        if (subscriptionId && (invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create")) {
+          try {
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            
+            // Check if this is an abandoned_trial subscription
+            const lineItem = subscription.items.data[0];
+            const productId = lineItem?.price?.product as string;
+            const abandonedTrialProductId = process.env.STRIPE_ABANDONED_TRIAL_PRODUCT_ID || "prod_TnGdDqDGvyBlhK";
+            
+            if (productId === abandonedTrialProductId) {
+              // Check if we've already upgraded this subscription
+              const hasUpgraded = subscription.metadata?.upgraded_to_weekly === "true";
+              
+              if (!hasUpgraded) {
+                // This is the first paid invoice for abandoned_trial, schedule upgrade to $6.99/week
+                const weeklyProductId = process.env.STRIPE_WEEKLY_PRODUCT_ID || "prod_Tn7ov8WD9p7Zty";
+                
+                // Get the weekly product's price
+                const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
+                const weeklyPriceId = weeklyProduct.default_price as string;
+                
+                if (weeklyPriceId) {
+                  // Update subscription to use the weekly price starting next period
+                  await stripe.subscriptions.update(subscriptionId, {
+                    items: [{
+                      id: lineItem.id,
+                      price: weeklyPriceId,
+                    }],
+                    proration_behavior: "none", // Don't prorate, wait until next period
+                    metadata: {
+                      ...subscription.metadata,
+                      upgraded_to_weekly: "true",
+                    },
+                  });
+                  
+                  console.log(`Scheduled upgrade for subscription ${subscriptionId} from $1.99 to $6.99/week (effective next billing cycle)`);
+                }
+              }
+            }
+          } catch (error: any) {
+            console.error("Error upgrading abandoned_trial subscription:", error);
           }
         }
         break;

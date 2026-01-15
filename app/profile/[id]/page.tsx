@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
+  ArrowRight,
   ExternalLink,
   User,
   Globe,
@@ -33,10 +34,11 @@ import {
   Search,
   Lock,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useSubscription } from "@/hooks/use-subscription";
 import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
 import { ResultsPaywallModal } from "@/components/shared/results-paywall-modal";
-import { FreeTrialPaywallModal } from "@/components/shared/free-trial-paywall-modal";
+import { MainPaywallModal } from "@/components/shared/main-paywall-modal";
 
 // Get icon for source type
 function getSourceIcon(label: string) {
@@ -74,6 +76,7 @@ export default function ProfilePage() {
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [showMoreSources, setShowMoreSources] = useState(false);
+  const [followUpQuery, setFollowUpQuery] = useState("");
 
   useEffect(() => {
     const id = params.id as string;
@@ -148,8 +151,8 @@ export default function ProfilePage() {
       />
       {/* Results Paywall Modal */}
       <ResultsPaywallModal />
-      {/* Free Trial Paywall Modal */}
-      <FreeTrialPaywallModal />
+      {/* Main Paywall Modal */}
+      <MainPaywallModal />
       
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -468,6 +471,89 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
+
+        {/* Related Questions Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="w-5 h-5 text-primary" />
+              Related
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Recommended Follow-up Questions */}
+            <div className="space-y-3">
+              {[
+                `What professional experience does ${profile.name} have?`,
+                `What investments or business ventures is ${profile.name} involved in?`,
+                `What education background does ${profile.name} have?`,
+                `What controversies or legal issues involve ${profile.name}?`,
+                `What social media presence does ${profile.name} have?`,
+              ].map((suggestion, index) => (
+                <button
+                  key={index}
+                  onClick={!isPro ? handleLockedSourceClick : undefined}
+                  className="w-full flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-all group text-left"
+                >
+                  <span className="text-sm font-medium">{suggestion}</span>
+                  <div className="flex items-center gap-2">
+                    {!isPro && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-blue-50 text-blue-600 border-blue-200 flex items-center gap-1"
+                      >
+                        <Lock className="w-3 h-3" />
+                        Pro
+                      </Badge>
+                    )}
+                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary flex-shrink-0" />
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Open-ended Search Input */}
+            <div className="pt-4 border-t">
+              <div className="flex items-center gap-2 mb-3">
+                <Search className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Ask follow up</span>
+                {!isPro && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-blue-50 text-blue-600 border-blue-200 flex items-center gap-1"
+                  >
+                    <Lock className="w-3 h-3" />
+                    Pro
+                  </Badge>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ask anything about this person..."
+                  value={followUpQuery}
+                  onChange={(e) => setFollowUpQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isPro) {
+                      showFreeTrialPaywall();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => {
+                    if (!isPro) {
+                      showFreeTrialPaywall();
+                    }
+                  }}
+                  size="icon"
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Disclaimer */}
         <div className="mt-8 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">

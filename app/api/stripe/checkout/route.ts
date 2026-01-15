@@ -23,19 +23,29 @@ export async function POST(request: NextRequest) {
     // Detect if we're using test or live mode based on the secret key
     const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_");
     
-    // Define product IDs - require environment variables in production
-    // Special "test" plan - uses test product if set, otherwise falls back to weekly
-    const productIds: Record<string, string | undefined> = {
-      weekly: process.env.STRIPE_WEEKLY_PRODUCT_ID,
-      yearly: process.env.STRIPE_YEARLY_PRODUCT_ID,
-      // Free trial plan - 7 day free trial then $9.99/week
-      free_trial: process.env.STRIPE_FREE_TRIAL_PRODUCT_ID,
+    // Define product IDs - HARDCODED to ensure correct products are used
+    // Main paywall products:
+    // - Weekly: prod_Tn7ov8WD9p7Zty ($6.99/week)
+    // - Yearly: prod_Tn7peqRLz4B8Ho ($39.99/year)
+    // - Abandoned Trial: prod_TnGdDqDGvyBlhK ($1.99 for first week, then upgrades to $6.99/week)
+    // - Free Trial: Uses weekly product with 7-day trial period, then converts to $6.99/week
+    const productIds: Record<string, string> = {
+      weekly: "prod_Tn7ov8WD9p7Zty", // $6.99/week - DO NOT CHANGE
+      yearly: "prod_Tn7peqRLz4B8Ho", // $39.99/year - DO NOT CHANGE
+      // Free trial plan - uses weekly product with 7-day trial, then converts to $6.99/week
+      free_trial: "prod_Tn7ov8WD9p7Zty", // $6.99/week after trial - DO NOT CHANGE
+      // Abandoned trial - $1.99 for first week, then upgrades to $6.99/week
+      abandoned_trial: "prod_TnGdDqDGvyBlhK", // $1.99 first week - DO NOT CHANGE
       // Test plan - use test product ID if set, otherwise use weekly for testing
-      test: process.env.STRIPE_TEST_PRODUCT_ID || process.env.STRIPE_WEEKLY_PRODUCT_ID,
+      test: process.env.STRIPE_TEST_PRODUCT_ID || "prod_Tn7ov8WD9p7Zty",
     };
 
     const productId = productIds[plan as string];
+    
+    // Log which product ID is being used for debugging
+    console.log(`[Checkout] Plan: ${plan}, Product ID: ${productId}`);
     const isFreeTrial = plan === "free_trial";
+    const isAbandonedTrial = plan === "abandoned_trial";
     
     if (!productId) {
       return NextResponse.json(
