@@ -95,8 +95,11 @@ export async function POST(request: NextRequest) {
       case "invoice.payment_succeeded": {
         // Handle upgrade from $1.99 to $6.99 for abandoned_trial subscriptions
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = invoice.subscription 
-          ? (typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription.id)
+        // invoice.subscription can be a string ID or a Subscription object
+        const subscriptionId = (invoice as any).subscription 
+          ? (typeof (invoice as any).subscription === 'string' 
+              ? (invoice as any).subscription 
+              : (invoice as any).subscription.id)
           : null;
 
         // Only process subscription invoices (not one-time payments)
