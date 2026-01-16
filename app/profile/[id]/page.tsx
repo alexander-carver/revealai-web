@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { mockProfiles, type MockProfile } from "@/lib/mock-data";
@@ -15,6 +15,8 @@ import {
   User,
   Globe,
   Share2,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
   Twitter,
   Facebook,
@@ -71,6 +73,7 @@ export default function ProfilePage() {
   const { isPro, showFreeTrialPaywall } = useSubscription();
   const [profile, setProfile] = useState<MockProfile | null>(null);
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
+  const galleryRef = useRef<HTMLDivElement>(null);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [showMoreSources, setShowMoreSources] = useState(false);
   const [followUpQuery, setFollowUpQuery] = useState("");
@@ -164,17 +167,61 @@ export default function ProfilePage() {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Profile Header */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Image Gallery */}
-          <div className="lg:col-span-1">
-            <Card className="overflow-hidden">
+        {/* Name and Aliases */}
+        <div className="mb-6">
+          <h1 className="text-4xl font-bold mb-2">{profile.name}</h1>
+          {profile.aliases.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {profile.aliases.map((alias, idx) => (
+                <Badge key={idx} variant="outline" className="text-sm">
+                  {alias}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Image Gallery - Full Width */}
+        <div className="relative mb-8">
+          <Card className="overflow-hidden">
+            <div className="relative">
+              {/* Navigation Arrows - Desktop Only */}
+              {profile.images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (galleryRef.current) {
+                        galleryRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+                      }
+                    }}
+                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg"
+                    aria-label="Previous images"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (galleryRef.current) {
+                        galleryRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+                      }
+                    }}
+                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg"
+                    aria-label="Next images"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+              
               {/* Horizontal Image Gallery */}
-              <div className="flex gap-2 p-3 overflow-x-auto scrollbar-hide">
+              <div 
+                ref={galleryRef}
+                className="flex gap-3 p-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+              >
                 {profile.images.map((img, idx) => (
                   <div
                     key={idx}
-                    className="relative w-32 h-40 sm:w-36 sm:h-44 md:w-40 md:h-48 flex-shrink-0 rounded-lg overflow-hidden bg-muted"
+                    className="relative w-40 h-52 sm:w-48 sm:h-64 md:w-56 md:h-72 flex-shrink-0 rounded-lg overflow-hidden bg-muted snap-center"
                   >
                     <Image
                       src={imageError[img] 
@@ -184,58 +231,48 @@ export default function ProfilePage() {
                       alt={`${profile.name} - Photo ${idx + 1}`}
                       fill
                       className="object-cover"
-                      sizes="(max-width: 640px) 128px, (max-width: 768px) 144px, 160px"
+                      sizes="(max-width: 640px) 160px, (max-width: 768px) 192px, 224px"
                       onError={() => handleImageError(img)}
                     />
                   </div>
                 ))}
               </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Profile Info Section */}
+        <div className="space-y-6 mb-8">
+          <div>
+            <p className="text-xl text-muted-foreground">{profile.summary}</p>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card className="p-4 text-center">
+              <div className="text-3xl font-bold text-primary">{profile.sources.length}</div>
+              <div className="text-sm text-muted-foreground">Sources</div>
+            </Card>
+            <Card className="p-4 text-center">
+              <div className="text-3xl font-bold text-primary">{profile.images.length}</div>
+              <div className="text-sm text-muted-foreground">Images</div>
+            </Card>
+            <Card className="p-4 text-center">
+              <div className="text-3xl font-bold text-green-500">✓</div>
+              <div className="text-sm text-muted-foreground">Verified</div>
             </Card>
           </div>
 
-          {/* Profile Info */}
-          <div className="lg:col-span-2 space-y-6">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">{profile.name}</h1>
-              {profile.aliases.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {profile.aliases.map((alias, idx) => (
-                    <Badge key={idx} variant="outline" className="text-sm">
-                      {alias}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              <p className="text-xl text-muted-foreground">{profile.summary}</p>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <Card className="p-4 text-center">
-                <div className="text-3xl font-bold text-primary">{profile.sources.length}</div>
-                <div className="text-sm text-muted-foreground">Sources</div>
-              </Card>
-              <Card className="p-4 text-center">
-                <div className="text-3xl font-bold text-primary">{profile.images.length}</div>
-                <div className="text-sm text-muted-foreground">Images</div>
-              </Card>
-              <Card className="p-4 text-center">
-                <div className="text-3xl font-bold text-green-500">✓</div>
-                <div className="text-sm text-muted-foreground">Verified</div>
-              </Card>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
-              <Button className="gap-2" onClick={handleBackgroundCheck}>
-                <Search className="w-4 h-4" />
-                Full Background Check
-              </Button>
-              <Button variant="outline" className="gap-2">
-                <Share2 className="w-4 h-4" />
-                Share Profile
-              </Button>
-            </div>
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-3">
+            <Button className="gap-2" onClick={handleBackgroundCheck}>
+              <Search className="w-4 h-4" />
+              Full Background Check
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <Share2 className="w-4 h-4" />
+              Share Profile
+            </Button>
           </div>
         </div>
 

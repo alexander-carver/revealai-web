@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
   ExternalLink,
   Globe,
   Share2,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
   CheckCircle2,
   AlertTriangle,
@@ -167,6 +169,7 @@ function SearchResultContent() {
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
   const [showMoreSources, setShowMoreSources] = useState(false);
   const [followUpQuery, setFollowUpQuery] = useState("");
+  const galleryRef = useRef<HTMLDivElement>(null);
 
   // Get search params
   const firstName = searchParams.get("firstName") || "";
@@ -527,17 +530,59 @@ function SearchResultContent() {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Profile Header */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Image Gallery */}
-          <div className="lg:col-span-1">
-            <Card className="overflow-hidden">
+        {/* Name and Location */}
+        <div className="mb-6">
+          <h1 className="text-4xl font-bold mb-2">{fullName}</h1>
+          {location && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Badge variant="outline" className="text-sm">
+                {location}
+              </Badge>
+            </div>
+          )}
+        </div>
+
+        {/* Image Gallery - Full Width */}
+        <div className="relative mb-8">
+          <Card className="overflow-hidden">
+            <div className="relative">
+              {/* Navigation Arrows - Desktop Only */}
+              {displayImages.length > 1 && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (galleryRef.current) {
+                        galleryRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+                      }
+                    }}
+                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg"
+                    aria-label="Previous images"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (galleryRef.current) {
+                        galleryRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+                      }
+                    }}
+                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg"
+                    aria-label="Next images"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+              
               {/* Horizontal Image Gallery */}
-              <div className="flex gap-2 p-3 overflow-x-auto scrollbar-hide">
+              <div 
+                ref={galleryRef}
+                className="flex gap-3 p-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+              >
                 {displayImages.map((img, idx) => (
                   <div
                     key={idx}
-                    className="relative w-32 h-40 sm:w-36 sm:h-44 md:w-40 md:h-48 flex-shrink-0 rounded-lg overflow-hidden bg-muted"
+                    className="relative w-40 h-52 sm:w-48 sm:h-64 md:w-56 md:h-72 flex-shrink-0 rounded-lg overflow-hidden bg-muted snap-center"
                   >
                     <Image
                       src={
@@ -548,143 +593,135 @@ function SearchResultContent() {
                       alt={`${fullName} - Photo ${idx + 1}`}
                       fill
                       className="object-cover"
-                      sizes="(max-width: 640px) 128px, (max-width: 768px) 144px, 160px"
+                      sizes="(max-width: 640px) 160px, (max-width: 768px) 192px, 224px"
                       onError={() => handleImageError(img)}
                       unoptimized
                     />
                   </div>
                 ))}
               </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Profile Info Section */}
+        <div className="space-y-6 mb-8">
+          <div>
+            <p className="text-xl text-muted-foreground">
+              {(() => {
+                // Get first sentence and clean it up
+                const firstSentence = parsedData.answer
+                  .replace(/!\[[^\]]*\]\([^)]+\)/g, '') // Remove image markdown
+                  .replace(/\*\*/g, '') // Remove bold markers
+                  .replace(/#{1,3}\s*/g, '') // Remove header markers
+                  .replace(/\[[^\]]+\]\([^)]+\)/g, (m) => m.match(/\[([^\]]+)\]/)?.[1] || '') // Keep link text only
+                  .split(/[.!?]/)[0]?.trim();
+                return firstSentence ? `${firstSentence}.` : `Profile for ${fullName}`;
+              })()}
+            </p>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card className="p-4 text-center">
+              <div className="text-3xl font-bold text-primary">
+                {parsedData.sources.length}
+              </div>
+              <div className="text-sm text-muted-foreground">Sources</div>
+            </Card>
+            <Card className="p-4 text-center">
+              <div className="text-3xl font-bold text-primary">
+                {displayImages.length}
+              </div>
+              <div className="text-sm text-muted-foreground">Images</div>
+            </Card>
+            <Card className="p-4 text-center">
+              <div className="text-3xl font-bold text-green-500">✓</div>
+              <div className="text-sm text-muted-foreground">Verified</div>
             </Card>
           </div>
 
-          {/* Profile Info */}
-          <div className="lg:col-span-2 space-y-6">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">{fullName}</h1>
-              {location && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge variant="outline" className="text-sm">
-                    {location}
-                  </Badge>
-                </div>
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-3">
+            <Button className="gap-2" onClick={handleFullBackgroundCheck}>
+              <Search className="w-4 h-4" />
+              Full Background Check
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <Share2 className="w-4 h-4" />
+              Share Profile
+            </Button>
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={handleRetry}
+              disabled={isRetrying}
+            >
+              {isRetrying ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
               )}
-              <p className="text-xl text-muted-foreground">
-                {(() => {
-                  // Get first sentence and clean it up
-                  const firstSentence = parsedData.answer
-                    .replace(/!\[[^\]]*\]\([^)]+\)/g, '') // Remove image markdown
-                    .replace(/\*\*/g, '') // Remove bold markers
-                    .replace(/#{1,3}\s*/g, '') // Remove header markers
-                    .replace(/\[[^\]]+\]\([^)]+\)/g, (m) => m.match(/\[([^\]]+)\]/)?.[1] || '') // Keep link text only
-                    .split(/[.!?]/)[0]?.trim();
-                  return firstSentence ? `${firstSentence}.` : `Profile for ${fullName}`;
-                })()}
-              </p>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <Card className="p-4 text-center">
-                <div className="text-3xl font-bold text-primary">
-                  {parsedData.sources.length}
-                </div>
-                <div className="text-sm text-muted-foreground">Sources</div>
-              </Card>
-              <Card className="p-4 text-center">
-                <div className="text-3xl font-bold text-primary">
-                  {displayImages.length}
-                </div>
-                <div className="text-sm text-muted-foreground">Images</div>
-              </Card>
-              <Card className="p-4 text-center">
-                <div className="text-3xl font-bold text-green-500">✓</div>
-                <div className="text-sm text-muted-foreground">Verified</div>
-              </Card>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
-              <Button className="gap-2" onClick={handleFullBackgroundCheck}>
-                <Search className="w-4 h-4" />
-                Full Background Check
-              </Button>
-              <Button variant="outline" className="gap-2">
-                <Share2 className="w-4 h-4" />
-                Share Profile
-              </Button>
-              <Button 
-                variant="outline" 
-                className="gap-2"
-                onClick={handleRetry}
-                disabled={isRetrying}
-              >
-                {isRetrying ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
-                )}
-                Try Again
-              </Button>
-            </div>
-
-            {/* Open-Ended Search Input */}
-            {showOpenEndedSearch && (
-              <Card className="mt-6">
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">
-                        Ask anything about {fullName}
-                      </label>
-                      <Input
-                        placeholder="e.g., What is their criminal record? Where do they work? What's their net worth?"
-                        value={openEndedQuery}
-                        onChange={(e) => setOpenEndedQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleOpenEndedSearch();
-                          }
-                        }}
-                        className="w-full"
-                        disabled={isSearchingOpenEnded}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleOpenEndedSearch}
-                        disabled={!openEndedQuery.trim() || isSearchingOpenEnded}
-                        className="gap-2"
-                      >
-                        {isSearchingOpenEnded ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Searching...
-                          </>
-                        ) : (
-                          <>
-                            <Search className="w-4 h-4" />
-                            Search
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setShowOpenEndedSearch(false);
-                          setOpenEndedQuery("");
-                        }}
-                        disabled={isSearchingOpenEnded}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+              Try Again
+            </Button>
           </div>
+
+          {/* Open-Ended Search Input */}
+          {showOpenEndedSearch && (
+            <Card className="mt-6">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Ask anything about {fullName}
+                    </label>
+                    <Input
+                      placeholder="e.g., What is their criminal record? Where do they work? What's their net worth?"
+                      value={openEndedQuery}
+                      onChange={(e) => setOpenEndedQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleOpenEndedSearch();
+                        }
+                      }}
+                      className="w-full"
+                      disabled={isSearchingOpenEnded}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleOpenEndedSearch}
+                      disabled={!openEndedQuery.trim() || isSearchingOpenEnded}
+                      className="gap-2"
+                    >
+                      {isSearchingOpenEnded ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Searching...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-4 h-4" />
+                          Search
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowOpenEndedSearch(false);
+                        setOpenEndedQuery("");
+                      }}
+                      disabled={isSearchingOpenEnded}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sources Section */}
