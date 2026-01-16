@@ -13,8 +13,6 @@ import {
   ExternalLink,
   Globe,
   Share2,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   CheckCircle2,
   AlertTriangle,
@@ -166,7 +164,6 @@ function SearchResultContent() {
     }
   }, [isPro, router]);
 
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
   const [showMoreSources, setShowMoreSources] = useState(false);
   const [followUpQuery, setFollowUpQuery] = useState("");
@@ -342,19 +339,6 @@ function SearchResultContent() {
     setImageError((prev) => ({ ...prev, [imageSrc]: true }));
   };
 
-  const nextImage = () => {
-    if (parsedData && parsedData.images.length > 0) {
-      setCurrentImageIndex((prev) => (prev + 1) % parsedData.images.length);
-    }
-  };
-
-  const prevImage = () => {
-    if (parsedData && parsedData.images.length > 0) {
-      setCurrentImageIndex(
-        (prev) => (prev - 1 + parsedData.images.length) % parsedData.images.length
-      );
-    }
-  };
 
   // Handle loading screen completion
   const handleLoadingComplete = () => {
@@ -548,77 +532,29 @@ function SearchResultContent() {
           {/* Image Gallery */}
           <div className="lg:col-span-1">
             <Card className="overflow-hidden">
-              {/* Main Image */}
-              <div className="relative aspect-square bg-muted">
-                <Image
-                  src={
-                    imageError[displayImages[currentImageIndex]]
-                      ? `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=600&background=6366f1&color=fff&bold=true`
-                      : displayImages[currentImageIndex]
-                  }
-                  alt={`${fullName} - Photo ${currentImageIndex + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 33vw"
-                  priority
-                  onError={() => handleImageError(displayImages[currentImageIndex])}
-                  unoptimized
-                />
-
-                {/* Navigation Arrows */}
-                {displayImages.length > 1 && (
-                  <>
-                    <button
-                      onClick={prevImage}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={nextImage}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </>
-                )}
-
-                {/* Image Counter */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/60 text-white text-sm">
-                  {currentImageIndex + 1} / {displayImages.length}
-                </div>
+              {/* Horizontal Image Gallery */}
+              <div className="flex gap-2 p-3 overflow-x-auto scrollbar-hide">
+                {displayImages.map((img, idx) => (
+                  <div
+                    key={idx}
+                    className="relative w-32 h-40 sm:w-36 sm:h-44 md:w-40 md:h-48 flex-shrink-0 rounded-lg overflow-hidden bg-muted"
+                  >
+                    <Image
+                      src={
+                        imageError[img]
+                          ? `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=600&background=6366f1&color=fff&bold=true`
+                          : img
+                      }
+                      alt={`${fullName} - Photo ${idx + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 128px, (max-width: 768px) 144px, 160px"
+                      onError={() => handleImageError(img)}
+                      unoptimized
+                    />
+                  </div>
+                ))}
               </div>
-
-              {/* Thumbnail Strip */}
-              {displayImages.length > 1 && (
-                <div className="flex gap-2 p-3 overflow-x-auto">
-                  {displayImages.slice(0, 6).map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
-                      className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors ${
-                        idx === currentImageIndex
-                          ? "border-primary"
-                          : "border-transparent"
-                      }`}
-                    >
-                      <Image
-                        src={
-                          imageError[img]
-                            ? `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=128&background=6366f1&color=fff`
-                            : img
-                        }
-                        alt={`Thumbnail ${idx + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="64px"
-                        onError={() => handleImageError(img)}
-                        unoptimized
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
             </Card>
           </div>
 

@@ -15,8 +15,6 @@ import {
   User,
   Globe,
   Share2,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   Twitter,
   Facebook,
@@ -72,7 +70,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const { isPro, showFreeTrialPaywall } = useSubscription();
   const [profile, setProfile] = useState<MockProfile | null>(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [showMoreSources, setShowMoreSources] = useState(false);
@@ -120,13 +117,6 @@ export default function ProfilePage() {
     );
   }
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % profile.images.length);
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + profile.images.length) % profile.images.length);
-  };
 
   const handleImageError = (imageSrc: string) => {
     setImageError(prev => ({ ...prev, [imageSrc]: true }));
@@ -179,71 +169,27 @@ export default function ProfilePage() {
           {/* Image Gallery */}
           <div className="lg:col-span-1">
             <Card className="overflow-hidden">
-              {/* Main Image */}
-              <div className="relative aspect-square bg-muted">
-                <Image
-                  src={imageError[profile.images[currentImageIndex]] 
-                    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&size=600&background=random`
-                    : profile.images[currentImageIndex]
-                  }
-                  alt={`${profile.name} - Photo ${currentImageIndex + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 33vw"
-                  priority
-                  onError={() => handleImageError(profile.images[currentImageIndex])}
-                />
-                
-                {/* Navigation Arrows */}
-                {profile.images.length > 1 && (
-                  <>
-                    <button
-                      onClick={prevImage}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={nextImage}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </>
-                )}
-
-                {/* Image Counter */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/60 text-white text-sm">
-                  {currentImageIndex + 1} / {profile.images.length}
-                </div>
+              {/* Horizontal Image Gallery */}
+              <div className="flex gap-2 p-3 overflow-x-auto scrollbar-hide">
+                {profile.images.map((img, idx) => (
+                  <div
+                    key={idx}
+                    className="relative w-32 h-40 sm:w-36 sm:h-44 md:w-40 md:h-48 flex-shrink-0 rounded-lg overflow-hidden bg-muted"
+                  >
+                    <Image
+                      src={imageError[img] 
+                        ? `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&size=600&background=random`
+                        : img
+                      }
+                      alt={`${profile.name} - Photo ${idx + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 128px, (max-width: 768px) 144px, 160px"
+                      onError={() => handleImageError(img)}
+                    />
+                  </div>
+                ))}
               </div>
-
-              {/* Thumbnail Strip */}
-              {profile.images.length > 1 && (
-                <div className="flex gap-2 p-3 overflow-x-auto">
-                  {profile.images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
-                      className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors ${
-                        idx === currentImageIndex ? 'border-primary' : 'border-transparent'
-                      }`}
-                    >
-                      <Image
-                        src={imageError[img] 
-                          ? `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&size=128&background=random`
-                          : img
-                        }
-                        alt={`Thumbnail ${idx + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="64px"
-                        onError={() => handleImageError(img)}
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
             </Card>
           </div>
 
