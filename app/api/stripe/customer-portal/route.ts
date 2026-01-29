@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getSessionFromRequest } from "@/lib/auth-server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-12-15.clover",
+  apiVersion: "2024-11-20.acacia",
 });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
