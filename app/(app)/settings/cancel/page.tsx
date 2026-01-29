@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/use-auth";
+import { getAuthHeaders } from "@/lib/supabase/client";
 import Link from "next/link";
 
 const CANCELLATION_QUESTIONS = [
@@ -81,12 +82,11 @@ export default function CancelSubscriptionPage() {
     setError(null);
 
     try {
-      // Submit questionnaire and cancel subscription
+      const headers = await getAuthHeaders();
       const response = await fetch("/api/stripe/cancel-subscription", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
           questionnaire: answers.map((answer, index) => ({
             question: CANCELLATION_QUESTIONS[index],
             answer,

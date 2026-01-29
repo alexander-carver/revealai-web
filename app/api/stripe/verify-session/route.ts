@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-11-17.clover",
+  apiVersion: "2025-12-15.clover",
 });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -42,8 +42,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the user ID - either from parameter, metadata, client_reference_id, or look up by device ID or email
-    let finalUserId = userId || session.metadata?.userId || session.client_reference_id;
+    // Get the user ID only from Stripe session (never trust client-supplied userId for subscription linking)
+    const hadUserIdFromStripe = !!(session.metadata?.userId || session.client_reference_id);
+    let finalUserId = session.metadata?.userId || session.client_reference_id || undefined;
     const deviceId = session.metadata?.deviceId;
     
     // Get customer email from multiple possible sources
@@ -305,7 +306,7 @@ export async function POST(request: NextRequest) {
       subscription: data,
       userId: finalUserId,
       email: customerEmail,
-      accountCreated: !userId, // Flag to indicate if account was auto-created
+      accountCreated: !hadUserIdFromStripe, // True when user was resolved via device/email (not from Stripe metadata)
     });
   } catch (error: any) {
     console.error("Verify session error:", error);

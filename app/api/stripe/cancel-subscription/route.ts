@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { getSessionFromRequest } from "@/lib/auth-server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-11-17.clover",
+  apiVersion: "2025-12-15.clover",
 });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -11,14 +12,16 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, questionnaire } = await request.json();
-
-    if (!userId) {
+    const sessionResult = await getSessionFromRequest(request);
+    if (sessionResult.error) {
       return NextResponse.json(
-        { error: "Missing userId" },
-        { status: 400 }
+        { error: sessionResult.error.message },
+        { status: sessionResult.error.status }
       );
     }
+    const userId = sessionResult.user.id;
+
+    const { questionnaire } = await request.json();
 
     if (!questionnaire || !Array.isArray(questionnaire) || questionnaire.length !== 5) {
       return NextResponse.json(

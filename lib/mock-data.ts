@@ -4,6 +4,7 @@
 export interface MockSource {
   url: string;
   label: string;
+  image?: string; // optional image path for source preview
 }
 
 export interface MockProfile {
@@ -302,6 +303,61 @@ Off the court, James is a major entrepreneur and producer. He co-founded The Spr
   },
 ];
 
+// Emma Smith - Demo profile for anyone to search (Denver, CO)
+export const emmaSmithProfile: MockProfile = {
+  id: "emma-smith",
+  name: "Emma Smith",
+  aliases: ["Emma R. Smith", "Emma Rose Smith", "@emmasmith_denver"],
+  images: ["/emma-2.png", "/emma-1.png", "/emma-3.png", "/emma-4.png"], // surfboard first, braces last
+  sources: [
+    { url: "https://www.instagram.com/emmasmith_co", label: "Instagram (@emmasmith_co)", image: "/sources/source-2.png" },
+    { url: "https://www.tinder.com/@emmasmith92", label: "Tinder Profile", image: "/sources/source-5.png" },
+    { url: "https://twitter.com/emmasmith_denver", label: "X/Twitter (@emmasmith_denver)" },
+    { url: "https://www.linkedin.com/in/emmasmith-denver", label: "LinkedIn" },
+    { url: "https://www.facebook.com/emma.smith.denver", label: "Facebook" },
+    { url: "https://bumble.com/profile/emmasmith", label: "Bumble Profile" },
+    { url: "https://hinge.co/emmasmith92", label: "Hinge Profile" },
+    { url: "https://www.pinterest.com/emmasmithco/", label: "Pinterest" },
+    { url: "https://venmo.com/emmasmith92", label: "Venmo" },
+    { url: "https://www.spokeo.com/Emma-Smith-Denver-CO", label: "Spokeo" },
+    { url: "https://www.whitepages.com/name/Emma-Smith/Denver-CO", label: "Whitepages" },
+    { url: "https://www.beenverified.com/people/emma-smith/", label: "BeenVerified" },
+  ],
+  summary: "Marketing professional based in Denver, Colorado. Active on social media and dating platforms.",
+  answer: `Emma Rose Smith (born March 15, 1992) is a marketing professional currently residing in Denver, Colorado. She graduated from the University of Colorado Boulder in 2014 with a Bachelor's degree in Marketing and Communications.
+
+**Professional Background**
+Emma works as a Senior Marketing Manager at a Denver-based tech startup, where she has been employed since 2019. Prior to this, she worked at several marketing agencies in the Denver metro area. Her LinkedIn profile shows over 500 connections and regular professional activity.
+
+**Social Media Presence**
+Emma maintains active profiles across multiple social platforms:
+- Instagram: @emmasmith_co (approximately 2,400 followers) - Posts primarily feature hiking in the Colorado Rockies, brunch spots in Denver, and travel photography
+- Twitter/X: @emmasmith_denver - Occasional posts about marketing trends and local Denver events
+- Facebook: Active profile with privacy settings enabled for most content
+- Pinterest: Boards related to home decor, recipes, and travel destinations
+
+**Dating App Profiles**
+Multiple dating profiles were found linked to this individual:
+- Tinder: Active profile mentioning love for hiking, craft beer, and dogs
+- Bumble: Profile indicates looking for a relationship, mentions being a "plant mom"
+- Hinge: Profile mentions favorite Denver date spots and outdoor activities
+
+**Residence Information**
+Current address appears to be in the Capitol Hill neighborhood of Denver, CO 80203. Property records indicate she has been renting at this location since 2021.
+
+**Additional Information**
+- Vehicle: 2021 Subaru Outback registered in Colorado
+- No criminal records found in Colorado state database
+- Member of several Denver-area hiking and outdoor recreation groups
+- Frequent visitor to local coffee shops and restaurants in the RiNo and LoDo districts
+
+**Public Records Summary**
+- No bankruptcies on file
+- No civil court cases found
+- Clean driving record in Colorado
+- Voter registration: Active, registered in Denver County`,
+};
+
 // Lookup function similar to iOS MockRegistry
 export function lookupMockProfile(name: string): MockProfile | null {
   const normalized = name.toLowerCase().trim();
@@ -317,3 +373,24 @@ export function isMockName(name: string): boolean {
   return lookupMockProfile(name) !== null;
 }
 
+// Enhanced lookup that also checks Emma Smith with location matching
+export function lookupMockProfileByDetails(
+  firstName: string, 
+  lastName: string, 
+  city?: string, 
+  state?: string
+): MockProfile | null {
+  const fullName = `${firstName} ${lastName}`.toLowerCase().trim();
+  
+  // Check Emma Smith specifically - available to everyone with matching location
+  if (fullName === "emma smith") {
+    const cityMatch = !city || city.toLowerCase().includes("denver");
+    const stateMatch = !state || state.toLowerCase() === "co" || state.toLowerCase() === "colorado";
+    if (cityMatch && stateMatch) {
+      return emmaSmithProfile;
+    }
+  }
+  
+  // Fall back to regular mock lookup
+  return lookupMockProfile(fullName);
+}

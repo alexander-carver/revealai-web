@@ -1,5 +1,6 @@
-// Simple in-memory rate limiter (resets on server restart)
-// For production, consider upgrading to @upstash/ratelimit with Redis
+// Simple in-memory rate limiter (resets on server restart).
+// Note: In-memory limits do not span serverless instances (each instance has its own map).
+// For production at scale, consider @upstash/ratelimit with Redis for shared limits.
 
 interface RateLimitRecord {
   count: number;

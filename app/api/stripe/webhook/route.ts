@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-11-17.clover",
+  apiVersion: "2025-12-15.clover",
 });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -14,13 +14,18 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  console.log("Webhook received at Next.js API route");
-  
+  // Reject early if webhook secret is not configured (do not read/log body)
+  if (!webhookSecret || webhookSecret.length === 0) {
+    return NextResponse.json(
+      { error: "Webhook not configured" },
+      { status: 503 }
+    );
+  }
+
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 
   if (!signature) {
-    console.log("No signature provided");
     return NextResponse.json(
       { error: "No signature" },
       { status: 400 }

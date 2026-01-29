@@ -11,7 +11,7 @@ const PRO_USER_DAILY_LIMIT = 100; // 100 searches per day for Pro users (generou
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, userId, usePro = false, isPro = false } = await request.json();
+    const { query, userId, usePro = false } = await request.json();
 
     if (!query) {
       return NextResponse.json(
@@ -27,10 +27,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // PRO USERS ONLY - Block all free users
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Server-side Pro check: never trust client-sent isPro; verify from subscriptions table
+    const { data: subscription, error: subError } = await supabase
+      .from("subscriptions")
+      .select("tier, status")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (subError) {
+      console.error("Error checking subscription:", subError);
+      return NextResponse.json(
+        { error: "Could not verify subscription" },
+        { status: 500 }
+      );
+    }
+
+    const isPro = !!subscription && (subscription.tier === "weekly" || subscription.tier === "yearly");
+
     if (!isPro) {
       return NextResponse.json(
-        { 
+        {
           error: "Pro subscription required",
           message: "Search is only available for Pro subscribers. Please upgrade to continue.",
         },
@@ -39,7 +58,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Check rate limits before making API call
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // Count searches in the last 24 hours
     const twentyFourHoursAgo = new Date();

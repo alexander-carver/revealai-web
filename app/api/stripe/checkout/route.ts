@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-11-17.clover",
+  apiVersion: "2025-12-15.clover",
 });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -28,12 +28,11 @@ export async function POST(request: NextRequest) {
     // - Weekly: prod_Tn7ov8WD9p7Zty ($6.99/week)
     // - Yearly: prod_Tn7peqRLz4B8Ho ($39.99/year)
     // - Abandoned Trial: prod_TnGdDqDGvyBlhK ($1.99 for first week, then upgrades to $6.99/week)
-    // - Free Trial: Uses weekly product with 7-day trial period, then converts to $6.99/week
+    // - Free Trial: Same as weekly, no trial (charges $6.99 immediately)
     const productIds: Record<string, string> = {
       weekly: "prod_Tn7ov8WD9p7Zty", // $6.99/week - DO NOT CHANGE
       yearly: "prod_Tn7peqRLz4B8Ho", // $39.99/year - DO NOT CHANGE
-      // Free trial plan - uses weekly product with 7-day trial, then converts to $6.99/week
-      free_trial: "prod_Tn7ov8WD9p7Zty", // $6.99/week after trial - DO NOT CHANGE
+      free_trial: "prod_Tn7ov8WD9p7Zty", // $6.99/week, charges immediately - DO NOT CHANGE
       // Abandoned trial - $1.99 for first week, then upgrades to $6.99/week
       abandoned_trial: "prod_TnGdDqDGvyBlhK", // $1.99 first week - DO NOT CHANGE
       // Test plan - use test product ID if set, otherwise use weekly for testing
@@ -44,9 +43,7 @@ export async function POST(request: NextRequest) {
     
     // Log which product ID is being used for debugging
     console.log(`[Checkout] Plan: ${plan}, Product ID: ${productId}`);
-    const isFreeTrial = plan === "free_trial";
-    const isAbandonedTrial = plan === "abandoned_trial";
-    
+
     if (!productId) {
       return NextResponse.json(
         { error: `Invalid plan: ${plan}. STRIPE_${plan.toUpperCase()}_PRODUCT_ID environment variable is required for production plans.` },
@@ -157,14 +154,11 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Add 7-day free trial for free_trial plan
-    if (isFreeTrial) {
-      sessionConfig.subscription_data = {
-        trial_period_days: 7,
-      };
-    }
-
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    // Idempotency key: same user+plan within same minute returns same session (avoids duplicate sessions on double-click)
+    const idempotencyKey = `${userId || deviceId || "anon"}-${plan}-${Math.floor(Date.now() / 60000)}`;
+    const session = await stripe.checkout.sessions.create(sessionConfig, {
+      idempotencyKey,
+    });
 
     return NextResponse.json({ url: session.url });
   } catch (error: any) {

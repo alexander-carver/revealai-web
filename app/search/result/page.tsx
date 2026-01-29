@@ -27,6 +27,8 @@ import {
 import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
+import { lookupMockProfileByDetails, emmaSmithProfile } from "@/lib/mock-data";
+import { Logo } from "@/components/shared/logo";
 
 // Parse Perplexity response to extract structured data
 function parsePerplexityResponse(content: string, personName: string) {
@@ -158,13 +160,26 @@ function SearchResultContent() {
   const [openEndedQuery, setOpenEndedQuery] = useState("");
   const [isSearchingOpenEnded, setIsSearchingOpenEnded] = useState(false);
 
-  // IMMEDIATELY redirect non-Pro users back to home - no paywall on results page
-  // (Paywall is handled on homepage in people-search.tsx)
+  // Check if this is a mock profile (like Emma Smith) - allow non-pro users to view mock profiles
+  const [isMockResult, setIsMockResult] = useState(false);
+  
+  // Redirect non-Pro users back to home UNLESS they're viewing a mock profile
   useEffect(() => {
+    const searchFirstName = searchParams.get("firstName") || "";
+    const searchLastName = searchParams.get("lastName") || "";
+    const searchCity = searchParams.get("city") || "";
+    const searchState = searchParams.get("state") || "";
+    
+    const mockProfile = lookupMockProfileByDetails(searchFirstName, searchLastName, searchCity, searchState);
+    if (mockProfile) {
+      setIsMockResult(true);
+      return; // Allow viewing mock profiles without pro
+    }
+    
     if (!isPro) {
       router.push("/");
     }
-  }, [isPro, router]);
+  }, [isPro, router, searchParams]);
 
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
   const [showMoreSources, setShowMoreSources] = useState(false);
@@ -202,7 +217,24 @@ function SearchResultContent() {
     const searchStartTime = Date.now();
     const MIN_LOADING_TIME_MS = 8000; // 8 seconds minimum
 
-    // Non-Pro users should never reach here (redirected earlier), but just in case:
+    // Check for mock profile first - available to everyone (pro or not)
+    const mockProfile = lookupMockProfileByDetails(firstName, lastName, city, state);
+    if (mockProfile) {
+      setIsMockResult(true);
+      
+      // Simulate loading time for better UX
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      setParsedData({
+        images: mockProfile.images,
+        sources: mockProfile.sources,
+        answer: mockProfile.answer,
+      });
+      setShowLoadingScreen(false);
+      return;
+    }
+
+    // Non-Pro users should never reach here for non-mock searches
     if (!isPro) {
       router.push("/");
       return;
@@ -532,14 +564,24 @@ function SearchResultContent() {
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Name and Location */}
         <div className="mb-6">
-          <h1 className="text-4xl font-bold mb-2">{fullName}</h1>
-          {location && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              <Badge variant="outline" className="text-sm">
-                {location}
-              </Badge>
+          <div className="flex items-center justify-between flex-wrap gap-4 mb-2">
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold">{fullName}</h1>
+              {location && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Badge variant="outline" className="text-sm">
+                    {location}
+                  </Badge>
+                </div>
+              )}
             </div>
-          )}
+            {/* Reveal AI Branding - Only show for Emma Smith mock profile */}
+            {isMockResult && fullName.toLowerCase().includes("emma smith") && (
+              <div className="flex items-center gap-2">
+                <Logo size="sm" showText={true} className="flex-shrink-0" />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Image Gallery - Full Width */}
@@ -745,8 +787,18 @@ function SearchResultContent() {
                         onClick={handleLockedClick}
                         className="flex items-center gap-3 p-3 rounded-lg border border-border transition-all cursor-pointer opacity-70 hover:opacity-90 group"
                       >
-                        <div className="p-2 rounded-lg bg-muted/50 transition-colors relative">
-                          <Globe className="w-4 h-4 text-muted-foreground" />
+                        <div className="p-2 rounded-lg bg-muted/50 transition-colors relative w-10 h-10 flex items-center justify-center flex-shrink-0">
+                          {(source as any).image ? (
+                            <Image
+                              src={(source as any).image}
+                              alt={source.label}
+                              width={40}
+                              height={40}
+                              className="rounded object-cover opacity-50"
+                            />
+                          ) : (
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                          )}
                           <div className="absolute -top-1 -right-1 p-0.5 bg-blue-500 rounded-full">
                             <Lock className="w-3 h-3 text-white" />
                           </div>
@@ -776,8 +828,18 @@ function SearchResultContent() {
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
                     >
-                      <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
-                        <Globe className="w-4 h-4 text-primary" />
+                      <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors relative w-10 h-10 flex items-center justify-center flex-shrink-0">
+                        {(source as any).image ? (
+                          <Image
+                            src={(source as any).image}
+                            alt={source.label}
+                            width={40}
+                            height={40}
+                            className="rounded object-cover"
+                          />
+                        ) : (
+                          <Globe className="w-4 h-4 text-primary" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
@@ -841,8 +903,18 @@ function SearchResultContent() {
                           rel="noopener noreferrer"
                           className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
                         >
-                          <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
-                            <Globe className="w-4 h-4 text-primary" />
+                          <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors relative w-10 h-10 flex items-center justify-center flex-shrink-0">
+                            {(source as any).image ? (
+                              <Image
+                                src={(source as any).image}
+                                alt={source.label}
+                                width={40}
+                                height={40}
+                                className="rounded object-cover"
+                              />
+                            ) : (
+                              <Globe className="w-4 h-4 text-primary" />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">

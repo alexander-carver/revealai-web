@@ -20,6 +20,7 @@ import { Alert } from "@/components/ui/alert";
 import { Logo } from "@/components/shared/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+import { getAuthHeaders } from "@/lib/supabase/client";
 
 function LoginContent() {
   const router = useRouter();
@@ -48,15 +49,16 @@ function LoginContent() {
         if (redirect.includes("checkout-success")) {
           const sessionId = new URLSearchParams(redirect.split("?")[1] || "").get("session_id");
           if (sessionId && user.email) {
-            fetch("/api/stripe/link-subscription", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: user.id,
-                email: user.email,
-                sessionId,
-              }),
-            }).then(() => {
+            getAuthHeaders().then((headers) =>
+              fetch("/api/stripe/link-subscription", {
+                method: "POST",
+                headers: { ...headers, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  email: user.email,
+                  sessionId,
+                }),
+              })
+            ).then(() => {
               refreshSubscription();
               router.push(redirect);
             });
