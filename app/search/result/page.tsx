@@ -27,7 +27,7 @@ import {
 import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
-import { lookupMockProfileByDetails, emmaSmithProfile } from "@/lib/mock-data";
+import { lookupMockProfileByDetails, emmaSmithProfile, kyleAndersonProfile } from "@/lib/mock-data";
 import { Logo } from "@/components/shared/logo";
 
 // Parse Perplexity response to extract structured data
@@ -575,8 +575,8 @@ function SearchResultContent() {
                 </div>
               )}
             </div>
-            {/* Reveal AI Branding - Only show for Emma Smith mock profile */}
-            {isMockResult && fullName.toLowerCase().includes("emma smith") && (
+            {/* Reveal AI Branding - Only show for mock profiles (Emma Smith, Kyle Anderson) */}
+            {isMockResult && (fullName.toLowerCase().includes("emma smith") || fullName.toLowerCase().includes("kyle anderson")) && (
               <div className="flex items-center gap-2">
                 <Logo size="sm" showText={true} className="flex-shrink-0" />
               </div>

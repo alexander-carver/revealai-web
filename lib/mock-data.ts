@@ -308,7 +308,7 @@ export const emmaSmithProfile: MockProfile = {
   id: "emma-smith",
   name: "Emma Smith",
   aliases: ["Emma R. Smith", "Emma Rose Smith", "@emmasmith_denver"],
-  images: ["/emma-2.png", "/emma-1.png", "/emma-3.png", "/emma-4.png"], // surfboard first, braces last
+  images: ["/emma-3.png", "/emma-2.png", "/emma-4.png", "/emma-1.png"], // surfing first, then 2 boyfriend pics, then school braces last
   sources: [
     { url: "https://www.instagram.com/emmasmith_co", label: "Instagram (@emmasmith_co)", image: "/sources/source-2.png" },
     { url: "https://www.tinder.com/@emmasmith92", label: "Tinder Profile", image: "/sources/source-5.png" },
@@ -358,6 +358,65 @@ Current address appears to be in the Capitol Hill neighborhood of Denver, CO 802
 - Voter registration: Active, registered in Denver County`,
 };
 
+// Kyle Anderson - Demo profile for anyone to search (Denver, CO)
+export const kyleAndersonProfile: MockProfile = {
+  id: "kyle-anderson",
+  name: "Kyle Anderson",
+  aliases: ["Kyle J. Anderson", "Kyle James Anderson", "@kyleanderson_denver"],
+  images: ["/kyle-3.png", "/kyle-1.png", "/kyle-4.png", "/kyle-2.png"], // surfing first, then couple pics, then portrait
+  sources: [
+    { url: "https://www.instagram.com/kyleanderson_co", label: "Instagram (@kyleanderson_co)", image: "/sources/source-2.png" },
+    { url: "https://www.tinder.com/@kyleanderson94", label: "Tinder Profile", image: "/sources/source-5.png" },
+    { url: "https://twitter.com/kyle_anderson_co", label: "X/Twitter (@kyle_anderson_co)" },
+    { url: "https://www.linkedin.com/in/kyleanderson-denver", label: "LinkedIn" },
+    { url: "https://www.facebook.com/kyle.anderson.denver", label: "Facebook" },
+    { url: "https://bumble.com/profile/kyleanderson", label: "Bumble Profile" },
+    { url: "https://hinge.co/kyleanderson94", label: "Hinge Profile" },
+    { url: "https://www.strava.com/athletes/kyleanderson", label: "Strava Profile" },
+    { url: "https://venmo.com/kyleanderson94", label: "Venmo" },
+    { url: "https://www.spokeo.com/Kyle-Anderson-Denver-CO", label: "Spokeo" },
+    { url: "https://www.whitepages.com/name/Kyle-Anderson/Denver-CO", label: "Whitepages" },
+    { url: "https://www.beenverified.com/people/kyle-anderson/", label: "BeenVerified" },
+  ],
+  summary: "Sales professional and outdoor enthusiast based in Denver, Colorado. Active on social media and dating platforms.",
+  answer: `Kyle James Anderson (born June 22, 1994) is a sales professional currently residing in Denver, Colorado. He graduated from Colorado State University in 2016 with a Bachelor's degree in Business Administration and Marketing.
+
+**Professional Background**
+Kyle works as a Senior Account Executive at a Denver-based SaaS company, where he has been employed since 2018. He specializes in enterprise sales and consistently ranks in the top 10% of sales representatives. His LinkedIn profile shows over 800 connections and active engagement in the Denver tech sales community.
+
+**Social Media Presence**
+Kyle maintains active profiles across multiple platforms:
+- Instagram: @kyleanderson_co (approximately 3,100 followers) - Posts primarily feature surfing trips, snowboarding in the Rockies, craft brewery visits, and outdoor adventures with friends
+- Twitter/X: @kyle_anderson_co - Posts about sales strategies, Colorado sports (Broncos, Nuggets, Avalanche), and outdoor activities
+- Facebook: Active profile with public posts about fitness, travel, and Denver nightlife
+- Strava: Regular runner and cyclist with multiple segments in Denver metro area
+
+**Dating App Profiles**
+Multiple dating profiles were found linked to this individual:
+- Tinder: Active profile mentioning love for surfing, snowboarding, and live music
+- Bumble: Profile indicates "in a relationship" status (as of 2024)
+- Hinge: Profile mentions favorite Denver date spots including Union Station and Lodo breweries
+
+**Relationship Status**
+Based on recent social media activity, Kyle appears to be in a relationship. Multiple photos from 2023-2024 feature him with the same partner at various locations including beach destinations, ski resorts, and Denver venues.
+
+**Residence Information**
+Current address appears to be in the LoDo (Lower Downtown) neighborhood of Denver, CO 80202. Property records indicate he has been renting at this location since 2020.
+
+**Additional Information**
+- Vehicle: 2022 Toyota 4Runner registered in Colorado
+- No criminal records found in Colorado state database
+- Member of Denver Athletic Club and various recreational sports leagues
+- Season pass holder at Vail Resorts (Epic Pass)
+- Frequent visitor to local breweries, coffee shops, and fitness centers in the Denver metro area
+
+**Public Records Summary**
+- No bankruptcies on file
+- No civil court cases found
+- Clean driving record in Colorado
+- Voter registration: Active, registered in Denver County`,
+};
+
 // Lookup function similar to iOS MockRegistry
 export function lookupMockProfile(name: string): MockProfile | null {
   const normalized = name.toLowerCase().trim();
@@ -373,7 +432,7 @@ export function isMockName(name: string): boolean {
   return lookupMockProfile(name) !== null;
 }
 
-// Enhanced lookup that also checks Emma Smith with location matching
+// Enhanced lookup that also checks Emma Smith and Kyle Anderson with location matching
 export function lookupMockProfileByDetails(
   firstName: string, 
   lastName: string, 
@@ -388,6 +447,15 @@ export function lookupMockProfileByDetails(
     const stateMatch = !state || state.toLowerCase() === "co" || state.toLowerCase() === "colorado";
     if (cityMatch && stateMatch) {
       return emmaSmithProfile;
+    }
+  }
+  
+  // Check Kyle Anderson specifically - available to everyone with matching location
+  if (fullName === "kyle anderson") {
+    const cityMatch = !city || city.toLowerCase().includes("denver");
+    const stateMatch = !state || state.toLowerCase() === "co" || state.toLowerCase() === "colorado";
+    if (cityMatch && stateMatch) {
+      return kyleAndersonProfile;
     }
   }
   
