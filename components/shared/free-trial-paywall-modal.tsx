@@ -133,7 +133,7 @@ export function FreeTrialPaywallModal() {
             {/* Countdown Timer - Large and Prominent at Top */}
             <div className="mb-8 flex flex-col items-center">
               <div className="text-center mb-2">
-                <span className="text-red-600 font-bold text-lg sm:text-xl">FREE limited time only</span>
+                <span className="text-red-600 font-bold text-lg sm:text-xl">Limited time offer</span>
               </div>
               <div className="text-center">
                 <span className="text-red-600 font-mono font-black text-5xl sm:text-6xl tabular-nums tracking-tight">
@@ -145,9 +145,9 @@ export function FreeTrialPaywallModal() {
             {/* Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                GET <span className="text-red-600">FREE</span> ACCESS
+                GET <span className="text-red-600">WEEKLY</span> ACCESS
               </h2>
-              <p className="text-gray-500 text-sm">Start your free trial today</p>
+              <p className="text-gray-500 text-sm">$6.99/week, charged today. Cancel anytime.</p>
             </div>
 
             {/* Benefits List */}
@@ -162,22 +162,16 @@ export function FreeTrialPaywallModal() {
               ))}
             </div>
 
-            {/* Plan Selection - Single Option for Free Trial */}
+            {/* Plan Selection - Weekly, charges immediately */}
             <div className="mb-6">
-              {/* Free Trial Plan */}
               <div className="relative w-full p-4 rounded-xl border-2 border-red-500 bg-red-50">
-                {/* FREE Badge */}
-                <div className="absolute -top-2.5 right-4 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
-                  FREE!
-                </div>
-                
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-bold text-gray-900">FREE ACCESS</div>
-                    <div className="text-gray-400 text-sm line-through decoration-2">Then $9.99 per week</div>
+                    <div className="font-bold text-gray-900">WEEKLY ACCESS</div>
+                    <div className="text-gray-500 text-sm">Charged today, then weekly</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-red-600">FREE ACCESS</div>
+                    <div className="text-xl font-bold text-red-600">$6.99<span className="text-sm font-normal text-gray-500">/week</span></div>
                   </div>
                 </div>
               </div>

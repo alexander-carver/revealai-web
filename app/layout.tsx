@@ -8,11 +8,19 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-geist-sans",
+  display: "swap",
+  fallback: ["system-ui", "arial"],
+  preload: true,
+  adjustFontFallback: true,
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
+  display: "swap",
+  fallback: ["monospace"],
+  preload: true,
+  adjustFontFallback: true,
 });
 
 export const metadata: Metadata = {
@@ -195,6 +203,11 @@ export default function RootLayout({
         <link rel="preload" href="/paywall-header.png" as="image" type="image/png" />
         {/* Preload paywall background image for instant display */}
         <link rel="preload" href="/paywall_image_reveal2.png" as="image" type="image/png" />
+        {/* Preload Most Searched images for faster LCP */}
+        <link rel="preload" href="/mock/trump1.jpg" as="image" fetchPriority="high" />
+        <link rel="preload" href="/mock/mrbeast1.jpg" as="image" fetchPriority="high" />
+        <link rel="preload" href="/mock/jefferyepstein1.jpg" as="image" fetchPriority="high" />
+        <link rel="preload" href="/mock/elonmusk2.jpg" as="image" fetchPriority="high" />
         {/* Preload hero background images to prevent layout shift - TEMPORARILY DISABLED */}
         {/* <link rel="preload" href="/New_Background_RevealAIMobile.png" as="image" type="image/png" media="(max-width: 768px)" />
         <link rel="preload" href="/New_Background_RevealAIWeb.png" as="image" type="image/png" media="(min-width: 769px)" /> */}

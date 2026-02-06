@@ -117,12 +117,19 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Subscription fetch timeout")), 5000)
+      );
+
+      const queryPromise = supabase
         .from("subscriptions")
         .select("tier, status, current_period_end")
         .eq("user_id", user.id)
         .eq("status", "active")
         .maybeSingle(); // Use maybeSingle instead of single to handle no results
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       if (error && error.code !== "PGRST116") {
         // PGRST116 is "not found" - that's okay

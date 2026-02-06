@@ -20,6 +20,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { MostSearched } from "./most-searched";
 import { trackSearchButtonClick } from "@/lib/analytics";
 import { SearchLoadingScreen } from "./search-loading-screen";
+import { lookupMockProfileByDetails } from "@/lib/mock-data";
 
 export function PeopleSearch() {
   const router = useRouter();
@@ -81,6 +82,33 @@ export function PeopleSearch() {
     trackSearchButtonClick(searchType === 'fullreport' ? 'full_report' : 'dating_apps');
 
     const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
+
+    // Check if this is a mock profile (like Emma Smith) - allow everyone to search
+    const mockProfile = lookupMockProfileByDetails(
+      formData.firstName.trim(),
+      formData.lastName.trim(),
+      formData.city.trim() || undefined,
+      formData.state.trim() || undefined
+    );
+
+    // If mock profile found, navigate directly to results (available to everyone)
+    if (mockProfile) {
+      const params = new URLSearchParams({
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        type: searchType,
+      });
+
+      if (formData.city.trim()) {
+        params.set("city", formData.city.trim());
+      }
+      if (formData.state.trim()) {
+        params.set("state", formData.state.trim());
+      }
+
+      router.push(`/search/result?${params.toString()}`);
+      return;
+    }
 
     // NON-PRO USERS: Show loading screen on homepage, then paywall after 8 seconds
     if (!isPro) {

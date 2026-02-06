@@ -22,6 +22,9 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  ScanSearch,
+  Brain,
+  FileCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -332,7 +335,7 @@ function HomeContent() {
         <PeopleSearch />
 
         {/* Features Grid */}
-        <section className="container mx-auto px-4 pb-20">
+        <section className="container mx-auto px-4 pt-12 pb-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
               <Link key={feature.href} href={feature.href}>
@@ -371,64 +374,133 @@ function HomeContent() {
           </div>
         </section>
 
-        {/* Stats Section */}
+        {/* User Reviews Section - New testimonials with photos */}
         <section className="container mx-auto px-4 pb-20">
-          <Card className="p-8 glass">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-              {[
-                { value: "500M+", label: "Records Indexed" },
-                { value: "100+", label: "Platforms Searched" },
-                { value: "99.9%", label: "Uptime" },
-                { value: "24/7", label: "Support" },
-              ].map((stat) => (
-                <div key={stat.label}>
-                  <div className="text-3xl font-bold gradient-text">
-                    {stat.value}
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-sm text-amber-700 mb-4">
+              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              <span className="font-medium">4.9 out of 5 stars</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">What Our Users Say</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Thousands of people trust RevealAI for their search needs
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {[
+              {
+                name: "Robert T.",
+                location: "Seattle, WA",
+                image: "/reviews/review-1.png",
+                content: "As a landlord, I use RevealAI to vet potential tenants. It's saved me from several bad situations. The background info is thorough and accurate.",
+                rating: 5,
+                useCase: "Tenant screening",
+              },
+              {
+                name: "Jessica M.",
+                location: "Austin, TX",
+                image: "/reviews/review-2.png",
+                content: "I was reconnecting with an old college friend and couldn't find them anywhere. RevealAI found their current info in seconds. We're meeting up next week! Totally worth it.",
+                rating: 5,
+                useCase: "Finding old friends",
+              },
+              {
+                name: "Amanda K.",
+                location: "Denver, CO",
+                image: "/reviews/review-3.png",
+                content: "Used this before a first date from a dating app. Found out the guy had a completely fake profile. Dodged a major bullet. Every single person should use this.",
+                rating: 5,
+                useCase: "Dating safety",
+              },
+            ].map((review, index) => (
+              <Card 
+                key={index} 
+                className="p-6 hover:shadow-lg transition-all duration-300"
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="relative w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0 ring-2 ring-white shadow-md">
+                    <Image
+                      src={review.image}
+                      alt={review.name}
+                      fill
+                      className="object-cover"
+                      sizes="56px"
+                    />
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {stat.label}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-gray-900">{review.name}</span>
+                      <CheckCircle2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    </div>
+                    <div className="text-sm text-gray-500">{review.location}</div>
+                    <div className="flex gap-0.5 mt-1">
+                      {[...Array(review.rating)].map((_, i) => (
+                        <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </Card>
+                <div className="relative">
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {review.content}
+                  </p>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                    {review.useCase}
+                  </span>
+                </div>
+              </Card>
+            ))}
+          </div>
         </section>
 
-        {/* How It Works Section */}
+        {/* How It Works Section - Now with icons instead of numbers */}
         <section className="container mx-auto px-4 pb-20">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Get comprehensive insights in three simple steps
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {[
               {
-                step: "1",
                 title: "Enter Your Search",
                 description: "Provide a name, phone number, email, or address. Our AI-powered system accepts multiple input types.",
-                icon: Search,
+                icon: ScanSearch,
+                color: "text-blue-600",
+                bgColor: "bg-blue-100",
+                borderColor: "border-blue-200",
               },
               {
-                step: "2",
                 title: "AI Analyzes Data",
                 description: "Our advanced algorithms search through 500M+ records across 100+ platforms in seconds.",
-                icon: Zap,
+                icon: Brain,
+                color: "text-purple-600",
+                bgColor: "bg-purple-100",
+                borderColor: "border-purple-200",
               },
               {
-                step: "3",
                 title: "Get Results",
                 description: "Receive comprehensive reports with verified information, social profiles, and public records.",
-                icon: CheckCircle2,
+                icon: FileCheck,
+                color: "text-emerald-600",
+                bgColor: "bg-emerald-100",
+                borderColor: "border-emerald-200",
               },
             ].map((item, index) => (
-              <Card key={index} className="p-8 text-center hover:border-primary/50 transition-all">
-                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <div className="text-2xl font-bold text-primary">{item.step}</div>
+              <Card key={index} className="p-8 text-center hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
+                {/* Connecting line for desktop */}
+                {index < 2 && (
+                  <div className="hidden md:block absolute top-1/3 -right-4 w-8 h-0.5 bg-gradient-to-r from-gray-200 to-transparent z-10" />
+                )}
+                <div className={`w-20 h-20 mx-auto mb-6 rounded-2xl ${item.bgColor} ${item.borderColor} border-2 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
+                  <item.icon className={`w-10 h-10 ${item.color}`} strokeWidth={1.5} />
                 </div>
                 <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                <p className="text-muted-foreground">{item.description}</p>
+                <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
               </Card>
             ))}
           </div>
@@ -498,96 +570,6 @@ function HomeContent() {
           </div>
         </section>
 
-        {/* Testimonials Section */}
-        <section className="container mx-auto px-4 pb-20">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Trusted by Thousands</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              See what our users are saying
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {[
-              {
-                name: "Sarah Johnson",
-                role: "Private Investigator",
-                content: "RevealAI has revolutionized my workflow. I can find information in minutes that used to take hours.",
-                rating: 5,
-              },
-              {
-                name: "Michael Chen",
-                role: "HR Professional",
-                content: "The background check feature is incredibly thorough. It's become essential for our hiring process.",
-                rating: 5,
-              },
-              {
-                name: "Emily Rodriguez",
-                role: "Journalist",
-                content: "As a journalist, I need reliable sources. RevealAI provides accurate, verified information every time.",
-                rating: 5,
-              },
-            ].map((testimonial, index) => (
-              <Card key={index} className="p-6">
-                <div className="flex gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-muted-foreground mb-4 italic">"{testimonial.content}"</p>
-                <div>
-                  <div className="font-semibold">{testimonial.name}</div>
-                  <div className="text-sm text-muted-foreground">{testimonial.role}</div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* Mobile App Download Section */}
-        <section id="download-app" className="container mx-auto px-4 pb-20">
-          <Card className="p-12 glass overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-purple-500/10" />
-            <div className="relative grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm text-primary mb-6">
-                  <Smartphone className="w-4 h-4" />
-                  <span>Available Now</span>
-                </div>
-                <h2 className="text-4xl font-bold mb-4">
-                  Take RevealAI <span className="gradient-text">On The Go</span>
-                </h2>
-                <p className="text-xl text-muted-foreground mb-8">
-                  Search, research, and protect your privacy from anywhere. Our mobile app brings the full power of RevealAI to your fingertips.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <a 
-                    href="https://apps.apple.com/us/app/reveal-ai-people-search/id6752310763"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-8 py-3 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
-                  >
-                      <Image
-                        src="/logo.png"
-                        alt="App Store"
-                        width={24}
-                        height={24}
-                        className="object-contain"
-                      />
-                      Download for iOS
-                    </a>
-                </div>
-              </div>
-              <div className="flex justify-center">
-                <div className="relative w-64 h-96">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-3xl blur-3xl" />
-                  <div className="relative w-full h-full bg-card border-2 border-border rounded-3xl p-8 flex items-center justify-center">
-                    <Smartphone className="w-32 h-32 text-primary/50" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </section>
 
         {/* FAQ Section */}
         <section className="container mx-auto px-4 pb-20">

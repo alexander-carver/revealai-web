@@ -164,7 +164,7 @@ export function ResultsPaywallModal() {
             {/* Countdown Timer - Large and Prominent at Top */}
             <div className="mb-8 flex flex-col items-center">
               <div className="text-center mb-2">
-                <span className="text-red-600 font-bold text-lg sm:text-xl">FREE limited time only</span>
+                <span className="text-red-600 font-bold text-lg sm:text-xl">Limited time offer</span>
               </div>
               <div className="text-center">
                 <span className="text-red-600 font-mono font-black text-5xl sm:text-6xl tabular-nums tracking-tight">
@@ -176,9 +176,9 @@ export function ResultsPaywallModal() {
             {/* Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                GET <span className="text-red-600">FREE</span> ACCESS
+                GET <span className="text-red-600">WEEKLY</span> ACCESS
               </h2>
-              <p className="text-gray-500 text-sm">Start your free trial today</p>
+              <p className="text-gray-500 text-sm">$6.99/week, charged today. Cancel anytime.</p>
             </div>
 
             {/* Benefits List */}

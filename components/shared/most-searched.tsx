@@ -44,7 +44,7 @@ export function MostSearched({ onSelectProfile }: MostSearchedProps) {
 
       {/* Celebrity Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
-        {mockProfiles.map((profile) => (
+        {mockProfiles.map((profile, index) => (
           <Link
             key={profile.id}
             href={`/profile/${profile.id}`}
@@ -70,6 +70,13 @@ export function MostSearched({ onSelectProfile }: MostSearchedProps) {
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-110"
                   sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                  // Priority load first 4 images (above the fold on most screens)
+                  priority={index < 4}
+                  // Add loading strategy for remaining images
+                  loading={index < 4 ? "eager" : "lazy"}
+                  // Blur placeholder for better perceived performance
+                  placeholder="blur"
+                  blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzIxMjEyMSIvPgo8L3N2Zz4="
                   onError={(e) => {
                     // Fallback to placeholder if image fails
                     const target = e.target as HTMLImageElement;
@@ -154,6 +161,10 @@ export function MostSearchedCompact({ onSelectProfile }: MostSearchedProps) {
                 fill
                 className="object-cover"
                 sizes="40px"
+                priority={index < 3}
+                loading={index < 3 ? "eager" : "lazy"}
+                placeholder="blur"
+                blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMjEyMTIxIi8+Cjwvc3ZnPg=="
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&size=80&background=random`;
