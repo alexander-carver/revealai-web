@@ -497,8 +497,8 @@ function SearchResultContent() {
     );
   }
 
-  // For non-Pro users waiting for paywall or with paywall visible, show nothing
-  if (!isPro && (isFreeTrialPaywallVisible || !parsedData)) {
+  // For non-Pro users waiting for paywall or with paywall visible, show nothing (mock profiles like Emma Smith & Kyle Anderson are always viewable)
+  if (!isPro && !isMockResult && (isFreeTrialPaywallVisible || !parsedData)) {
     return (
       <div className="min-h-screen bg-background">
         {/* Empty page - paywall will overlay */}
@@ -507,10 +507,9 @@ function SearchResultContent() {
   }
 
   // No results state - only show for Pro users who actually got no results
-  // Non-Pro users should never see this - they stay on loading screen until paywall redirects
+  // Non-Pro users see loading until paywall; mock profile viewers (Emma/Kyle) always get content so skip this
   if (!parsedData) {
-    // If not Pro, keep showing loading screen
-    if (!isPro) {
+    if (!isPro && !isMockResult) {
       return (
         <>
           <SearchLoadingScreen
