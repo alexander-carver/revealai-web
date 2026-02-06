@@ -459,13 +459,13 @@ function SearchResultContent() {
     }
   };
 
-  // Handle follow-up search
+  // Handle follow-up search (Pro users can run follow-up; non-Pro see paywall)
   const handleFollowUpSearch = (query: string) => {
     if (!isPro) {
       showFreeTrialPaywall();
       return;
     }
-    showFreeTrialPaywall();
+    // TODO: run follow-up search for Pro users
   };
 
   const handleFollowUpSubmit = () => {

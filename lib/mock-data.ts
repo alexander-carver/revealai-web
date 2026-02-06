@@ -439,26 +439,29 @@ export function lookupMockProfileByDetails(
   city?: string, 
   state?: string
 ): MockProfile | null {
-  const fullName = `${firstName} ${lastName}`.toLowerCase().trim();
-  
+  const raw = `${firstName} ${lastName}`.toLowerCase().trim();
+  const fullName = raw.replace(/\s+/g, " ");
+
+  const cityNorm = city?.toLowerCase().trim() ?? "";
+  const stateNorm = state?.toLowerCase().trim().replace(/\s+/g, " ") ?? "";
+  const stateMatch = (s: string) =>
+    !s || s === "co" || s === "colorado";
+  const cityMatchDenver = (c: string) => !c || c.includes("denver");
+
   // Check Emma Smith specifically - available to everyone with matching location
   if (fullName === "emma smith") {
-    const cityMatch = !city || city.toLowerCase().includes("denver");
-    const stateMatch = !state || state.toLowerCase() === "co" || state.toLowerCase() === "colorado";
-    if (cityMatch && stateMatch) {
+    if (cityMatchDenver(cityNorm) && stateMatch(stateNorm)) {
       return emmaSmithProfile;
     }
   }
-  
-  // Check Kyle Anderson specifically - available to everyone with matching location
+
+  // Check Kyle Anderson - available to everyone; match name and optional Denver/CO
   if (fullName === "kyle anderson") {
-    const cityMatch = !city || city.toLowerCase().includes("denver");
-    const stateMatch = !state || state.toLowerCase() === "co" || state.toLowerCase() === "colorado";
-    if (cityMatch && stateMatch) {
+    if (cityMatchDenver(cityNorm) && stateMatch(stateNorm)) {
       return kyleAndersonProfile;
     }
   }
-  
+
   // Fall back to regular mock lookup
   return lookupMockProfile(fullName);
 }
