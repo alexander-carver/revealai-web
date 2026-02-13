@@ -88,13 +88,47 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
-    const priceId = product.default_price as string;
+    let priceId = product.default_price as string;
 
     if (!priceId) {
       return NextResponse.json(
         { error: "Product has no default price" },
         { status: 400 }
       );
+    }
+
+    // For abandoned_trial: use the $6.99/week product with a one-time $5.00 coupon
+    // This makes the first charge $1.99 ($6.99 - $5.00) and all subsequent charges $6.99
+    // This is much more reliable than the old approach of creating a $1.99 subscription
+    // and relying on a webhook to upgrade it (which requires invoice.payment_succeeded to be configured)
+    let abandonedTrialCouponId: string | undefined;
+    if (plan === "abandoned_trial") {
+      try {
+        // Override to use the weekly product ($6.99/week) instead of the $1.99 product
+        const weeklyProductId = productIds["weekly"];
+        const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
+        priceId = weeklyProduct.default_price as string;
+        
+        // Create or retrieve the one-time coupon ($5.00 off first invoice only)
+        const COUPON_ID = "revealai_abandoned_trial_intro";
+        try {
+          await stripe.coupons.retrieve(COUPON_ID);
+        } catch {
+          await stripe.coupons.create({
+            id: COUPON_ID,
+            amount_off: 500, // $5.00 off
+            currency: "usd",
+            duration: "once", // Only applies to the first invoice
+            name: "Introductory Offer - First Week $1.99",
+          });
+        }
+        abandonedTrialCouponId = COUPON_ID;
+        console.log(`[Checkout] abandoned_trial: using weekly product with $5.00 coupon (first charge = $1.99)`);
+      } catch (error) {
+        console.error("[Checkout] Error setting up abandoned trial coupon, falling back to $1.99 product:", error);
+        // Fall back to the original $1.99 product if coupon setup fails
+        priceId = product.default_price as string;
+      }
     }
 
     // Get user email if userId provided
@@ -117,6 +151,32 @@ export async function POST(request: NextRequest) {
         
         if (existingCustomers.data.length > 0) {
           customerId = existingCustomers.data[0].id;
+          
+          // Check if this customer already has an active subscription
+          // This prevents accidental double-subscriptions (e.g. user clicks subscribe twice)
+          try {
+            const existingSubscriptions = await stripe.subscriptions.list({
+              customer: customerId,
+              status: "active",
+              limit: 1,
+            });
+            
+            if (existingSubscriptions.data.length > 0) {
+              const existingSub = existingSubscriptions.data[0];
+              console.log(`[Checkout] Customer ${customerId} already has active subscription: ${existingSub.id}. Redirecting to success.`);
+              
+              // Return a special response that tells the client the user already has a subscription
+              // The frontend can redirect to success page or show appropriate message
+              return NextResponse.json({
+                url: `${request.nextUrl.origin}/checkout-success?already_subscribed=true`,
+                alreadySubscribed: true,
+                message: "You already have an active subscription!",
+              });
+            }
+          } catch (error) {
+            console.error("Error checking existing subscriptions:", error);
+            // Continue with checkout if we can't check
+          }
         }
       } catch (error) {
         console.error("Error finding customer:", error);
@@ -134,6 +194,8 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
+      // Apply coupon for abandoned_trial (first invoice only)
+      ...(abandonedTrialCouponId && { discounts: [{ coupon: abandonedTrialCouponId }] }),
       // Use existing customer if found, otherwise let Stripe create one
       ...(customerId && { customer: customerId }),
       // If no existing customer, pre-fill email (or Stripe will collect it)

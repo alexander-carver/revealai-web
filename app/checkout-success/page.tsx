@@ -12,12 +12,23 @@ function CheckoutSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
+  const alreadySubscribed = searchParams.get("already_subscribed");
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const hasVerified = useRef(false);
 
   const activateSubscription = async () => {
+    // If user already had an active subscription, show success and redirect
+    if (alreadySubscribed === "true") {
+      console.log("User already has an active subscription, redirecting...");
+      setStatus("success");
+      setTimeout(() => {
+        router.push("/?pro=true");
+      }, 2000);
+      return;
+    }
+
     if (!sessionId) {
       setStatus("error");
       setErrorMessage("No session ID found. Please try again.");

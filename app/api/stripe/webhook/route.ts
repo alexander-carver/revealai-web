@@ -52,10 +52,43 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed": {
         console.log("Processing checkout.session.completed");
         const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.userId || session.client_reference_id;
+        let userId = session.metadata?.userId || session.client_reference_id;
         const plan = session.metadata?.plan || "yearly";
+        const deviceId = session.metadata?.deviceId;
+        const customerEmail = session.customer_email || 
+                              session.customer_details?.email || 
+                              session.metadata?.email;
 
-        console.log("Session data:", { userId, plan, customer: session.customer });
+        console.log("Session data:", { userId, plan, customer: session.customer, deviceId, customerEmail });
+
+        // If no userId in metadata, try to resolve by deviceId (like verify-session does)
+        if (!userId && deviceId) {
+          const deviceEmail = `device_${deviceId}@revealai.device`;
+          const { data: userData } = await supabase.auth.admin.listUsers();
+          if (userData?.users) {
+            const matchingUser = userData.users.find(
+              u => u.email?.toLowerCase() === deviceEmail.toLowerCase()
+            );
+            if (matchingUser) {
+              userId = matchingUser.id;
+              console.log("Webhook: resolved user by deviceId:", userId);
+            }
+          }
+        }
+
+        // If still no userId, try to resolve by customer email
+        if (!userId && customerEmail) {
+          const { data: userData } = await supabase.auth.admin.listUsers();
+          if (userData?.users) {
+            const matchingUser = userData.users.find(
+              u => u.email?.toLowerCase() === customerEmail.toLowerCase()
+            );
+            if (matchingUser) {
+              userId = matchingUser.id;
+              console.log("Webhook: resolved user by email:", userId);
+            }
+          }
+        }
 
         if (userId) {
           // free_trial converts to weekly after trial, abandoned_trial also converts to weekly
@@ -93,6 +126,57 @@ export async function POST(request: NextRequest) {
           } else {
             console.log("Subscription created for user:", userId);
           }
+
+          // Safety net for abandoned_trial: if the subscription uses the old $1.99 product,
+          // schedule the upgrade to $6.99/week immediately. New checkouts use the coupon approach
+          // (so the product is already $6.99), but this catches any old-flow subscriptions.
+          if (plan === "abandoned_trial" && subscriptionId) {
+            try {
+              const sub = await stripe.subscriptions.retrieve(subscriptionId);
+              const lineItem = sub.items.data[0];
+              const subProductId = lineItem?.price?.product as string;
+              const abandonedTrialProductId = process.env.STRIPE_ABANDONED_TRIAL_PRODUCT_ID || "prod_TnGdDqDGvyBlhK";
+
+              // Only upgrade if still on the $1.99 product (not already using $6.99 via coupon)
+              if (subProductId === abandonedTrialProductId && lineItem) {
+                const weeklyProductId = process.env.STRIPE_WEEKLY_PRODUCT_ID || "prod_Tn7ov8WD9p7Zty";
+                const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
+                const weeklyPriceId = weeklyProduct.default_price as string;
+
+                if (weeklyPriceId) {
+                  // Use subscription schedule for reliable automatic upgrade after first period
+                  const schedule = await stripe.subscriptionSchedules.create({
+                    from_subscription: subscriptionId,
+                  });
+
+                  const currentPhase = schedule.phases[0];
+                  await stripe.subscriptionSchedules.update(schedule.id, {
+                    end_behavior: "release",
+                    phases: [
+                      {
+                        items: currentPhase.items.map((item: any) => ({
+                          price: typeof item.price === "string" ? item.price : item.price.id,
+                          quantity: item.quantity || 1,
+                        })),
+                        start_date: currentPhase.start_date,
+                        end_date: currentPhase.end_date,
+                      },
+                      {
+                        items: [{ price: weeklyPriceId, quantity: 1 }],
+                      },
+                    ],
+                  });
+
+                  console.log(`Created subscription schedule for abandoned_trial ${subscriptionId}: $1.99 → $6.99 after first period`);
+                }
+              }
+            } catch (scheduleError: any) {
+              console.error("Error creating abandoned trial schedule:", scheduleError);
+              // Non-fatal: the customer.subscription.updated handler will also catch this
+            }
+          }
+        } else {
+          console.log("Webhook: no userId resolved for checkout session. verify-session will handle it when user visits success page.");
         }
         break;
       }
@@ -158,26 +242,124 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
+        const subscriptionStatus = subscription.status;
+
+        // --- Abandoned trial auto-upgrade ---
+        // Check if this is an active $1.99 abandoned_trial subscription that needs upgrading to $6.99/week.
+        // This fires on every renewal (current_period_end changes), so it catches existing subscribers
+        // who were stuck at $1.99 because the invoice.payment_succeeded webhook wasn't configured.
+        if (subscriptionStatus === "active" && event.type === "customer.subscription.updated") {
+          try {
+            const lineItem = subscription.items.data[0];
+            const subProductId = lineItem?.price?.product as string;
+            const abandonedTrialProductId = process.env.STRIPE_ABANDONED_TRIAL_PRODUCT_ID || "prod_TnGdDqDGvyBlhK";
+
+            if (subProductId === abandonedTrialProductId) {
+              const hasUpgraded = subscription.metadata?.upgraded_to_weekly === "true";
+              if (!hasUpgraded) {
+                const weeklyProductId = process.env.STRIPE_WEEKLY_PRODUCT_ID || "prod_Tn7ov8WD9p7Zty";
+                const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
+                const weeklyPriceId = weeklyProduct.default_price as string;
+
+                if (weeklyPriceId && lineItem) {
+                  await stripe.subscriptions.update(subscription.id, {
+                    items: [{
+                      id: lineItem.id,
+                      price: weeklyPriceId,
+                    }],
+                    proration_behavior: "none",
+                    metadata: {
+                      ...subscription.metadata,
+                      upgraded_to_weekly: "true",
+                    },
+                  });
+                  console.log(`Auto-upgraded abandoned trial subscription ${subscription.id} from $1.99 to $6.99/week`);
+                }
+              }
+            }
+          } catch (upgradeError: any) {
+            console.error("Error auto-upgrading abandoned trial:", upgradeError);
+            // Don't fail the whole handler — continue with normal subscription update logic
+          }
+        }
 
         const { data: subData } = await supabase
           .from("subscriptions")
-          .select("user_id")
+          .select("user_id, stripe_subscription_id")
           .eq("stripe_customer_id", customerId)
           .single();
 
         if (subData) {
-          const status = subscription.status === "active" ? "active" : "canceled";
+          if (subscriptionStatus === "active") {
+            // Subscription became active — update to track it (use the most recently active one)
+            await supabase
+              .from("subscriptions")
+              .update({
+                stripe_subscription_id: subscription.id,
+                status: "active",
+                current_period_end: new Date(
+                  (subscription as any).current_period_end * 1000
+                ).toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("user_id", subData.user_id);
+            console.log("Subscription activated/updated for user:", subData.user_id, "sub:", subscription.id);
+          } else {
+            // Subscription is being canceled/paused — check if customer has OTHER active subscriptions
+            // This handles duplicate subscriptions: if one is canceled, the other keeps access alive
+            try {
+              const activeSubscriptions = await stripe.subscriptions.list({
+                customer: customerId,
+                status: "active",
+                limit: 10,
+              });
 
-          await supabase
-            .from("subscriptions")
-            .update({
-              status,
-              current_period_end: new Date(
-                (subscription as any).current_period_end * 1000
-              ).toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("user_id", subData.user_id);
+              if (activeSubscriptions.data.length > 0) {
+                // Customer still has active subscriptions — switch to the most recent one
+                const latestActive = activeSubscriptions.data[0];
+                await supabase
+                  .from("subscriptions")
+                  .update({
+                    stripe_subscription_id: latestActive.id,
+                    status: "active",
+                    current_period_end: new Date(
+                      (latestActive as any).current_period_end * 1000
+                    ).toISOString(),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("user_id", subData.user_id);
+                console.log("Switched to remaining active subscription:", latestActive.id, "for user:", subData.user_id);
+              } else {
+                // No other active subscriptions — actually cancel
+                await supabase
+                  .from("subscriptions")
+                  .update({
+                    status: "canceled",
+                    current_period_end: new Date(
+                      (subscription as any).current_period_end * 1000
+                    ).toISOString(),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("user_id", subData.user_id);
+                console.log("All subscriptions canceled for user:", subData.user_id);
+              }
+            } catch (e) {
+              console.error("Error checking for other active subscriptions:", e);
+              // Fallback: only cancel if this is the tracked subscription
+              if (subData.stripe_subscription_id === subscription.id) {
+                await supabase
+                  .from("subscriptions")
+                  .update({
+                    status: "canceled",
+                    current_period_end: new Date(
+                      (subscription as any).current_period_end * 1000
+                    ).toISOString(),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("user_id", subData.user_id);
+              }
+            }
+          }
         }
         break;
       }
