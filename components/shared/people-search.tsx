@@ -24,7 +24,7 @@ import { lookupMockProfileByDetails } from "@/lib/mock-data";
 
 export function PeopleSearch() {
   const router = useRouter();
-  const { isPro, showFreeTrialPaywall, isFreeTrialPaywallVisible } = useSubscription();
+  const { isPro, showFreeTrialPaywall, isPaywallVisible, isAbandonedPaywallVisible } = useSubscription();
   const [searchType, setSearchType] = useState<"fullreport" | "datingapps">("fullreport");
   const [formData, setFormData] = useState({
     firstName: "",
@@ -36,25 +36,30 @@ export function PeopleSearch() {
   // Loading screen state for non-Pro users
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const paywallWasShown = useRef(false);
+  const paywallSequenceStarted = useRef(false);
 
   // Mobile sticky CTA visibility
   const [showMobileCTA, setShowMobileCTA] = useState(true);
 
-  // Track when paywall becomes visible
+  // Track when main paywall becomes visible during loading (paywall sequence has started)
   useEffect(() => {
-    if (isFreeTrialPaywallVisible && showLoadingScreen) {
-      paywallWasShown.current = true;
+    if (isPaywallVisible && showLoadingScreen) {
+      paywallSequenceStarted.current = true;
     }
-  }, [isFreeTrialPaywallVisible, showLoadingScreen]);
+  }, [isPaywallVisible, showLoadingScreen]);
 
-  // Close loading screen when paywall is closed (only if paywall was actually shown)
+  // Close loading screen only when ALL paywalls are closed (both main and $1.99 abandoned)
   useEffect(() => {
-    if (!isFreeTrialPaywallVisible && paywallWasShown.current && showLoadingScreen) {
+    if (
+      paywallSequenceStarted.current &&
+      !isPaywallVisible &&
+      !isAbandonedPaywallVisible &&
+      showLoadingScreen
+    ) {
       setShowLoadingScreen(false);
-      paywallWasShown.current = false; // Reset for next time
+      paywallSequenceStarted.current = false;
     }
-  }, [isFreeTrialPaywallVisible, showLoadingScreen]);
+  }, [isPaywallVisible, isAbandonedPaywallVisible, showLoadingScreen]);
 
   // Hide mobile CTA when search section is in view
   useEffect(() => {

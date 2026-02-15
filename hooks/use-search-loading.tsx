@@ -33,7 +33,7 @@ export function useSearchLoading(
   options: UseSearchLoadingOptions = {}
 ): UseSearchLoadingReturn {
   const { minLoadingDuration = 12000, onComplete, onCancel } = options;
-  const { isPro, showPaywall, isPaywallVisible } = useSubscription();
+  const { isPro, showPaywall, isPaywallVisible, isAbandonedPaywallVisible } = useSubscription();
 
   const [isLoadingScreenVisible, setIsLoadingScreenVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,19 +79,20 @@ export function useSearchLoading(
     onCancel?.();
   }, [onCancel]);
 
-  // Watch for paywall visibility changes
+  // Watch for paywall visibility changes - only cancel when ALL paywalls are closed
+  // (main paywall closes and shows $1.99 abandoned paywall, so wait for both to be gone)
   useEffect(() => {
-    if (hasShownPaywall && !isPaywallVisible) {
+    if (hasShownPaywall && !isPaywallVisible && !isAbandonedPaywallVisible) {
       if (isPro) {
         // User subscribed via paywall - show results
         setIsLoadingScreenVisible(false);
         onComplete?.();
       } else {
-        // User dismissed paywall without subscribing - cancel
+        // User dismissed all paywalls without subscribing - cancel
         cancelLoading();
       }
     }
-  }, [isPaywallVisible, isPro, hasShownPaywall, onComplete, cancelLoading]);
+  }, [isPaywallVisible, isAbandonedPaywallVisible, isPro, hasShownPaywall, onComplete, cancelLoading]);
 
   return {
     isLoadingScreenVisible,
