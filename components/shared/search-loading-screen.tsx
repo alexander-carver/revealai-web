@@ -4,13 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { Check, Lock, Star, Loader2 } from "lucide-react";
 import Image from "next/image";
 
-// Progress steps configuration
+// Progress steps configuration with detailed sub-descriptions
 const PROGRESS_STEPS = [
-  { id: 1, text: "Catching the signals…", completionTime: 3000 },
-  { id: 2, text: "Diving deep into the data…", completionTime: 6000 },
-  { id: 3, text: "Uncovering hidden insights…", completionTime: 9000 },
-  { id: 4, text: "Following the trail…", completionTime: 12000 },
-  { id: 5, text: "Finalizing the search…", completionTime: Infinity }, // Never completes
+  { id: 1, text: "Scanning 500M+ public records…", detail: "Court records, property filings, registrations", completionTime: 3000 },
+  { id: 2, text: "Cross-referencing databases…", detail: "Matching across 100+ data sources", completionTime: 6000 },
+  { id: 3, text: "Analyzing social footprint…", detail: "Social media, dating apps, forums", completionTime: 9000 },
+  { id: 4, text: "Compiling verified report…", detail: "Verifying data accuracy & recency", completionTime: 12000 },
+  { id: 5, text: "Finalizing deep analysis…", detail: "Almost ready", completionTime: Infinity },
 ];
 
 // Testimonials configuration
@@ -380,17 +380,24 @@ export function SearchLoadingScreen({
                 )}
               </div>
               {/* Text */}
-              <span
-                className={`text-xs md:text-sm transition-colors duration-300 ${
-                  isCompleted
-                    ? "text-gray-700"
-                    : isCurrent
-                    ? "text-[#0087FF] font-medium"
-                    : "text-gray-400"
-                }`}
-              >
-                {step.text}
-              </span>
+              <div className="flex flex-col">
+                <span
+                  className={`text-xs md:text-sm transition-colors duration-300 ${
+                    isCompleted
+                      ? "text-gray-700"
+                      : isCurrent
+                      ? "text-[#0087FF] font-medium"
+                      : "text-gray-400"
+                  }`}
+                >
+                  {step.text}
+                </span>
+                {isCurrent && step.detail && (
+                  <span className="text-[10px] md:text-xs text-gray-400 mt-0.5 animate-pulse">
+                    {step.detail}
+                  </span>
+                )}
+              </div>
             </div>
           );
         })}

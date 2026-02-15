@@ -8,6 +8,7 @@ import {
   Car,
   Shield,
   DollarSign,
+  Phone,
   ArrowRight,
   Sparkles,
   Smartphone,
@@ -43,6 +44,9 @@ import Image from "next/image";
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { trackViewContent } from "@/lib/analytics";
+import { ScrollToTop } from "@/components/shared/scroll-to-top";
+import { CookieConsent } from "@/components/shared/cookie-consent";
+import { SocialProofTicker } from "@/components/shared/social-proof-ticker";
 
 const features = [
   {
@@ -72,6 +76,16 @@ const features = [
     href: "/search",
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
+  },
+  {
+    title: "Reverse Phone Lookup",
+    description: "Identify unknown callers, spam, and scam numbers",
+    icon: Phone,
+    href: "/phone",
+    color: "text-cyan-500",
+    bgColor: "bg-cyan-500/10",
+    badge: "New",
+    badgeColor: "bg-blue-500",
   },
   {
     title: "Records Search",
@@ -305,6 +319,10 @@ function HomeContent() {
       <AbandonedPaywallModal />
       {/* Free trial paywall - shown when user closes abandoned paywall */}
       <FreeTrialPaywallModal />
+      {/* Global UI components */}
+      <ScrollToTop />
+      <CookieConsent />
+      <SocialProofTicker />
       <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Header - Fixed on top */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
@@ -658,6 +676,9 @@ function HomeContent() {
             </Link>
             <Link href="/terms" className="hover:text-foreground transition">
               Terms of Service
+            </Link>
+            <Link href="/blog" className="hover:text-foreground transition">
+              Blog
             </Link>
             <Link href="/settings" className="hover:text-foreground transition">
               Settings

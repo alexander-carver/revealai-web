@@ -4,6 +4,7 @@ import { Navigation } from "./navigation";
 import { MainPaywallModal } from "./main-paywall-modal";
 import { AbandonedPaywallModal } from "./abandoned-paywall-modal";
 import { cn } from "@/lib/utils";
+import { ScrollToTop } from "@/components/shared/scroll-to-top";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -28,6 +29,7 @@ export function AppLayout({ children, className }: AppLayoutProps) {
       <MainPaywallModal />
       {/* Abandoned paywall - shown for transaction abandoned scenarios */}
       <AbandonedPaywallModal />
+      <ScrollToTop />
     </div>
   );
 }

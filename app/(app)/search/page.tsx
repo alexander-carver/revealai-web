@@ -18,6 +18,7 @@ import dynamic from "next/dynamic";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { FullReportResult } from "@/components/shared/full-report-result";
+import { addSearchHistoryItem } from "@/lib/search-history";
 
 // Lazy load SearchLoadingScreen to reduce initial bundle size
 const SearchLoadingScreen = dynamic(
@@ -83,6 +84,11 @@ export default function PeopleSearchPage() {
     onSuccess: (data) => {
       setSearchResult(data);
       setSearchCount((prev) => prev + 1);
+      addSearchHistoryItem({
+        query: `${formData.firstName} ${formData.lastName}`,
+        type: "people",
+        preview: data.substring(0, 80),
+      });
     },
   });
 

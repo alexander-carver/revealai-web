@@ -14,6 +14,7 @@ import {
   Lock,
   Clock,
   ChevronRight,
+  KeyRound,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -153,6 +154,25 @@ export default function PrivacyPage() {
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   Step-by-step guides to remove yourself from data brokers
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+          </Card>
+        </Link>
+
+        <Link href="/privacy/password-checker">
+          <Card className="p-5 hover:border-primary/50 transition-all cursor-pointer group h-full">
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-indigo-500/10">
+                <KeyRound className="w-6 h-6 text-indigo-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold group-hover:text-primary transition-colors">
+                  Password Strength Checker
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Test your password security — 100% private, runs locally
                 </p>
               </div>
               <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />

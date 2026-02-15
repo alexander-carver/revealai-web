@@ -81,7 +81,7 @@ export const metadata: Metadata = {
       "Reveal AI - Safety Lookup & Privacy Toolkit. Search people, block spam calls, remove your data from brokers, find unclaimed money. Verify what's real with on-demand results from licensed providers.",
     images: [
       {
-        url: "/logo.png",
+        url: "/api/og?title=Find Everything About Anyone&subtitle=People Search | Safety Lookup | Privacy Toolkit",
         width: 1200,
         height: 630,
         alt: "RevealAI - AI-Powered People Search",
@@ -93,8 +93,8 @@ export const metadata: Metadata = {
     title: "Reveal AI - People Search | Safety Lookup & Privacy Toolkit",
     description:
       "Search 500M+ public records, social profiles, and background information with AI-powered people search.",
-    images: ["/logo.png"],
-    creator: "@revealai", // Update with your Twitter handle if you have one
+    images: ["/api/og?title=Find Everything About Anyone&subtitle=People Search | Safety Lookup | Privacy Toolkit"],
+    creator: "@revealai",
   },
   alternates: {
     canonical: "https://revealai-peoplesearch.com",

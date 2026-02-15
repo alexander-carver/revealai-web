@@ -9,6 +9,8 @@ import {
   Car,
   Shield,
   DollarSign,
+  Phone,
+  History,
   Settings,
   Menu,
   X,
@@ -25,6 +27,7 @@ import { useState, useEffect } from "react";
 
 const navItems = [
   { href: "/search", label: "People Search", icon: Search },
+  { href: "/phone", label: "Phone Lookup", icon: Phone },
   { href: "/records", label: "Records", icon: FileText },
   { href: "/username", label: "Username", icon: AtSign },
   { href: "/vehicle", label: "Vehicle", icon: Car },
@@ -211,6 +214,18 @@ export function Navigation() {
         <div className="p-4 border-t border-border">
           {user ? (
             <div className="space-y-2">
+              <Link
+                href="/history"
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
+                  pathname === "/history"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <History className="w-5 h-5" />
+                Search History
+              </Link>
               <Link
                 href="/settings"
                 className={cn(
