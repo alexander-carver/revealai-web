@@ -5,6 +5,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter, usePathname } from "next/navigation";
 import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
 import { getDeviceId } from "@/lib/device-id";
 
@@ -18,8 +19,10 @@ const benefits = [
 ];
 
 export function AbandonedPaywallModal() {
-  const { isAbandonedPaywallVisible, hideAbandonedPaywall, showFreeTrialPaywallDirectly } = useSubscription();
+  const { isAbandonedPaywallVisible, hideAbandonedPaywall } = useSubscription();
   const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
 
@@ -34,10 +37,12 @@ export function AbandonedPaywallModal() {
 
   if (!isAbandonedPaywallVisible) return null;
 
+  // When user closes $1.99 paywall via X: hide it and return to main home page
   const handleClose = () => {
     hideAbandonedPaywall();
-    // Show free trial paywall when closing abandoned paywall
-    showFreeTrialPaywallDirectly();
+    if (pathname !== "/") {
+      router.push("/");
+    }
   };
 
   const handleSubscribe = async () => {

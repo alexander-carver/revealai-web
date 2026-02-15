@@ -18,11 +18,17 @@ const benefits = [
 ];
 
 export function MainPaywallModal() {
-  const { isPaywallVisible, hidePaywall } = useSubscription();
+  const { isPaywallVisible, hidePaywall, showAbandonedPaywall } = useSubscription();
   const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<"weekly" | "yearly">("yearly");
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
+
+  // Only when user closes via X: hide main paywall and show $1.99 paywall
+  const handleCloseByX = () => {
+    hidePaywall();
+    showAbandonedPaywall();
+  };
 
   // Show close button instantly
   useEffect(() => {
@@ -103,7 +109,7 @@ export function MainPaywallModal() {
           
           {/* Close Button - Inside card, top left */}
           <button
-            onClick={hidePaywall}
+            onClick={handleCloseByX}
             className={`absolute left-3 top-3 p-2 z-20 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-500 ${
               showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
