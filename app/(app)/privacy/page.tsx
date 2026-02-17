@@ -1,17 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   Shield,
   Eye,
   EyeOff,
   AlertTriangle,
-  CheckCircle,
   ExternalLink,
   ArrowRight,
   Globe,
-  Lock,
   Clock,
   ChevronRight,
   KeyRound,
@@ -19,34 +16,14 @@ import {
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Alert } from "@/components/ui/alert";
 import {
-  calculateExposureScore,
-  getExposureLevel,
   DATA_BROKERS,
   type DataBroker,
 } from "@/lib/services/privacy";
 import { useSubscription } from "@/hooks/use-subscription";
 
-// Mock exposed categories for demo
-const MOCK_EXPOSED = [
-  "Phone Numbers",
-  "Email Addresses",
-  "Home Addresses",
-  "Social Media",
-];
-
 export default function PrivacyPage() {
   const { isPro, showFreeTrialPaywall } = useSubscription();
-  const exposureData = calculateExposureScore(MOCK_EXPOSED);
-  const { level, color } = getExposureLevel(
-    exposureData.score,
-    exposureData.maxScore
-  );
-  const percentage = Math.round(
-    (exposureData.score / exposureData.maxScore) * 100
-  );
 
   return (
     <div>
@@ -58,49 +35,29 @@ export default function PrivacyPage() {
         iconBgColor="bg-rose-500/10"
       />
 
-      {/* Exposure Score Card */}
-      <Card className="mb-6 overflow-hidden">
-        <div className="h-4 bg-gradient-to-r from-green-500 via-amber-500 to-red-500">
-          <div
-            className="h-full bg-card"
-            style={{ marginLeft: `${percentage}%` }}
-          />
-        </div>
+      {/* Privacy Scan CTA Card */}
+      <Card className="mb-6 overflow-hidden border-rose-200">
+        <div className="h-1.5 bg-gradient-to-r from-rose-500 via-red-500 to-orange-500" />
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-2">
-                Your Exposure Score
-              </h2>
-              <div className="flex items-baseline gap-3">
-                <span className={`text-5xl font-bold ${color}`}>
-                  {exposureData.score}
-                </span>
-                <span className="text-muted-foreground">
-                  / {exposureData.maxScore}
-                </span>
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-2xl bg-rose-500/10">
+                <AlertTriangle className="w-8 h-8 text-rose-500" />
               </div>
-              <Badge
-                variant={
-                  level === "Low"
-                    ? "success"
-                    : level === "Moderate"
-                    ? "warning"
-                    : "destructive"
-                }
-                className="mt-2"
-              >
-                {level} Risk
-              </Badge>
+              <div>
+                <h2 className="text-lg font-semibold mb-1">
+                  Is Your Personal Data Exposed?
+                </h2>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Run an AI-powered privacy scan to find out exactly where your information 
+                  appears on data broker sites, social media, and public records.
+                </p>
+              </div>
             </div>
-            <div className="flex-1 max-w-md">
-              <p className="text-sm text-muted-foreground mb-4">
-                Your personal data is exposed in {MOCK_EXPOSED.length} categories.
-                Remove your information from data brokers to lower your score.
-              </p>
+            <div className="flex-shrink-0">
               {isPro ? (
                 <Link href="/privacy/scan">
-                  <Button className="gap-2">
+                  <Button className="gap-2 bg-rose-600 hover:bg-rose-700" size="lg">
                     <Eye className="w-4 h-4" />
                     Run Full Privacy Scan
                     <ArrowRight className="w-4 h-4" />
@@ -108,7 +65,8 @@ export default function PrivacyPage() {
                 </Link>
               ) : (
                 <Button 
-                  className="gap-2"
+                  className="gap-2 bg-rose-600 hover:bg-rose-700"
+                  size="lg"
                   onClick={showFreeTrialPaywall}
                 >
                   <Eye className="w-4 h-4" />
@@ -123,6 +81,25 @@ export default function PrivacyPage() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <Link href="/privacy/scan">
+          <Card className="p-5 hover:border-rose-300 transition-all cursor-pointer group h-full border-rose-200 bg-rose-50/30">
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-rose-500/10">
+                <Eye className="w-6 h-6 text-rose-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold group-hover:text-rose-600 transition-colors">
+                  Full Privacy Scan
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  AI-powered scan to find your data across 50+ data broker sites
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-rose-400 group-hover:text-rose-600 transition-colors" />
+            </div>
+          </Card>
+        </Link>
+
         <Link href="/privacy/remove">
           <Card className="p-5 hover:border-primary/50 transition-all cursor-pointer group h-full">
             <div className="flex items-start gap-4">
@@ -180,53 +157,6 @@ export default function PrivacyPage() {
           </Card>
         </Link>
       </div>
-
-      {/* Exposure Categories */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">Exposure Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {exposureData.categories.map((category) => (
-              <div
-                key={category.name}
-                className={`p-4 rounded-xl border ${
-                  category.exposed
-                    ? "border-destructive/30 bg-destructive/5"
-                    : "border-success/30 bg-success/5"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  {category.exposed ? (
-                    <AlertTriangle className="w-5 h-5 text-destructive" />
-                  ) : (
-                    <CheckCircle className="w-5 h-5 text-success" />
-                  )}
-                  <div className="flex-1">
-                    <p className="font-medium">{category.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {category.description}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={
-                      category.severity === "high"
-                        ? "destructive"
-                        : category.severity === "medium"
-                        ? "warning"
-                        : "secondary"
-                    }
-                    className="text-xs"
-                  >
-                    {category.severity}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Data Brokers Preview */}
       <Card>

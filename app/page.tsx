@@ -49,68 +49,13 @@ import { CookieConsent } from "@/components/shared/cookie-consent";
 import { SocialProofTicker } from "@/components/shared/social-proof-ticker";
 
 const features = [
-  {
-    title: "Remove YOUR sensitive Info",
-    description: "Remove your data from brokers and check exposure",
-    icon: Shield,
-    href: "/privacy",
-    color: "text-rose-500",
-    bgColor: "bg-rose-500/10",
-    badge: "Urgent",
-    badgeColor: "bg-red-500",
-  },
-  {
-    title: "Unclaimed Money",
-    description: "Find money owed to you by state governments",
-    icon: DollarSign,
-    href: "/unclaimed",
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-    badge: "try",
-    badgeColor: "bg-red-500",
-  },
-  {
-    title: "People Search",
-    description: "Find anyone using name, phone, email, or address",
-    icon: Search,
-    href: "/search",
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-  },
-  {
-    title: "Reverse Phone Lookup",
-    description: "Identify unknown callers, spam, and scam numbers",
-    icon: Phone,
-    href: "/phone",
-    color: "text-cyan-500",
-    bgColor: "bg-cyan-500/10",
-    badge: "New",
-    badgeColor: "bg-blue-500",
-  },
-  {
-    title: "Records Search",
-    description: "Court records, criminal history, and public filings",
-    icon: FileText,
-    href: "/records",
-    color: "text-amber-500",
-    bgColor: "bg-amber-500/10",
-  },
-  {
-    title: "Username Search",
-    description: "Find social profiles across 100+ platforms",
-    icon: AtSign,
-    href: "/username",
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
-  },
-  {
-    title: "Vehicle Lookup",
-    description: "Decode any VIN for vehicle history and specs",
-    icon: Car,
-    href: "/vehicle",
-    color: "text-emerald-500",
-    bgColor: "bg-emerald-500/10",
-  },
+  { title: "People Search", icon: Search, href: "/search", color: "text-blue-500", bgColor: "bg-blue-500/10", badge: "Popular", badgeColor: "bg-blue-500" },
+  { title: "Privacy Scan", icon: Shield, href: "/privacy", color: "text-rose-500", bgColor: "bg-rose-500/10", badge: "Urgent", badgeColor: "bg-red-500" },
+  { title: "Reverse Phone Lookup", icon: Phone, href: "/phone", color: "text-cyan-500", bgColor: "bg-cyan-500/10", badge: "New", badgeColor: "bg-cyan-600" },
+  { title: "Records Search", icon: FileText, href: "/records", color: "text-amber-500", bgColor: "bg-amber-500/10" },
+  { title: "Username Search", icon: AtSign, href: "/username", color: "text-purple-500", bgColor: "bg-purple-500/10" },
+  { title: "Vehicle Lookup", icon: Car, href: "/vehicle", color: "text-emerald-500", bgColor: "bg-emerald-500/10" },
+  { title: "Unclaimed Money", icon: DollarSign, href: "/unclaimed", color: "text-green-500", bgColor: "bg-green-500/10", badge: "Free", badgeColor: "bg-green-600" },
 ];
 
 function FAQItem({ question, answer }: { question: string; answer: string }) {
@@ -354,38 +299,36 @@ function HomeContent() {
 
         {/* Features Grid */}
         <section className="container mx-auto px-4 pt-12 pb-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">Powerful Tools at Your Fingertips</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Everything you need to research, protect, and stay informed
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {features.map((feature) => (
               <Link key={feature.href} href={feature.href}>
                 <Card
-                  className="p-6 h-full hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 group cursor-pointer"
-                  style={{ animationDelay: `${index * 100}ms` }}
+                  className="p-5 h-full hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 group cursor-pointer hover:-translate-y-1 flex items-center gap-4"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="relative">
-                      <div
-                        className={`p-3 rounded-xl ${feature.bgColor} group-hover:scale-110 transition-transform`}
+                  <div className="relative flex-shrink-0">
+                    <div
+                      className={`p-3 rounded-xl ${feature.bgColor} group-hover:scale-110 transition-transform duration-300`}
+                    >
+                      <feature.icon className={`w-6 h-6 ${feature.color}`} />
+                    </div>
+                    {feature.badge && (
+                      <Badge
+                        className={`absolute -top-2 -right-2 ${feature.badgeColor} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg`}
                       >
-                        <feature.icon className={`w-6 h-6 ${feature.color}`} />
-                      </div>
-                      {feature.badge && (
-                        <Badge
-                          className={`absolute -top-2 -right-2 ${feature.badgeColor} text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-lg`}
-                        >
-                          {feature.badge}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors">
-                        {feature.title}
-                      </h3>
-                      <p className="text-muted-foreground text-sm">
-                        {feature.description}
-                      </p>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                        {feature.badge}
+                      </Badge>
+                    )}
                   </div>
+                  <h3 className="font-semibold text-base flex-1 group-hover:text-primary transition-colors">
+                    {feature.title}
+                  </h3>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </Card>
               </Link>
             ))}
@@ -627,25 +570,31 @@ function HomeContent() {
 
         {/* Final CTA Section */}
         <section className="container mx-auto px-4 pb-20">
-          <Card className="p-12 text-center glass relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-purple-500/10" />
+          <Card className="p-10 md:p-16 text-center relative overflow-hidden border-0 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-red-600 via-red-500 to-rose-600" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
             <div className="relative">
-              <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                Ready to <span className="gradient-text">Get Started?</span>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-sm text-white/90 font-medium mb-6 backdrop-blur-sm">
+                <Sparkles className="w-4 h-4" />
+                Trusted by 2M+ users
+              </div>
+              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-white">
+                Know More. Stay Safe.
               </h2>
-              <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Join millions of users who trust RevealAI for accurate, comprehensive people intelligence.
+              <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto">
+                Get instant access to AI-powered people search, privacy protection, background checks, and more.
               </p>
-              <div className="flex flex-col gap-4 justify-center max-w-md mx-auto">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
                 {!user && (
                   <>
-                    <Link href="/login?signup=true">
-                      <Button size="lg" className="w-full text-base">
-                        Sign Up
+                    <Link href="/login?signup=true" className="flex-1">
+                      <Button size="lg" className="w-full text-base bg-white text-red-600 hover:bg-white/90 font-bold shadow-lg">
+                        Get Started Free
+                        <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </Link>
-                    <Link href="/login">
-                      <Button size="lg" variant="outline" className="w-full text-base">
+                    <Link href="/login" className="flex-1">
+                      <Button size="lg" variant="outline" className="w-full text-base border-white/30 text-white hover:bg-white/10 font-medium">
                         Sign In
                       </Button>
                     </Link>
@@ -653,7 +602,7 @@ function HomeContent() {
                 )}
                 {user && (
                   <Link href="/search">
-                    <Button size="lg" className="gap-2 text-base w-full">
+                    <Button size="lg" className="gap-2 text-base bg-white text-red-600 hover:bg-white/90 font-bold shadow-lg px-8">
                       <Search className="w-5 h-5" />
                       Start Searching Now
                       <ArrowRight className="w-4 h-4" />
@@ -661,28 +610,71 @@ function HomeContent() {
                   </Link>
                 )}
               </div>
+              <p className="text-xs text-white/50 mt-6">
+                No credit card required to start. Cancel anytime.
+              </p>
             </div>
           </Card>
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-border/50 py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} RevealAI. All rights reserved.</p>
-          <div className="flex justify-center gap-6 mt-4">
-            <Link href="/privacy" className="hover:text-foreground transition">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-foreground transition">
-              Terms of Service
-            </Link>
-            <Link href="/blog" className="hover:text-foreground transition">
-              Blog
-            </Link>
-            <Link href="/settings" className="hover:text-foreground transition">
-              Settings
-            </Link>
+      <footer className="relative z-10 border-t border-border/50 bg-gray-50">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
+            {/* Brand Column */}
+            <div className="md:col-span-1">
+              <Logo size="md" />
+              <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                AI-powered people search and privacy protection trusted by millions.
+              </p>
+            </div>
+
+            {/* Tools Column */}
+            <div>
+              <h4 className="font-semibold text-sm mb-4 text-foreground">Tools</h4>
+              <ul className="space-y-2.5">
+                <li><Link href="/search" className="text-sm text-muted-foreground hover:text-foreground transition">People Search</Link></li>
+                <li><Link href="/phone" className="text-sm text-muted-foreground hover:text-foreground transition">Phone Lookup</Link></li>
+                <li><Link href="/records" className="text-sm text-muted-foreground hover:text-foreground transition">Records Search</Link></li>
+                <li><Link href="/username" className="text-sm text-muted-foreground hover:text-foreground transition">Username Search</Link></li>
+                <li><Link href="/vehicle" className="text-sm text-muted-foreground hover:text-foreground transition">Vehicle Lookup</Link></li>
+                <li><Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition">Privacy Scan</Link></li>
+              </ul>
+            </div>
+
+            {/* Resources Column */}
+            <div>
+              <h4 className="font-semibold text-sm mb-4 text-foreground">Resources</h4>
+              <ul className="space-y-2.5">
+                <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground transition">Blog</Link></li>
+                <li><a href="https://polished-factory-180.notion.site/Reveal-AI-People-Search-279df7bf5f6a80559673d41efdd0a82e" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">FAQ</a></li>
+                <li><a href="https://polished-factory-180.notion.site/Support-278df7bf5f6a80e5986bc22ac7786ced" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">Support</a></li>
+                <li><a href="https://polished-factory-180.notion.site/Feedback-Suggestions-279df7bf5f6a8090b058f19161d822ca" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">Feedback</a></li>
+              </ul>
+            </div>
+
+            {/* Legal Column */}
+            <div>
+              <h4 className="font-semibold text-sm mb-4 text-foreground">Legal</h4>
+              <ul className="space-y-2.5">
+                <li><a href="https://polished-factory-180.notion.site/Privacy-Policy-278df7bf5f6a801bb270d8216c5182c9" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">Privacy Policy</a></li>
+                <li><a href="https://polished-factory-180.notion.site/Terms-of-Service-279df7bf5f6a8064bad7c5481a8e9a1b" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">Terms of Service</a></li>
+                <li><Link href="/settings" className="text-sm text-muted-foreground hover:text-foreground transition">Settings</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-border/50 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} RevealAI. All rights reserved.
+            </p>
+            <div className="flex items-center gap-6 text-xs text-muted-foreground">
+              <a href="https://polished-factory-180.notion.site/Privacy-Policy-278df7bf5f6a801bb270d8216c5182c9" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">Privacy</a>
+              <a href="https://polished-factory-180.notion.site/Terms-of-Service-279df7bf5f6a8064bad7c5481a8e9a1b" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">Terms</a>
+              <a href="https://polished-factory-180.notion.site/Support-278df7bf5f6a80e5986bc22ac7786ced" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">Support</a>
+            </div>
           </div>
         </div>
       </footer>

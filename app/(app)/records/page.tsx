@@ -11,31 +11,21 @@ import {
   ArrowRight,
   Scale,
   AlertTriangle,
+  Shield,
   Clock,
-  Hash,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
 import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
-import { searchRecords, normalizeDob } from "@/lib/services/records-search";
-import type { RecordsSearchResponse, CourtRecord } from "@/lib/types";
+import { FullReportResult } from "@/components/shared/full-report-result";
+import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
-import { formatDate } from "@/lib/utils";
-
-const categoryColors: Record<string, { bg: string; text: string }> = {
-  Criminal: { bg: "bg-red-500/10", text: "text-red-500" },
-  Civil: { bg: "bg-blue-500/10", text: "text-blue-500" },
-  Traffic: { bg: "bg-amber-500/10", text: "text-amber-500" },
-  Bankruptcy: { bg: "bg-purple-500/10", text: "text-purple-500" },
-  default: { bg: "bg-muted", text: "text-muted-foreground" },
-};
 
 export default function RecordsSearchPage() {
+  const { user } = useAuth();
   const { isPro, showFreeTrialPaywall } = useSubscription();
   const [formData, setFormData] = useState({
     firstName: "",
@@ -44,47 +34,73 @@ export default function RecordsSearchPage() {
     state: "",
     dob: "",
   });
-  const [results, setResults] = useState<RecordsSearchResponse | null>(null);
-  
-  // Loading screen state
+  const [searchResult, setSearchResult] = useState<string | null>(null);
+  const [searchCount, setSearchCount] = useState(0);
+
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
 
   const searchMutation = useMutation({
-    mutationFn: async () => {
-      const request = {
-        person: {
-          firstName: formData.firstName.trim(),
-          lastName: formData.lastName.trim(),
-          dob: normalizeDob(formData.dob),
-          city: formData.city.trim() || undefined,
-          state: formData.state.trim().toUpperCase() || undefined,
-        },
-      };
-      return searchRecords(request);
+    mutationFn: async (query: string) => {
+      const response = await fetch("/api/perplexity/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          userId: user?.id,
+          usePro: searchCount < 3,
+          isPro: isPro || false,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        if (response.status === 429) {
+          throw new Error(error.message || "Rate limit exceeded. Please try again later.");
+        }
+        throw new Error(error.error || "Search failed");
+      }
+
+      const data = await response.json();
+      return data.content;
     },
     onSuccess: (data) => {
-      setResults(data);
+      setSearchResult(data);
+      setSearchCount((prev) => prev + 1);
     },
   });
 
   const handleSearch = useCallback(() => {
-    if (!formData.firstName.trim() || !formData.lastName.trim()) {
-      return;
-    }
-    
-    // Show free trial paywall immediately if not pro
+    if (!formData.firstName.trim() || !formData.lastName.trim()) return;
+
     if (!isPro) {
       showFreeTrialPaywall();
       return;
     }
-    
-    // Show loading screen and start search
-    const displayName = `${formData.firstName} ${formData.lastName}`.trim();
-    setLoadingSearchQuery(displayName);
+
+    const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
+    const location = [formData.city.trim(), formData.state.trim().toUpperCase()]
+      .filter(Boolean)
+      .join(", ");
+    const dobInfo = formData.dob.trim() ? `, date of birth ${formData.dob.trim()}` : "";
+
+    const query = `Search for any public court records, criminal records, civil records, traffic violations, bankruptcy filings, liens, judgments, and other legal records for ${fullName}${location ? ` from ${location}` : ""}${dobInfo}.
+
+Please provide:
+1. Any criminal records (felonies, misdemeanors, arrests)
+2. Civil court cases (lawsuits, disputes, small claims)
+3. Traffic violations and DUI records
+4. Bankruptcy filings
+5. Tax liens and judgments
+6. Sex offender registry check
+7. Any other public legal records
+
+For each record found, include the case number, date, jurisdiction, status, and a brief description. If no records are found in a category, state that clearly. Search federal, state, and local databases.`;
+
+    setLoadingSearchQuery(fullName);
     setShowLoadingScreen(true);
-    searchMutation.mutate();
-  }, [formData.firstName, formData.lastName, searchMutation, isPro, showFreeTrialPaywall]);
+    searchMutation.mutate(query);
+  }, [formData, isPro, showFreeTrialPaywall, searchMutation, searchCount]);
 
   const handleLoadingComplete = useCallback(() => {
     setShowLoadingScreen(false);
@@ -92,16 +108,11 @@ export default function RecordsSearchPage() {
 
   const handleLoadingCancel = useCallback(() => {
     setShowLoadingScreen(false);
-    setResults(null);
+    setSearchResult(null);
   }, []);
-
-  const getCategoryStyle = (category: string) => {
-    return categoryColors[category] || categoryColors.default;
-  };
 
   return (
     <div>
-      {/* Loading Screen Overlay */}
       <SearchLoadingScreen
         isVisible={showLoadingScreen}
         searchQuery={loadingSearchQuery}
@@ -119,8 +130,11 @@ export default function RecordsSearchPage() {
 
       {/* Search Form */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Search Records</CardTitle>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">Search Public Records</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Search court records, criminal history, civil cases, and more
+          </p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -180,127 +194,68 @@ export default function RecordsSearchPage() {
         </CardContent>
       </Card>
 
-      {/* Error Message */}
+      {/* Error */}
       {searchMutation.error && !showLoadingScreen && (
         <Alert variant="destructive" className="mt-6">
-          {(searchMutation.error as Error).message ||
-            "An error occurred during the search"}
+          {searchMutation.error.message || "Search failed. Please try again."}
         </Alert>
       )}
 
-      {/* Loading State (inline, hidden when full loading screen is shown) */}
-      {searchMutation.isPending && !showLoadingScreen && (
-        <div className="mt-6 space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="w-20 h-6 rounded-full" />
-                  <Skeleton className="h-5 w-48" />
-                </div>
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            </Card>
-          ))}
+      {/* Results */}
+      {searchResult && !showLoadingScreen && (
+        <div className="mt-6">
+          <FullReportResult
+            content={searchResult}
+            searchCount={searchCount}
+            personName={`${formData.firstName} ${formData.lastName}`.trim()}
+          />
         </div>
       )}
 
-      {/* Results */}
-      {results && !showLoadingScreen && (
-        <div className="mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">
-              Found {results.records.length} record
-              {results.records.length !== 1 ? "s" : ""}
-            </h2>
-            {results.tookMs && (
-              <span className="text-sm text-muted-foreground">
-                <Clock className="w-4 h-4 inline mr-1" />
-                {results.tookMs}ms
-              </span>
-            )}
-          </div>
-
-          {results.records.length === 0 ? (
-            <Alert variant="info">
-              No records found for this person. This is good news!
-            </Alert>
-          ) : (
-            <div className="space-y-4">
-              {results.records.map((record) => (
-                <RecordCard key={record.id} record={record} />
-              ))}
+      {/* Info Section */}
+      {!searchResult && !showLoadingScreen && (
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <Scale className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">Court Records</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Search criminal, civil, traffic, and bankruptcy records across federal and state databases.
+                </p>
+              </div>
             </div>
-          )}
+          </Card>
+          <Card className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Shield className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">Comprehensive Search</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Includes arrests, liens, judgments, sex offender registry, and more.
+                </p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <Clock className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">AI-Powered Results</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Our AI searches multiple databases to compile a comprehensive report.
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
     </div>
-  );
-}
-
-function RecordCard({ record }: { record: CourtRecord }) {
-  const categoryColors: Record<string, { bg: string; text: string }> = {
-    Criminal: { bg: "bg-red-500/10", text: "text-red-500" },
-    Civil: { bg: "bg-blue-500/10", text: "text-blue-500" },
-    Traffic: { bg: "bg-amber-500/10", text: "text-amber-500" },
-    Bankruptcy: { bg: "bg-purple-500/10", text: "text-purple-500" },
-    default: { bg: "bg-muted", text: "text-muted-foreground" },
-  };
-
-  const style = categoryColors[record.category] || categoryColors.default;
-
-  return (
-    <Card className="hover:border-primary/30 transition-colors">
-      <CardContent className="p-5">
-        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-          {/* Category Icon */}
-          <div
-            className={`flex-shrink-0 w-12 h-12 rounded-xl ${style.bg} flex items-center justify-center`}
-          >
-            <Scale className={`w-6 h-6 ${style.text}`} />
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <Badge className={`${style.bg} ${style.text} border-0`}>
-                {record.category}
-              </Badge>
-              {record.status && (
-                <Badge variant="outline" className="text-xs">
-                  {record.status}
-                </Badge>
-              )}
-            </div>
-
-            {record.description && (
-              <p className="text-sm mb-3">{record.description}</p>
-            )}
-
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-              {record.caseNumber && (
-                <span className="flex items-center gap-1">
-                  <Hash className="w-4 h-4" />
-                  {record.caseNumber}
-                </span>
-              )}
-              {record.filedDate && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  {formatDate(record.filedDate)}
-                </span>
-              )}
-              {record.jurisdiction && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  {record.jurisdiction}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

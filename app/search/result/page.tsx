@@ -460,12 +460,47 @@ function SearchResultContent() {
   };
 
   // Handle follow-up search (Pro users can run follow-up; non-Pro see paywall)
-  const handleFollowUpSearch = (query: string) => {
+  const handleFollowUpSearch = async (query: string) => {
     if (!isPro) {
       showFreeTrialPaywall();
       return;
     }
-    // TODO: run follow-up search for Pro users
+
+    setIsSearchingOpenEnded(true);
+    try {
+      const contextQuery = `Regarding ${fullName}${location ? ` from ${location}` : ""}: ${query}`;
+      
+      const response = await fetch("/api/perplexity/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: contextQuery,
+          userId: user?.id || "guest",
+          usePro: true,
+          isPro: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Follow-up search failed");
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || data.content;
+      
+      if (content && parsedData) {
+        setParsedData({
+          ...parsedData,
+          answer: parsedData.answer + "\n\n---\n\n**Follow-up: " + query + "**\n\n" + content,
+        });
+      }
+      setFollowUpQuery("");
+    } catch (error: any) {
+      console.error("Follow-up search error:", error);
+    } finally {
+      setIsSearchingOpenEnded(false);
+    }
   };
 
   const handleFollowUpSubmit = () => {

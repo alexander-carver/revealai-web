@@ -7,60 +7,82 @@ import {
   Search,
   ArrowRight,
   ExternalLink,
-  Check,
-  X,
-  Clock,
   Globe,
-  AlertCircle,
+  Shield,
+  Clock,
+  Users,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
-import { searchUsername } from "@/lib/services/username-search";
-import type { UsernameSearchResponse, UsernameProbe } from "@/lib/types";
+import { FullReportResult } from "@/components/shared/full-report-result";
+import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 
 export default function UsernameSearchPage() {
+  const { user } = useAuth();
   const { isPro, showFreeTrialPaywall } = useSubscription();
   const [username, setUsername] = useState("");
-  const [results, setResults] = useState<UsernameSearchResponse | null>(null);
-  const [filter, setFilter] = useState<"all" | "found" | "not_found">("all");
-  
-  // Loading screen state
+  const [searchResult, setSearchResult] = useState<string | null>(null);
+  const [searchCount, setSearchCount] = useState(0);
+
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
 
   const searchMutation = useMutation({
-    mutationFn: async () => {
-      return searchUsername(username);
+    mutationFn: async (query: string) => {
+      const response = await fetch("/api/perplexity/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          userId: user?.id,
+          usePro: searchCount < 3,
+          isPro: isPro || false,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        if (response.status === 429) {
+          throw new Error(error.message || "Rate limit exceeded. Please try again later.");
+        }
+        throw new Error(error.error || "Search failed");
+      }
+
+      const data = await response.json();
+      return data.content;
     },
     onSuccess: (data) => {
-      setResults(data);
+      setSearchResult(data);
+      setSearchCount((prev) => prev + 1);
     },
   });
 
   const handleSearch = useCallback(() => {
-    if (username.trim().length < 2) {
-      return;
-    }
-    
-    // Show free trial paywall immediately if not pro
+    const trimmed = username.trim().replace("@", "");
+    if (trimmed.length < 2) return;
+
     if (!isPro) {
       showFreeTrialPaywall();
       return;
     }
-    
-    // Show loading screen and start search
-    setLoadingSearchQuery(`@${username}`);
+
+    const query = `Search for the username "${trimmed}" across all major social media platforms and websites. For each platform where you find an active profile, provide:
+- The platform name and direct URL to the profile
+- A brief description of the account (bio, follower count, activity level if visible)
+
+Check these platforms: Instagram, Twitter/X, TikTok, YouTube, Facebook, LinkedIn, Reddit, GitHub, Snapchat, Pinterest, Twitch, Discord, Telegram, Medium, Tumblr, SoundCloud, Spotify, Steam, PlayStation Network, Xbox Live, and any other platforms where this username appears.
+
+Also provide a summary of the person's online presence and any connections between the accounts (same profile picture, similar bio, etc.).`;
+
+    setLoadingSearchQuery(`@${trimmed}`);
     setShowLoadingScreen(true);
-    searchMutation.mutate();
-  }, [username, searchMutation, isPro, showFreeTrialPaywall]);
+    searchMutation.mutate(query);
+  }, [username, isPro, showFreeTrialPaywall, searchMutation, searchCount]);
 
   const handleLoadingComplete = useCallback(() => {
     setShowLoadingScreen(false);
@@ -68,22 +90,11 @@ export default function UsernameSearchPage() {
 
   const handleLoadingCancel = useCallback(() => {
     setShowLoadingScreen(false);
-    setResults(null);
+    setSearchResult(null);
   }, []);
-
-  const filteredProfiles =
-    results?.profiles.filter((p) => {
-      if (filter === "found") return p.exists;
-      if (filter === "not_found") return !p.exists;
-      return true;
-    }) || [];
-
-  const foundCount = results?.profiles.filter((p) => p.exists).length || 0;
-  const notFoundCount = results?.profiles.filter((p) => !p.exists).length || 0;
 
   return (
     <div>
-      {/* Loading Screen Overlay */}
       <SearchLoadingScreen
         isVisible={showLoadingScreen}
         searchQuery={loadingSearchQuery}
@@ -101,8 +112,11 @@ export default function UsernameSearchPage() {
 
       {/* Search Form */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle className="text-lg">Search Username</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Enter any username to find their profiles across social media, forums, and websites
+          </p>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3">
@@ -124,166 +138,88 @@ export default function UsernameSearchPage() {
               Search
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground mt-3">
-            We&apos;ll check if this username exists on popular social media
-            platforms, forums, and websites.
-          </p>
+
+          {/* Quick Info Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+            {[
+              { icon: Globe, label: "100+ Platforms", color: "text-purple-500", bg: "bg-purple-500/10" },
+              { icon: Users, label: "Social Profiles", color: "text-blue-500", bg: "bg-blue-500/10" },
+              { icon: ExternalLink, label: "Direct Links", color: "text-green-500", bg: "bg-green-500/10" },
+              { icon: Shield, label: "Private Search", color: "text-rose-500", bg: "bg-rose-500/10" },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                <div className={`p-1.5 rounded-lg ${item.bg}`}>
+                  <item.icon className={`w-3.5 h-3.5 ${item.color}`} />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Error Message */}
+      {/* Error */}
       {searchMutation.error && !showLoadingScreen && (
         <Alert variant="destructive" className="mt-6">
-          {(searchMutation.error as Error).message ||
-            "An error occurred during the search"}
+          {searchMutation.error.message || "Search failed. Please try again."}
         </Alert>
       )}
 
-      {/* Loading State (inline, hidden when full loading screen is shown) */}
-      {searchMutation.isPending && !showLoadingScreen && (
+      {/* Results */}
+      {searchResult && !showLoadingScreen && (
         <div className="mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-muted-foreground">
-              Searching platforms...
-            </span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="p-4">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="w-10 h-10 rounded-lg" />
-                  <div className="flex-1">
-                    <Skeleton className="h-5 w-24" />
-                    <Skeleton className="h-4 w-16 mt-1" />
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <FullReportResult
+            content={searchResult}
+            searchCount={searchCount}
+            personName={`@${username.trim().replace("@", "")}`}
+          />
         </div>
       )}
 
-      {/* Results */}
-      {results && !showLoadingScreen && (
-        <div className="mt-6">
-          {/* Stats Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-lg font-semibold">
-                Results for @{results.username}
-              </h2>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                <span className="flex items-center gap-1">
-                  <Check className="w-4 h-4 text-success" />
-                  {foundCount} found
-                </span>
-                <span className="flex items-center gap-1">
-                  <X className="w-4 h-4 text-destructive" />
-                  {notFoundCount} not found
-                </span>
-                {results.tookMs && (
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {results.tookMs}ms
-                  </span>
-                )}
+      {/* Info Section */}
+      {!searchResult && !showLoadingScreen && (
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-purple-500/10">
+                <Globe className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">Cross-Platform Search</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Search across Instagram, TikTok, X, YouTube, Reddit, GitHub, and dozens more.
+                </p>
               </div>
             </div>
-
-            {/* Filter Tabs */}
-            <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-              <TabsList>
-                <TabsTrigger value="all">All ({results.profiles.length})</TabsTrigger>
-                <TabsTrigger value="found">Found ({foundCount})</TabsTrigger>
-                <TabsTrigger value="not_found">Not Found ({notFoundCount})</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {/* Profile Grid */}
-          {filteredProfiles.length === 0 ? (
-            <Alert variant="info">
-              No profiles match this filter.
-            </Alert>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {filteredProfiles.map((probe) => (
-                <ProfileCard key={probe.site} probe={probe} />
-              ))}
+          </Card>
+          <Card className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Users className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">Profile Analysis</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Get details on profile activity, follower counts, and account connections.
+                </p>
+              </div>
             </div>
-          )}
+          </Card>
+          <Card className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <Clock className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">Instant Results</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Get comprehensive results in seconds, powered by AI research.
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
-    </div>
-  );
-}
-
-function ProfileCard({ probe }: { probe: UsernameProbe }) {
-  return (
-    <Card
-      className={`p-4 transition-all ${
-        probe.exists
-          ? "hover:border-success/50 cursor-pointer"
-          : "opacity-60"
-      }`}
-    >
-      {probe.exists && probe.url ? (
-        <a
-          href={probe.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block"
-        >
-          <ProfileCardContent probe={probe} />
-        </a>
-      ) : (
-        <ProfileCardContent probe={probe} />
-      )}
-    </Card>
-  );
-}
-
-function ProfileCardContent({ probe }: { probe: UsernameProbe }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div
-        className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-          probe.exists ? "bg-success/10" : "bg-muted"
-        }`}
-      >
-        <Globe
-          className={`w-5 h-5 ${
-            probe.exists ? "text-success" : "text-muted-foreground"
-          }`}
-        />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium truncate">{probe.display}</span>
-          {probe.exists && probe.url && (
-            <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-          )}
-        </div>
-        <div className="flex items-center gap-2 mt-1">
-          {probe.exists ? (
-            <Badge variant="success" className="text-xs">
-              <Check className="w-3 h-3 mr-1" />
-              Found
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-xs">
-              <X className="w-3 h-3 mr-1" />
-              Not Found
-            </Badge>
-          )}
-          {probe.confidence > 0 && probe.exists && (
-            <span className="text-xs text-muted-foreground">
-              {Math.round(probe.confidence * 100)}% confident
-            </span>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
