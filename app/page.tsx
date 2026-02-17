@@ -49,13 +49,13 @@ import { CookieConsent } from "@/components/shared/cookie-consent";
 import { SocialProofTicker } from "@/components/shared/social-proof-ticker";
 
 const features = [
-  { title: "People Search", description: "AI background reports", icon: Search, href: "/search", color: "text-blue-500", bgColor: "bg-blue-500/10", badge: "Popular", badgeColor: "bg-blue-500" },
-  { title: "Privacy Scan", description: "Find your data exposure", icon: Shield, href: "/privacy", color: "text-rose-500", bgColor: "bg-rose-500/10", badge: "Urgent", badgeColor: "bg-red-500" },
-  { title: "Reverse Phone Lookup", description: "Identify unknown callers", icon: Phone, href: "/phone", color: "text-cyan-500", bgColor: "bg-cyan-500/10", badge: "New", badgeColor: "bg-cyan-600" },
-  { title: "Records Search", description: "Court & criminal records", icon: FileText, href: "/records", color: "text-amber-500", bgColor: "bg-amber-500/10" },
-  { title: "Username Search", description: "Social profiles across 100+ sites", icon: AtSign, href: "/username", color: "text-purple-500", bgColor: "bg-purple-500/10" },
-  { title: "Vehicle Lookup", description: "Decode any VIN", icon: Car, href: "/vehicle", color: "text-emerald-500", bgColor: "bg-emerald-500/10" },
-  { title: "Unclaimed Money", description: "State funds search", icon: DollarSign, href: "/unclaimed", color: "text-green-500", bgColor: "bg-green-500/10", badge: "Free", badgeColor: "bg-green-600" },
+  { title: "People Search", description: "Full AI report on anyone: social profiles, work history, public records.", icon: Search, href: "/search", color: "text-blue-500", bgColor: "bg-blue-500/10", badge: "Popular", badgeColor: "bg-blue-500" },
+  { title: "Privacy Scan", description: "Find where your data is exposed online and get removal guides.", icon: Shield, href: "/privacy", color: "text-rose-500", bgColor: "bg-rose-500/10", badge: "Urgent", badgeColor: "bg-red-500" },
+  { title: "Reverse Phone Lookup", description: "Identify unknown callers: name, location, carrier, spam check.", icon: Phone, href: "/phone", color: "text-cyan-500", bgColor: "bg-cyan-500/10", badge: "New", badgeColor: "bg-cyan-600" },
+  { title: "Records Search", description: "Court records, criminal history, civil cases, bankruptcies by name.", icon: FileText, href: "/records", color: "text-amber-500", bgColor: "bg-amber-500/10" },
+  { title: "Username Search", description: "Find a username across 100+ social platforms and linked profiles.", icon: AtSign, href: "/username", color: "text-purple-500", bgColor: "bg-purple-500/10" },
+  { title: "Vehicle Lookup", description: "Decode any VIN for specs, manufacturer, and assembly info.", icon: Car, href: "/vehicle", color: "text-emerald-500", bgColor: "bg-emerald-500/10" },
+  { title: "Unclaimed Money", description: "Search state databases for unclaimed funds owed to you.", icon: DollarSign, href: "/unclaimed", color: "text-green-500", bgColor: "bg-green-500/10", badge: "Free", badgeColor: "bg-green-600" },
 ];
 
 function FAQItem({ question, answer }: { question: string; answer: string }) {
@@ -330,7 +330,7 @@ function HomeContent() {
                       <h3 className="font-semibold text-base group-hover:text-primary transition-colors">
                         {feature.title}
                       </h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-sm text-muted-foreground mt-1 leading-snug">
                         {feature.description}
                       </p>
                     </div>
