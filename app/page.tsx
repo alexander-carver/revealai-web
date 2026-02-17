@@ -49,13 +49,13 @@ import { CookieConsent } from "@/components/shared/cookie-consent";
 import { SocialProofTicker } from "@/components/shared/social-proof-ticker";
 
 const features = [
-  { title: "People Search", icon: Search, href: "/search", color: "text-blue-500", bgColor: "bg-blue-500/10", badge: "Popular", badgeColor: "bg-blue-500" },
-  { title: "Privacy Scan", icon: Shield, href: "/privacy", color: "text-rose-500", bgColor: "bg-rose-500/10", badge: "Urgent", badgeColor: "bg-red-500" },
-  { title: "Reverse Phone Lookup", icon: Phone, href: "/phone", color: "text-cyan-500", bgColor: "bg-cyan-500/10", badge: "New", badgeColor: "bg-cyan-600" },
-  { title: "Records Search", icon: FileText, href: "/records", color: "text-amber-500", bgColor: "bg-amber-500/10" },
-  { title: "Username Search", icon: AtSign, href: "/username", color: "text-purple-500", bgColor: "bg-purple-500/10" },
-  { title: "Vehicle Lookup", icon: Car, href: "/vehicle", color: "text-emerald-500", bgColor: "bg-emerald-500/10" },
-  { title: "Unclaimed Money", icon: DollarSign, href: "/unclaimed", color: "text-green-500", bgColor: "bg-green-500/10", badge: "Free", badgeColor: "bg-green-600" },
+  { title: "People Search", description: "AI background reports", icon: Search, href: "/search", color: "text-blue-500", bgColor: "bg-blue-500/10", badge: "Popular", badgeColor: "bg-blue-500" },
+  { title: "Privacy Scan", description: "Find your data exposure", icon: Shield, href: "/privacy", color: "text-rose-500", bgColor: "bg-rose-500/10", badge: "Urgent", badgeColor: "bg-red-500" },
+  { title: "Reverse Phone Lookup", description: "Identify unknown callers", icon: Phone, href: "/phone", color: "text-cyan-500", bgColor: "bg-cyan-500/10", badge: "New", badgeColor: "bg-cyan-600" },
+  { title: "Records Search", description: "Court & criminal records", icon: FileText, href: "/records", color: "text-amber-500", bgColor: "bg-amber-500/10" },
+  { title: "Username Search", description: "Social profiles across 100+ sites", icon: AtSign, href: "/username", color: "text-purple-500", bgColor: "bg-purple-500/10" },
+  { title: "Vehicle Lookup", description: "Decode any VIN", icon: Car, href: "/vehicle", color: "text-emerald-500", bgColor: "bg-emerald-500/10" },
+  { title: "Unclaimed Money", description: "State funds search", icon: DollarSign, href: "/unclaimed", color: "text-green-500", bgColor: "bg-green-500/10", badge: "Free", badgeColor: "bg-green-600" },
 ];
 
 function FAQItem({ question, answer }: { question: string; answer: string }) {
@@ -309,26 +309,33 @@ function HomeContent() {
             {features.map((feature) => (
               <Link key={feature.href} href={feature.href}>
                 <Card
-                  className="p-5 h-full hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 group cursor-pointer hover:-translate-y-1 flex items-center gap-4"
+                  className="p-5 h-full hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 group cursor-pointer hover:-translate-y-1"
                 >
-                  <div className="relative flex-shrink-0">
-                    <div
-                      className={`p-3 rounded-xl ${feature.bgColor} group-hover:scale-110 transition-transform duration-300`}
-                    >
-                      <feature.icon className={`w-6 h-6 ${feature.color}`} />
-                    </div>
-                    {feature.badge && (
-                      <Badge
-                        className={`absolute -top-2 -right-2 ${feature.badgeColor} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg`}
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-shrink-0">
+                      <div
+                        className={`p-3 rounded-xl ${feature.bgColor} group-hover:scale-110 transition-transform duration-300`}
                       >
-                        {feature.badge}
-                      </Badge>
-                    )}
+                        <feature.icon className={`w-6 h-6 ${feature.color}`} />
+                      </div>
+                      {feature.badge && (
+                        <Badge
+                          className={`absolute -top-2 -right-2 ${feature.badgeColor} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg`}
+                        >
+                          {feature.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base group-hover:text-primary transition-colors">
+                        {feature.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {feature.description}
+                      </p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
                   </div>
-                  <h3 className="font-semibold text-base flex-1 group-hover:text-primary transition-colors">
-                    {feature.title}
-                  </h3>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </Card>
               </Link>
             ))}
