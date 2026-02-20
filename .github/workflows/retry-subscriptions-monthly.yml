@@ -1,0 +1,33 @@
+# 12‑month retry: run subscription retries monthly for unpaid/past_due only.
+# Requires repository secret STRIPE_SECRET_KEY (sk_live_...).
+# To test without charging, set env DRY_RUN to 'true' in the "Run retries" step.
+
+name: Monthly subscription retries
+
+on:
+  schedule:
+    # 1st of every month at 09:00 UTC
+    - cron: '0 9 1 * *'
+  workflow_dispatch: # allow manual run from Actions tab
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run retries (unpaid/past_due only)
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          DRY_RUN: 'false'
+          ONLY_UNPAID_PAST_DUE: 'true'
+        run: node scripts/retry_all_subscriptions.js
