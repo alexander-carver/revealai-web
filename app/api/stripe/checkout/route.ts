@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { sendInitiateCheckoutEvent, generateEventId } from "@/lib/meta-capi";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-12-15.clover",
@@ -221,6 +222,22 @@ export async function POST(request: NextRequest) {
     const session = await stripe.checkout.sessions.create(sessionConfig, {
       idempotencyKey,
     });
+
+    // Server-side CAPI: InitiateCheckout (redundant with browser pixel for better match quality)
+    try {
+      const value = plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : 6.99;
+      await sendInitiateCheckoutEvent({
+        eventId: generateEventId('ic_srv'),
+        email: customerEmail || undefined,
+        value,
+        currency: 'USD',
+        plan: plan as string,
+        sourceUrl: request.nextUrl.origin,
+        externalId: userId || deviceId,
+      });
+    } catch (capiErr) {
+      console.error("CAPI InitiateCheckout error (non-fatal):", capiErr);
+    }
 
     return NextResponse.json({ url: session.url });
   } catch (error: any) {

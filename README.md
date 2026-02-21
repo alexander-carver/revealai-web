@@ -59,7 +59,9 @@ A modern web application for people search, background checks, and privacy tools
    npm run dev
    ```
 
-6. Open [http://localhost:3000](http://localhost:3000)
+6. Open [http://localhost:3000](http://localhost:3000) in **Chrome or Safari** (not Cursor’s Simple Browser).
+
+   **If you get Error -102 (connection refused)** in Cursor’s browser, see **[LOCALHOST_PREVIEW.md](./LOCALHOST_PREVIEW.md)** — run the dev server in a normal terminal and open localhost in an external browser, or use `./scripts/dev-preview.sh`.
 
 ## Project Structure
 

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { getDeviceId } from "@/lib/device-id";
+import { identifyUser } from "@/lib/analytics";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -104,15 +105,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session (with timeout so we never hang if Supabase is unreachable)
+    const AUTH_SESSION_TIMEOUT_MS = 8000;
+
     const getInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Error getting session:", error);
+      try {
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Auth session timeout")), AUTH_SESSION_TIMEOUT_MS)
+        );
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+        if (error) {
+          console.error("Error getting session:", error);
+        }
+        setSession(session ?? null);
+        setUser(session?.user ?? null);
+        if (session?.user?.email) {
+          identifyUser(session.user.email, session.user.id);
+        }
+      } catch (err) {
+        console.warn("Auth init timeout or error, continuing without session:", err);
+        setSession(null);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
     };
 
     getInitialSession();
@@ -125,6 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+
+      // Update Meta Pixel with user identity for Advanced Matching
+      if (session?.user?.email) {
+        identifyUser(session.user.email, session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();

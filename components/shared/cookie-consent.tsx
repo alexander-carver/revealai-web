@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Cookie, X } from "lucide-react";
+import { Cookie } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function CookieConsent() {
@@ -15,23 +15,28 @@ export function CookieConsent() {
     }
   }, []);
 
+  const updateConsent = (granted: boolean) => {
+    if (typeof window !== "undefined" && window.gtag) {
+      const state = granted ? "granted" : "denied";
+      window.gtag("consent", "update", {
+        ad_storage: state,
+        ad_user_data: state,
+        ad_personalization: state,
+        analytics_storage: state,
+      });
+    }
+  };
+
   const handleAccept = () => {
     localStorage.setItem("revealai_cookie_consent", "accepted");
     setIsVisible(false);
+    updateConsent(true);
   };
 
   const handleDecline = () => {
     localStorage.setItem("revealai_cookie_consent", "declined");
     setIsVisible(false);
-    if (typeof window !== "undefined") {
-      // Disable GA4
-      if (window.gtag) {
-        window.gtag("consent", "update", {
-          analytics_storage: "denied",
-          ad_storage: "denied",
-        });
-      }
-    }
+    updateConsent(false);
   };
 
   if (!isVisible) return null;
@@ -46,32 +51,25 @@ export function CookieConsent() {
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900 text-sm">We use cookies</h3>
             <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              We use cookies and similar technologies to improve your experience, analyze traffic, and personalize ads. By clicking &quot;Accept&quot;, you consent to our use of cookies.
+              We use cookies to improve your experience and personalize content. By clicking &quot;Accept&quot;, you consent to our use of cookies.
             </p>
           </div>
-          <button
-            onClick={handleDecline}
-            className="p-1 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
-            aria-label="Close"
-          >
-            <X className="w-4 h-4 text-gray-400" />
-          </button>
         </div>
         <div className="flex gap-2">
           <Button
             onClick={handleDecline}
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="flex-1 text-xs"
+            className="flex-1 text-xs text-gray-400 hover:text-gray-600"
           >
             Decline
           </Button>
           <Button
             onClick={handleAccept}
             size="sm"
-            className="flex-1 text-xs bg-gray-900 hover:bg-gray-800"
+            className="flex-[2] text-xs bg-gray-900 hover:bg-gray-800 text-white font-semibold"
           >
-            Accept All
+            Accept
           </Button>
         </div>
       </div>

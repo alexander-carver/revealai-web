@@ -164,10 +164,15 @@ export function AbandonedPaywallModal() {
               </button>
             </div>
 
-            {/* Auto-renew notice */}
-            <p className="text-center text-gray-400 text-xs mb-4">
-              Auto Renewable, Cancel Anytime
-            </p>
+            {/* Social proof */}
+            <div className="flex items-center justify-center gap-1.5 mb-3">
+              <div className="flex -space-x-1">
+                {[...Array(5)].map((_, i) => (
+                  <span key={i} className="text-yellow-400 text-sm">★</span>
+                ))}
+              </div>
+              <span className="text-gray-500 text-xs font-medium">Trusted by 10,000+ users</span>
+            </div>
 
             {/* CTA Button */}
             <button
@@ -184,6 +189,11 @@ export function AbandonedPaywallModal() {
                 </>
               )}
             </button>
+
+            {/* Trust / cancel assurance */}
+            <p className="text-center text-gray-400 text-xs mt-3">
+              No commitment · Cancel anytime · Secure checkout
+            </p>
 
             {/* Footer Links */}
             <div className="flex items-center justify-center gap-3 mt-6 text-xs text-gray-400">

@@ -48,6 +48,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Deterministic event_id for browser/CAPI dedup (same session always = same event_id)
+    const eventId = `pur_${session.id.replace('cs_', '').substring(0, 16)}`;
+
     return NextResponse.json({
       success: true,
       transaction_id: session.id,
@@ -56,6 +59,7 @@ export async function GET(request: NextRequest) {
       plan: planName,
       payment_status: session.payment_status,
       customer_email: session.customer_email,
+      event_id: eventId,
     });
   } catch (error: any) {
     console.error("Error retrieving Stripe session:", error);

@@ -154,6 +154,35 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Google Consent Mode v2: set defaults before any tracking scripts.
+            Cookieless pings still send so Meta/Google can model conversions even before consent.
+            Updated to 'granted' when user clicks Accept in the cookie banner. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('consent', 'default', {
+                ad_storage: 'denied',
+                ad_user_data: 'denied',
+                ad_personalization: 'denied',
+                analytics_storage: 'denied',
+                wait_for_update: 500,
+              });
+              // If user previously accepted, grant immediately
+              try {
+                if (localStorage.getItem('revealai_cookie_consent') === 'accepted') {
+                  gtag('consent', 'update', {
+                    ad_storage: 'granted',
+                    ad_user_data: 'granted',
+                    ad_personalization: 'granted',
+                    analytics_storage: 'granted',
+                  });
+                }
+              } catch(e) {}
+            `,
+          }}
+        />
         {/* Google Analytics 4 (GA4) */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-KXNE8LSF4X"></script>
         <script
@@ -181,7 +210,14 @@ export default function RootLayout({
               t.src=v;s=b.getElementsByTagName(e)[0];
               s.parentNode.insertBefore(t,s)}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
-              fbq('init', '1519956929082381');
+              // Advanced Matching: pass external_id (device ID) for better event match quality.
+              // Email is added dynamically after login/checkout via fbq('init', ..., {em: ...}) in client code.
+              var _amid = {};
+              try {
+                var _devId = localStorage.getItem('revealai_device_id');
+                if (_devId) _amid.external_id = _devId;
+              } catch(e) {}
+              fbq('init', '1519956929082381', _amid);
               fbq('track', 'PageView');
             `,
           }}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { sendPurchaseEvent, sendStartTrialEvent, generateEventId } from "@/lib/meta-capi";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-12-15.clover",
@@ -125,6 +126,39 @@ export async function POST(request: NextRequest) {
             console.error("Error updating subscription:", error);
           } else {
             console.log("Subscription created for user:", userId);
+          }
+
+          // --- Server-side Meta CAPI: Purchase + StartTrial ---
+          try {
+            const amount = session.amount_total ? session.amount_total / 100 : (plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : 6.99);
+            const currency = (session.currency || 'usd').toUpperCase();
+            // Deterministic event_id: same as what /api/stripe/session returns to the browser
+            const capiEventId = `pur_${session.id.replace('cs_', '').substring(0, 16)}`;
+
+            await sendPurchaseEvent({
+              eventId: capiEventId,
+              email: customerEmail || '',
+              value: amount,
+              currency,
+              transactionId: session.id,
+              plan,
+              sourceUrl: session.success_url?.split('?')[0],
+              externalId: userId || deviceId,
+            });
+
+            if (plan === 'free_trial' || plan === 'abandoned_trial') {
+              await sendStartTrialEvent({
+                eventId: generateEventId('st_srv'),
+                email: customerEmail || '',
+                value: amount,
+                currency,
+                plan,
+                sourceUrl: session.success_url?.split('?')[0],
+                externalId: userId || deviceId,
+              });
+            }
+          } catch (capiErr) {
+            console.error("CAPI tracking error (non-fatal):", capiErr);
           }
 
           // Safety net for abandoned_trial: if the subscription uses the old $1.99 product,

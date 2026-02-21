@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Check, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
-import { trackPurchase } from "@/lib/analytics";
+import { trackPurchase, identifyUser } from "@/lib/analytics";
 
 function CheckoutSuccessContent() {
   const router = useRouter();
@@ -65,6 +65,7 @@ function CheckoutSuccessContent() {
               currency: sessionData.currency,
               transaction_id: sessionData.transaction_id,
               plan: sessionData.plan,
+              eventId: sessionData.event_id,
             });
           }
         } catch (e) {
@@ -72,6 +73,7 @@ function CheckoutSuccessContent() {
         }
 
         setEmail(result.email);
+        if (result.email) identifyUser(result.email, result.userId);
         setStatus("success");
         
         // Redirect to home after 2 seconds
