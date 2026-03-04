@@ -614,14 +614,14 @@ function SearchResultContent() {
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-4xl font-bold">{fullName}</h1>
                 {isViralMockProfile && (
-                  <>
-                    <Badge className="bg-red-600 hover:bg-red-700 text-white border-red-700 font-semibold px-3 py-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="h-9 rounded-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-700 hover:to-red-600 text-white border-red-800 font-bold px-4 text-[11px] tracking-wide shadow-sm animate-pulse">
                       🚩 CHEATER score 87/100 - HIGH
                     </Badge>
-                    <Badge className="bg-rose-500 hover:bg-rose-600 text-white border-rose-600 font-semibold px-3 py-1">
+                    <Badge className="h-9 rounded-full bg-gradient-to-r from-fuchsia-600 to-pink-500 hover:from-fuchsia-600 hover:to-pink-500 text-white border-fuchsia-700 font-bold px-4 text-[11px] tracking-wide shadow-sm">
                       🔥 ATTRACTIVE score 82/100 - {getAttractivenessTier(82)}
                     </Badge>
-                  </>
+                  </div>
                 )}
               </div>
               {location && (
