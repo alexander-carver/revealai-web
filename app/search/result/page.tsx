@@ -200,13 +200,6 @@ function SearchResultContent() {
     isMockResult &&
     (normalizedFullName === "emma smith" || normalizedFullName === "kyle anderson");
 
-  const getAttractivenessTier = (score: number): string => {
-    if (score >= 90) return "S-TIER";
-    if (score >= 80) return "A-TIER";
-    if (score >= 70) return "B-TIER";
-    return "C-TIER";
-  };
-
   // Follow-up questions based on person name
   const followUpSuggestions = [
     `What professional experience does ${fullName} have?`,
@@ -611,16 +604,22 @@ function SearchResultContent() {
         <div className="mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4 mb-2">
             <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-4xl font-bold">{fullName}</h1>
+              <div className="flex flex-wrap items-start gap-3">
+                <div className="relative pr-2">
+                  <h1 className="text-4xl font-bold">{fullName}</h1>
+                  {isViralMockProfile && (
+                    <div className="absolute -top-4 -right-16 rotate-[-14deg] z-10 rounded-xl border border-red-800 bg-gradient-to-b from-red-500 to-red-700 px-3 py-1 shadow-lg">
+                      <span className="text-white text-lg font-black leading-none tracking-tight">
+                        HOT 8.8/10
+                      </span>
+                    </div>
+                  )}
+                </div>
                 {isViralMockProfile && (
-                  <div className="flex flex-wrap items-center gap-2 animate-badge-pulse">
-                    <Badge className="h-9 rounded-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-700 hover:to-red-600 text-white border-red-800 font-bold px-4 text-[11px] tracking-wide shadow-sm">
-                      🚩 CHEATER SCORE 87/100
-                    </Badge>
-                    <Badge className="h-9 rounded-full bg-gradient-to-r from-fuchsia-600 to-pink-500 hover:from-fuchsia-600 hover:to-pink-500 text-white border-fuchsia-700 font-bold px-4 text-[11px] tracking-wide shadow-sm">
-                      🔥 ATTRACTIVE SCORE 82/100
-                    </Badge>
+                  <div className="mt-1 rounded-md bg-red-700 px-4 py-1.5 shadow-md">
+                    <span className="text-white text-2xl md:text-4xl font-extrabold leading-none tracking-tight">
+                      CHEATER SCORE 91/100
+                    </span>
                   </div>
                 )}
               </div>
