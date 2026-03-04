@@ -291,3 +291,20 @@
   }
 }
 
+/* Viral mock profile badge pulse (no text fade) */
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.4);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 6px rgba(248, 113, 113, 0);
+  }
+}
+
+.animate-badge-pulse {
+  animation: badge-pulse 1.6s ease-out infinite;
+  transform-origin: center;
+}
+
