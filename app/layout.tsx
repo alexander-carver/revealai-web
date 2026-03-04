@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Analytics } from "@vercel/analytics/react";
@@ -183,45 +184,42 @@ export default function RootLayout({
             `,
           }}
         />
-        {/* Google Analytics 4 (GA4) */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-KXNE8LSF4X"></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-KXNE8LSF4X', {
-                page_path: window.location.pathname,
-                send_page_view: true
-              });
-            `,
-          }}
+        {/* Google Analytics 4 (GA4) - deferred to not block initial render */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-KXNE8LSF4X"
+          strategy="lazyOnload"
         />
-        {/* Meta Pixel (Facebook Pixel) */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              !function(f,b,e,v,n,t,s)
-              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-              n.queue=[];t=b.createElement(e);t.async=!0;
-              t.src=v;s=b.getElementsByTagName(e)[0];
-              s.parentNode.insertBefore(t,s)}(window, document,'script',
-              'https://connect.facebook.net/en_US/fbevents.js');
-              // Advanced Matching: pass external_id (device ID) for better event match quality.
-              // Email is added dynamically after login/checkout via fbq('init', ..., {em: ...}) in client code.
-              var _amid = {};
-              try {
-                var _devId = localStorage.getItem('revealai_device_id');
-                if (_devId) _amid.external_id = _devId;
-              } catch(e) {}
-              fbq('init', '1519956929082381', _amid);
-              fbq('track', 'PageView');
-            `,
-          }}
-        />
+        <Script id="gtag-init" strategy="lazyOnload">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-KXNE8LSF4X', {
+              page_path: window.location.pathname,
+              send_page_view: true
+            });
+          `}
+        </Script>
+        {/* Meta Pixel (Facebook Pixel) - deferred to not block initial render */}
+        <Script id="meta-pixel" strategy="lazyOnload">
+          {`
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            var _amid = {};
+            try {
+              var _devId = localStorage.getItem('revealai_device_id');
+              if (_devId) _amid.external_id = _devId;
+            } catch(e) {}
+            fbq('init', '1519956929082381', _amid);
+            fbq('track', 'PageView');
+          `}
+        </Script>
         <noscript>
           <img
             height="1"
@@ -235,18 +233,9 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        {/* Preload paywall header image for instant display */}
-        <link rel="preload" href="/paywall-header.png" as="image" type="image/png" />
-        {/* Preload paywall background image for instant display */}
-        <link rel="preload" href="/paywall_image_reveal2.png" as="image" type="image/png" />
-        {/* Preload Most Searched images for faster LCP */}
-        <link rel="preload" href="/mock/trump1.jpg" as="image" fetchPriority="high" />
-        <link rel="preload" href="/mock/mrbeast1.jpg" as="image" fetchPriority="high" />
-        <link rel="preload" href="/mock/jefferyepstein1.jpg" as="image" fetchPriority="high" />
-        <link rel="preload" href="/mock/elonmusk2.jpg" as="image" fetchPriority="high" />
-        {/* Preload hero background images to prevent layout shift - TEMPORARILY DISABLED */}
-        {/* <link rel="preload" href="/New_Background_RevealAIMobile.png" as="image" type="image/png" media="(max-width: 768px)" />
-        <link rel="preload" href="/New_Background_RevealAIWeb.png" as="image" type="image/png" media="(min-width: 769px)" /> */}
+        {/* Preload paywall images with low priority - ready before user reaches paywall, doesn't block LCP */}
+        <link rel="preload" href="/paywall-header.png" as="image" type="image/png" fetchPriority="low" />
+        <link rel="preload" href="/paywall_image_reveal2.png" as="image" type="image/png" fetchPriority="low" />
         {/* Favicon links for better browser and search engine support */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />

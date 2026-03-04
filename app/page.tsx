@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   Search,
   FileText,
@@ -11,7 +12,6 @@ import {
   Phone,
   ArrowRight,
   Sparkles,
-  Smartphone,
   CheckCircle2,
   Zap,
   Lock,
@@ -30,23 +30,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PeopleSearch } from "@/components/shared/people-search";
-import { MainPaywallModal } from "@/components/shared/main-paywall-modal";
-import { ResultsPaywallModal } from "@/components/shared/results-paywall-modal";
-import { AbandonedPaywallModal } from "@/components/shared/abandoned-paywall-modal";
-import { FreeTrialPaywallModal } from "@/components/shared/free-trial-paywall-modal";
-// TEMPORARILY DISABLED: Onboarding flow
-// import { OnboardingFlow } from "@/components/shared/onboarding-flow";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/shared/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import Image from "next/image";
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { trackViewContent } from "@/lib/analytics";
-import { ScrollToTop } from "@/components/shared/scroll-to-top";
-import { CookieConsent } from "@/components/shared/cookie-consent";
-import { SocialProofTicker } from "@/components/shared/social-proof-ticker";
+
+// Lazy-load paywall modals and below-fold components to speed up initial paint
+const modalLoading = () => null; // Modals render nothing when not visible
+const MainPaywallModal = dynamic(() => import("@/components/shared/main-paywall-modal").then((m) => ({ default: m.MainPaywallModal })), { ssr: false, loading: modalLoading });
+const ResultsPaywallModal = dynamic(() => import("@/components/shared/results-paywall-modal").then((m) => ({ default: m.ResultsPaywallModal })), { ssr: false, loading: modalLoading });
+const AbandonedPaywallModal = dynamic(() => import("@/components/shared/abandoned-paywall-modal").then((m) => ({ default: m.AbandonedPaywallModal })), { ssr: false, loading: modalLoading });
+const FreeTrialPaywallModal = dynamic(() => import("@/components/shared/free-trial-paywall-modal").then((m) => ({ default: m.FreeTrialPaywallModal })), { ssr: false, loading: modalLoading });
+const ScrollToTop = dynamic(() => import("@/components/shared/scroll-to-top").then((m) => ({ default: m.ScrollToTop })), { ssr: false });
+const CookieConsent = dynamic(() => import("@/components/shared/cookie-consent").then((m) => ({ default: m.CookieConsent })), { ssr: false });
+const SocialProofTicker = dynamic(() => import("@/components/shared/social-proof-ticker").then((m) => ({ default: m.SocialProofTicker })), { ssr: false });
 
 const features = [
   { title: "People Search", description: "Full AI report on anyone: social profiles, work history, public records.", icon: Search, href: "/search", color: "text-blue-500", bgColor: "bg-blue-500/10", badge: "Popular", badgeColor: "bg-blue-500" },
@@ -89,12 +90,10 @@ function HomeContent() {
   // const [showOnboarding, setShowOnboarding] = useState(false);
   // const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
-  // Preload paywall images early so they're ready when needed
+  // Preload paywall images early (also in layout with fetchPriority=low) - ensures they're ready when paywall opens
   useEffect(() => {
-    // Preload images immediately on page load
     const img1 = new window.Image();
     img1.src = '/paywall-header.png';
-    
     const img2 = new window.Image();
     img2.src = '/paywall_image_reveal2.png';
   }, []);
@@ -394,6 +393,7 @@ function HomeContent() {
                       fill
                       className="object-cover"
                       sizes="56px"
+                      loading="lazy"
                     />
                   </div>
                   <div className="flex-1 min-w-0">
