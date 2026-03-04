@@ -635,7 +635,7 @@ function SearchResultContent() {
               </div>
               <div className="flex items-center gap-3 rounded-xl border border-pink-200 bg-pink-50 px-5 py-3 shadow-sm animate-badge-pulse">
                 <div className="flex flex-col items-center justify-center rounded-lg bg-gradient-to-b from-pink-500 to-rose-600 px-3 py-1.5 shadow">
-                  <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Hot</span>
+                  <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Attractive</span>
                   <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Score</span>
                 </div>
                 <div className="flex items-baseline gap-1">
