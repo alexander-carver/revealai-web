@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
 import { 
   Copy, 
   Plus, 
@@ -13,7 +12,7 @@ import {
   ChevronUp,
   DollarSign,
   Users,
-  Link as LinkIcon,
+  LogOut,
   CreditCard
 } from "lucide-react";
 
@@ -57,10 +56,11 @@ interface AffiliateStats {
 }
 
 export default function AdminAffiliatesPage() {
-  const searchParams = useSearchParams();
-  const secretFromUrl = searchParams.get("secret");
-
-  const [secret, setSecret] = useState(secretFromUrl || "");
+  const [password, setPassword] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,12 +79,42 @@ export default function AdminAffiliatesPage() {
   // Copy feedback
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  // Check for stored password on mount
+  useEffect(() => {
+    const stored = sessionStorage.getItem("admin_password");
+    if (stored) {
+      setPassword(stored);
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError(null);
+    
+    try {
+      // Test the password by making a request
+      const res = await fetch(`/api/affiliates/list?secret=${encodeURIComponent(password)}`);
+      if (res.ok) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem("admin_password", password);
+      } else {
+        setAuthError("Invalid password");
+      }
+    } catch {
+      setAuthError("Failed to verify password");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   const fetchAffiliates = useCallback(async () => {
-    if (!secret) return;
+    if (!isAuthenticated || !password) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/affiliates/list?secret=${encodeURIComponent(secret)}`);
+      const res = await fetch(`/api/affiliates/list?secret=${encodeURIComponent(password)}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setAffiliates(data.affiliates || []);
@@ -93,15 +123,15 @@ export default function AdminAffiliatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [secret]);
+  }, [isAuthenticated, password]);
 
   useEffect(() => {
-    if (secret) fetchAffiliates();
-  }, [secret, fetchAffiliates]);
+    if (isAuthenticated) fetchAffiliates();
+  }, [isAuthenticated, fetchAffiliates]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!secret) return;
+    if (!password) return;
     setCreating(true);
     setCreateResult(null);
     try {
@@ -109,7 +139,7 @@ export default function AdminAffiliatesPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${secret}`,
+          "Authorization": `Bearer ${password}`,
         },
         body: JSON.stringify(newAffiliate),
       });
@@ -129,10 +159,10 @@ export default function AdminAffiliatesPage() {
   };
 
   const fetchStats = async (ref: string) => {
-    if (!secret) return;
+    if (!password) return;
     setStatsLoading(true);
     try {
-      const res = await fetch(`/api/affiliates/stats?ref=${encodeURIComponent(ref)}&secret=${encodeURIComponent(secret)}`);
+      const res = await fetch(`/api/affiliates/stats?ref=${encodeURIComponent(ref)}&secret=${encodeURIComponent(password)}`);
       if (!res.ok) throw new Error("Failed to fetch stats");
       const data = await res.json();
       setStats(data);
@@ -151,29 +181,48 @@ export default function AdminAffiliatesPage() {
 
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-  if (!secret) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full">
+        <form onSubmit={handleLogin} className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <LinkIcon className="w-8 h-8 text-red-600" />
+            <Users className="w-8 h-8 text-red-600" />
           </div>
           <h1 className="text-2xl font-bold text-center mb-2">Affiliate Admin</h1>
-          <p className="text-gray-500 text-center mb-6">Enter your secret key to manage affiliates</p>
+          <p className="text-gray-500 text-center mb-6">Enter password to access dashboard</p>
+          
+          {authError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm text-center">
+              {authError}
+            </div>
+          )}
+          
           <input
             type="password"
-            placeholder="AFFILIATE_API_SECRET"
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
+            placeholder="Enter password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+            autoFocus
           />
           <button
-            onClick={() => secret && fetchAffiliates()}
-            className="w-full mt-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors"
+            type="submit"
+            disabled={authLoading || !password}
+            className="w-full mt-4 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
           >
-            Access Dashboard
+            {authLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              "Access Dashboard"
+            )}
           </button>
-        </div>
+          <p className="text-xs text-gray-400 text-center mt-4">
+            Password is your AFFILIATE_API_SECRET from Vercel env vars
+          </p>
+        </form>
       </div>
     );
   }
@@ -193,13 +242,26 @@ export default function AdminAffiliatesPage() {
                 <p className="text-sm text-gray-500">Manage UGC creators & track commissions</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              New Affiliate
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCreateForm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                New Affiliate
+              </button>
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem("admin_password");
+                  setIsAuthenticated(false);
+                  setPassword("");
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
