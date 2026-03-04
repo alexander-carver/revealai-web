@@ -1,0 +1,40 @@
+---
+description: How to push to Vercel when user requests deployment
+alwaysApply: true
+---
+
+# Pushing to Vercel
+
+## The Problem
+
+When the user asks to "push to Vercel" or deploy, running `git push origin main` from the Cursor terminal often **does not actually push** to GitHub. The command may exit with code 0 but:
+- Changes remain uncommitted (git status shows modified files)
+- Vercel shows no new deployment
+- The push may fail silently due to missing git credentials in the Cursor environment
+
+## The Fix
+
+**Always give the user manual instructions** to run in their own terminal. The user has working git credentials there.
+
+After making code changes, provide this block:
+
+```bash
+cd /Users/alexandercarver/revealaiweb/revealai-web
+git add -A
+git status   # optional: verify what will be committed
+git commit -m "Your descriptive commit message"
+git push origin main
+```
+
+## Workflow
+
+1. Make the requested code changes
+2. **Immediately** provide the git commands above with a commit message that describes the changes
+3. Tell the user: "Run these in your terminal to push. Vercel will auto-deploy from the new commit."
+4. Do NOT assume the Cursor terminal push worked—if the user says "still says X mins ago" or deployment didn't update, the push likely didn't go through. Provide the manual commands again.
+
+## Vercel Connection
+
+- Repo: `alexander-carver/revealai-web`
+- Branch: `main`
+- Vercel auto-deploys on push to main

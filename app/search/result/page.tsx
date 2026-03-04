@@ -195,6 +195,17 @@ function SearchResultContent() {
 
   const fullName = `${firstName} ${lastName}`.trim();
   const location = [city, state].filter(Boolean).join(", ");
+  const normalizedFullName = fullName.toLowerCase().trim();
+  const isViralMockProfile =
+    isMockResult &&
+    (normalizedFullName === "emma smith" || normalizedFullName === "kyle anderson");
+
+  const getAttractivenessTier = (score: number): string => {
+    if (score >= 90) return "S-TIER";
+    if (score >= 80) return "A-TIER";
+    if (score >= 70) return "B-TIER";
+    return "C-TIER";
+  };
 
   // Follow-up questions based on person name
   const followUpSuggestions = [
@@ -600,7 +611,19 @@ function SearchResultContent() {
         <div className="mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4 mb-2">
             <div className="flex-1">
-              <h1 className="text-4xl font-bold">{fullName}</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-4xl font-bold">{fullName}</h1>
+                {isViralMockProfile && (
+                  <>
+                    <Badge className="bg-red-600 hover:bg-red-700 text-white border-red-700 font-semibold px-3 py-1">
+                      🚩 CHEATER score 87/100 - HIGH
+                    </Badge>
+                    <Badge className="bg-rose-500 hover:bg-rose-600 text-white border-rose-600 font-semibold px-3 py-1">
+                      🔥 ATTRACTIVE score 82/100 - {getAttractivenessTier(82)}
+                    </Badge>
+                  </>
+                )}
+              </div>
               {location && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Badge variant="outline" className="text-sm">
@@ -610,7 +633,7 @@ function SearchResultContent() {
               )}
             </div>
             {/* Reveal AI Branding - Only show for mock profiles (Emma Smith, Kyle Anderson) */}
-            {isMockResult && (fullName.toLowerCase().includes("emma smith") || fullName.toLowerCase().includes("kyle anderson")) && (
+            {isViralMockProfile && (
               <div className="flex items-center gap-2">
                 <Logo size="sm" showText={true} className="flex-shrink-0" />
               </div>
