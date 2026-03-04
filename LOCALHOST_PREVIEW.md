@@ -7,6 +7,7 @@
 - Cursor’s built-in Simple Browser often **cannot reach `localhost`** (sandbox/network).
 - The dev server might not be running, or it crashed.
 - Something else might be using port 3000.
+- **Turbopack bug:** Next.js 16’s Turbopack may fail with "couldn't find next/package.json from .../app". `next.config.mjs` sets `turbopack.root` to fix it.
 
 ## What to do every time
 
@@ -15,9 +16,11 @@
 In a **normal terminal** (not Cursor’s background run):
 
 ```bash
-cd /path/to/revealai-web
+cd /Users/alexandercarver/revealaiweb/revealai-web
 npm run dev
 ```
+
+Or: `./scripts/start-dev.sh`
 
 Wait until you see something like:
 

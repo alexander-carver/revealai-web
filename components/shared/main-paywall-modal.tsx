@@ -81,7 +81,7 @@ export function MainPaywallModal() {
   };
 
   // Calculate savings for yearly plan
-  const weeklyPrice = 6.99;
+  const weeklyPrice = 9.99;
   const yearlyPrice = 39.99;
   const weeklyYearlyTotal = weeklyPrice * 52;
   const savings = weeklyYearlyTotal - yearlyPrice;

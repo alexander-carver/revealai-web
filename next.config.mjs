@@ -1,3 +1,8 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -52,9 +57,10 @@ const nextConfig = {
     ];
   },
   // Turbopack configuration (Next.js 16+)
-  // Empty config acknowledges Turbopack is in use
-  // Supabase functions are excluded via tsconfig.json
-  turbopack: {},
+  // Explicit absolute root so Turbopack finds next/package.json (fixes "inferred wrong workspace root")
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   // Keep webpack config for backwards compatibility if using --webpack flag
   webpack: (config) => {
     // Ignore Supabase Edge Functions (Deno files)

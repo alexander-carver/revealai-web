@@ -115,10 +115,10 @@ export function AbandonedPaywallModal() {
           <div className="relative z-10 px-6 sm:px-8 py-8 sm:py-10">
             {/* Header */}
             <div className="text-center mb-6">
-              {/* 72% OFF Badge */}
+              {/* 81% OFF Badge */}
               <div className="mb-4">
                 <div className="inline-block bg-red-600 text-white text-base font-bold px-6 py-2.5 rounded-full shadow-lg">
-                  72% OFF
+                  81% OFF
                 </div>
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
@@ -145,16 +145,16 @@ export function AbandonedPaywallModal() {
                 disabled={isLoading}
                 className="relative w-full p-[18px] rounded-xl border-2 border-red-500 bg-red-50 transition-all"
               >
-                {/* SAVE 72% Badge - positioned on top right */}
+                {/* SAVE 81% Badge - positioned on top right */}
                 <div className="absolute -top-2.5 right-3">
                   <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
-                    SAVE 72%
+                    SAVE 81%
                   </div>
                 </div>
                 <div className="flex justify-between items-start">
                   <div className="text-left">
                     <div className="font-bold text-gray-900 text-base mb-0.5">WEEKLY ACCESS</div>
-                    <div className="text-gray-500 text-xs">Then $6.99 per week</div>
+                    <div className="text-gray-500 text-xs">Then $9.99 per week</div>
                   </div>
                   <div className="text-right">
                     <div className="text-gray-900 font-semibold text-sm">ONLY $1.99</div>

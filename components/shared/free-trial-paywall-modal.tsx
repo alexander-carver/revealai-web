@@ -147,7 +147,7 @@ export function FreeTrialPaywallModal() {
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                 GET <span className="text-red-600">WEEKLY</span> ACCESS
               </h2>
-              <p className="text-gray-500 text-sm">$6.99/week, charged today. Cancel anytime.</p>
+              <p className="text-gray-500 text-sm">$9.99/week, charged today. Cancel anytime.</p>
             </div>
 
             {/* Benefits List */}
@@ -171,7 +171,7 @@ export function FreeTrialPaywallModal() {
                     <div className="text-gray-500 text-sm">Charged today, then weekly</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-red-600">$6.99<span className="text-sm font-normal text-gray-500">/week</span></div>
+                    <div className="text-xl font-bold text-red-600">$9.99<span className="text-sm font-normal text-gray-500">/week</span></div>
                   </div>
                 </div>
               </div>

@@ -178,7 +178,7 @@ export function ResultsPaywallModal() {
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                 GET <span className="text-red-600">WEEKLY</span> ACCESS
               </h2>
-              <p className="text-gray-500 text-sm">$6.99/week, charged today. Cancel anytime.</p>
+              <p className="text-gray-500 text-sm">$9.99/week, charged today. Cancel anytime.</p>
             </div>
 
             {/* Benefits List */}

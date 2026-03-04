@@ -26,18 +26,18 @@ export async function POST(request: NextRequest) {
     
     // Define product IDs - HARDCODED to ensure correct products are used
     // Main paywall products:
-    // - Weekly: prod_Tn7ov8WD9p7Zty ($6.99/week)
+    // - Weekly: prod_TexubYU0K47p6u ($9.99/week)
     // - Yearly: prod_Tn7peqRLz4B8Ho ($39.99/year)
-    // - Abandoned Trial: prod_TnGdDqDGvyBlhK ($1.99 for first week, then upgrades to $6.99/week)
-    // - Free Trial: Same as weekly, no trial (charges $6.99 immediately)
+    // - Abandoned Trial: prod_TexubYU0K47p6u + $8 coupon ($1.99 first week, then $9.99/week)
+    // - Free Trial: Same as weekly, no trial (charges $9.99 immediately)
     const productIds: Record<string, string> = {
-      weekly: "prod_Tn7ov8WD9p7Zty", // $6.99/week - DO NOT CHANGE
+      weekly: "prod_TexubYU0K47p6u", // $9.99/week
       yearly: "prod_Tn7peqRLz4B8Ho", // $39.99/year - DO NOT CHANGE
-      free_trial: "prod_Tn7ov8WD9p7Zty", // $6.99/week, charges immediately - DO NOT CHANGE
-      // Abandoned trial - $1.99 for first week, then upgrades to $6.99/week
-      abandoned_trial: "prod_TnGdDqDGvyBlhK", // $1.99 first week - DO NOT CHANGE
+      free_trial: "prod_TexubYU0K47p6u", // $9.99/week, charges immediately
+      // Abandoned trial - $1.99 first week (via $8 coupon), then $9.99/week
+      abandoned_trial: "prod_TexubYU0K47p6u",
       // Test plan - use test product ID if set, otherwise use weekly for testing
-      test: process.env.STRIPE_TEST_PRODUCT_ID || "prod_Tn7ov8WD9p7Zty",
+      test: process.env.STRIPE_TEST_PRODUCT_ID || "prod_TexubYU0K47p6u",
     };
 
     const productId = productIds[plan as string];
@@ -98,36 +98,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For abandoned_trial: use the $6.99/week product with a one-time $5.00 coupon
-    // This makes the first charge $1.99 ($6.99 - $5.00) and all subsequent charges $6.99
-    // This is much more reliable than the old approach of creating a $1.99 subscription
-    // and relying on a webhook to upgrade it (which requires invoice.payment_succeeded to be configured)
+    // For abandoned_trial: use the $9.99/week product with a one-time $8.00 coupon (81% off)
+    // This makes the first charge $1.99 ($9.99 - $8.00) and all subsequent charges $9.99
     let abandonedTrialCouponId: string | undefined;
     if (plan === "abandoned_trial") {
       try {
-        // Override to use the weekly product ($6.99/week) instead of the $1.99 product
+        // Use the weekly product ($9.99/week)
         const weeklyProductId = productIds["weekly"];
         const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
         priceId = weeklyProduct.default_price as string;
         
-        // Create or retrieve the one-time coupon ($5.00 off first invoice only)
-        const COUPON_ID = "revealai_abandoned_trial_intro";
+        // Create or retrieve the one-time coupon ($8.00 off first invoice only = 81% off)
+        const COUPON_ID = "revealai_abandoned_81";
         try {
           await stripe.coupons.retrieve(COUPON_ID);
         } catch {
           await stripe.coupons.create({
             id: COUPON_ID,
-            amount_off: 500, // $5.00 off
+            amount_off: 800, // $8.00 off ($9.99 - $8 = $1.99 first week)
             currency: "usd",
             duration: "once", // Only applies to the first invoice
-            name: "Introductory Offer - First Week $1.99",
+            name: "81% OFF - First Week $1.99",
           });
         }
         abandonedTrialCouponId = COUPON_ID;
-        console.log(`[Checkout] abandoned_trial: using weekly product with $5.00 coupon (first charge = $1.99)`);
+        console.log(`[Checkout] abandoned_trial: using weekly product with $8.00 coupon (first charge = $1.99)`);
       } catch (error) {
-        console.error("[Checkout] Error setting up abandoned trial coupon, falling back to $1.99 product:", error);
-        // Fall back to the original $1.99 product if coupon setup fails
+        console.error("[Checkout] Error setting up abandoned trial coupon:", error);
         priceId = product.default_price as string;
       }
     }
@@ -225,7 +222,7 @@ export async function POST(request: NextRequest) {
 
     // Server-side CAPI: InitiateCheckout (redundant with browser pixel for better match quality)
     try {
-      const value = plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : 6.99;
+      const value = plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : 9.99;
       await sendInitiateCheckoutEvent({
         eventId: generateEventId('ic_srv'),
         email: customerEmail || undefined,
