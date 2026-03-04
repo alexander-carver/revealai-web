@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
 import { getDeviceId } from "@/lib/device-id";
+import { getAffiliateRef } from "@/lib/affiliate";
 
 const INITIAL_COUNTDOWN_SECONDS = 472; // 7 minutes 52 seconds
 const COUNTDOWN_STORAGE_KEY = "revealai_paywall_countdown";
@@ -111,7 +112,8 @@ export function ResultsPaywallModal() {
           plan: "free_trial",
           userId: user?.id || undefined,
           email: user?.email || undefined,
-          deviceId: getDeviceId(), // Pass device ID for consistent user creation
+          deviceId: getDeviceId(),
+          affiliateRef: getAffiliateRef() || undefined,
         }),
       });
 

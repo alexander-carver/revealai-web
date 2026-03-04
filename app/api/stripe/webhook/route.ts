@@ -128,6 +128,27 @@ export async function POST(request: NextRequest) {
             console.log("Subscription created for user:", userId);
           }
 
+          // --- Affiliate referral tracking ---
+          const affiliateRef = session.metadata?.affiliate_ref;
+          if (affiliateRef && subscriptionId) {
+            try {
+              await supabase.from("affiliate_referrals").upsert({
+                stripe_subscription_id: subscriptionId,
+                stripe_customer_id: session.customer as string,
+                affiliate_ref: affiliateRef,
+                user_id: userId,
+                commission_rate: 0.30,
+                status: "active",
+                created_at: new Date().toISOString(),
+              }, {
+                onConflict: "stripe_subscription_id",
+              });
+              console.log(`Affiliate referral recorded: ${affiliateRef} → subscription ${subscriptionId}`);
+            } catch (affErr) {
+              console.error("Error recording affiliate referral (non-fatal):", affErr);
+            }
+          }
+
           // --- Server-side Meta CAPI: Purchase + StartTrial ---
           try {
             const amount = session.amount_total ? session.amount_total / 100 : (plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : 9.99);
@@ -215,53 +236,125 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      case "invoice.payment_succeeded": {
-        // Handle upgrade from $1.99 to $9.99 for abandoned_trial subscriptions (legacy only)
+      case "invoice.payment_succeeded":
+      case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
-        // invoice.subscription can be a string ID or a Subscription object
-        const subscriptionId = (invoice as any).subscription 
+        const invoiceSubId = (invoice as any).subscription 
           ? (typeof (invoice as any).subscription === 'string' 
               ? (invoice as any).subscription 
               : (invoice as any).subscription.id)
           : null;
 
-        // Only process subscription invoices (not one-time payments)
-        if (subscriptionId && (invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create")) {
+        // --- Affiliate commission tracking (30% recurring for life) ---
+        if (invoiceSubId && invoice.amount_paid > 0) {
           try {
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const { data: referral } = await supabase
+              .from("affiliate_referrals")
+              .select("*")
+              .eq("stripe_subscription_id", invoiceSubId)
+              .eq("status", "active")
+              .maybeSingle();
+
+            if (referral) {
+              const commissionAmount = Math.round(invoice.amount_paid * referral.commission_rate);
+              const invoiceId = invoice.id;
+
+              // Look up the affiliate's Connect account for automatic payouts
+              const { data: affiliate } = await supabase
+                .from("affiliates")
+                .select("stripe_connect_account_id, status")
+                .eq("ref_slug", referral.affiliate_ref)
+                .eq("status", "active")
+                .maybeSingle();
+
+              let commissionStatus = "pending";
+              let transferId: string | null = null;
+
+              // Auto-transfer if affiliate has a connected payout account
+              if (affiliate?.stripe_connect_account_id && commissionAmount > 0) {
+                try {
+                  const transfer = await stripe.transfers.create({
+                    amount: commissionAmount,
+                    currency: invoice.currency || "usd",
+                    destination: affiliate.stripe_connect_account_id,
+                    description: `30% affiliate commission – invoice ${invoiceId}`,
+                    metadata: {
+                      affiliate_ref: referral.affiliate_ref,
+                      stripe_invoice_id: invoiceId,
+                    },
+                  });
+                  commissionStatus = "paid";
+                  transferId = transfer.id;
+                  console.log(`Auto-transferred $${(commissionAmount / 100).toFixed(2)} to ${referral.affiliate_ref} (${transfer.id})`);
+                } catch (transferErr: any) {
+                  console.error(`Transfer failed for ${referral.affiliate_ref}:`, transferErr.message);
+                  commissionStatus = "pending";
+                }
+              }
+
+              // Idempotent insert keyed on invoice ID
+              const { error: commErr } = await supabase
+                .from("affiliate_commissions")
+                .upsert({
+                  stripe_invoice_id: invoiceId,
+                  stripe_subscription_id: invoiceSubId,
+                  affiliate_ref: referral.affiliate_ref,
+                  invoice_amount_cents: invoice.amount_paid,
+                  commission_amount_cents: commissionAmount,
+                  commission_rate: referral.commission_rate,
+                  currency: invoice.currency || "usd",
+                  status: commissionStatus,
+                  ...(transferId && { stripe_transfer_id: transferId }),
+                  ...(commissionStatus === "paid" && { paid_at: new Date().toISOString() }),
+                  created_at: new Date().toISOString(),
+                }, {
+                  onConflict: "stripe_invoice_id",
+                });
+
+              if (commErr) {
+                console.error("Error recording affiliate commission:", commErr);
+              } else {
+                console.log(`Affiliate commission recorded: ${referral.affiliate_ref} earns $${(commissionAmount / 100).toFixed(2)} from invoice ${invoiceId} [${commissionStatus}]`);
+              }
+            }
+          } catch (affErr) {
+            console.error("Affiliate commission tracking error (non-fatal):", affErr);
+          }
+        }
+
+        // Handle upgrade from $1.99 to $9.99 for abandoned_trial subscriptions (legacy only)
+        if (event.type === "invoice.payment_succeeded" && invoiceSubId && 
+            (invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create")) {
+          try {
+            const subscription = await stripe.subscriptions.retrieve(invoiceSubId);
             
-            // Check if this is an abandoned_trial subscription
             const lineItem = subscription.items.data[0];
             const productId = lineItem?.price?.product as string;
             const abandonedTrialProductId = process.env.STRIPE_ABANDONED_TRIAL_PRODUCT_ID || "prod_TnGdDqDGvyBlhK";
             
             if (productId === abandonedTrialProductId) {
-              // Check if we've already upgraded this subscription
               const hasUpgraded = subscription.metadata?.upgraded_to_weekly === "true";
               
               if (!hasUpgraded) {
-                // This is the first paid invoice for abandoned_trial, schedule upgrade to $9.99/week
                 const weeklyProductId = process.env.STRIPE_WEEKLY_PRODUCT_ID || "prod_TexubYU0K47p6u";
                 
-                // Get the weekly product's price
                 const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
                 const weeklyPriceId = weeklyProduct.default_price as string;
                 
                 if (weeklyPriceId) {
-                  // Update subscription to use the weekly price starting next period
-                  await stripe.subscriptions.update(subscriptionId, {
+                  await stripe.subscriptions.update(invoiceSubId, {
                     items: [{
                       id: lineItem.id,
                       price: weeklyPriceId,
                     }],
-                    proration_behavior: "none", // Don't prorate, wait until next period
+                    proration_behavior: "none",
                     metadata: {
                       ...subscription.metadata,
                       upgraded_to_weekly: "true",
                     },
                   });
                   
-                  console.log(`Scheduled upgrade for subscription ${subscriptionId} from $1.99 to $9.99/week (effective next billing cycle)`);
+                  console.log(`Scheduled upgrade for subscription ${invoiceSubId} from $1.99 to $9.99/week (effective next billing cycle)`);
                 }
               }
             }

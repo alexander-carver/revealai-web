@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
 import { getDeviceId } from "@/lib/device-id";
+import { getAffiliateRef } from "@/lib/affiliate";
 
 // Benefits with styled text
 const benefits = [
@@ -64,6 +65,7 @@ export function AbandonedPaywallModal() {
           userId: user?.id || undefined,
           email: user?.email || undefined,
           deviceId: getDeviceId(),
+          affiliateRef: getAffiliateRef() || undefined,
         }),
       });
 

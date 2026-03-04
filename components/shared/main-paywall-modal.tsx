@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
 import { getDeviceId } from "@/lib/device-id";
+import { getAffiliateRef } from "@/lib/affiliate";
 
 // Benefits with styled text
 const benefits = [
@@ -59,7 +60,8 @@ export function MainPaywallModal() {
           plan: selectedPlan,
           userId: user?.id || undefined,
           email: user?.email || undefined,
-          deviceId: getDeviceId(), // Pass device ID for consistent user creation
+          deviceId: getDeviceId(),
+          affiliateRef: getAffiliateRef() || undefined,
         }),
       });
 
