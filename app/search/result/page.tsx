@@ -604,25 +604,7 @@ function SearchResultContent() {
         <div className="mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4 mb-2">
             <div className="flex-1">
-              <div className="flex flex-wrap items-start gap-3">
-                <div className="relative pr-2">
-                  <h1 className="text-4xl font-bold">{fullName}</h1>
-                  {isViralMockProfile && (
-                    <div className="absolute -top-4 -right-16 rotate-[-14deg] z-10 rounded-xl border border-red-800 bg-gradient-to-b from-red-500 to-red-700 px-3 py-1 shadow-lg">
-                      <span className="text-white text-lg font-black leading-none tracking-tight">
-                        HOT 8.8/10
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {isViralMockProfile && (
-                  <div className="mt-1 rounded-md bg-red-700 px-4 py-1.5 shadow-md">
-                    <span className="text-white text-2xl md:text-4xl font-extrabold leading-none tracking-tight">
-                      CHEATER SCORE 91/100
-                    </span>
-                  </div>
-                )}
-              </div>
+              <h1 className="text-4xl font-bold">{fullName}</h1>
               {location && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Badge variant="outline" className="text-sm">
@@ -631,13 +613,38 @@ function SearchResultContent() {
                 </div>
               )}
             </div>
-            {/* Reveal AI Branding - Only show for mock profiles (Emma Smith, Kyle Anderson) */}
             {isViralMockProfile && (
               <div className="flex items-center gap-2">
                 <Logo size="sm" showText={true} className="flex-shrink-0" />
               </div>
             )}
           </div>
+
+          {/* Viral Score Cards - only for mock demo profiles */}
+          {isViralMockProfile && (
+            <div className="flex flex-wrap gap-3 mt-4">
+              <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-3 shadow-sm animate-badge-pulse">
+                <div className="flex flex-col items-center justify-center rounded-lg bg-red-600 px-3 py-1.5 shadow">
+                  <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Cheater</span>
+                  <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Score</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl md:text-5xl font-black text-red-600 leading-none">91</span>
+                  <span className="text-lg md:text-xl font-bold text-red-400 leading-none">/100</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-pink-200 bg-pink-50 px-5 py-3 shadow-sm animate-badge-pulse">
+                <div className="flex flex-col items-center justify-center rounded-lg bg-gradient-to-b from-pink-500 to-rose-600 px-3 py-1.5 shadow">
+                  <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Hot</span>
+                  <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Score</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl md:text-5xl font-black text-pink-600 leading-none">8.8</span>
+                  <span className="text-lg md:text-xl font-bold text-pink-400 leading-none">/10</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Image Gallery - Full Width */}
