@@ -7,6 +7,7 @@ const AFFILIATE_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90-day attribution window
  * Call this on every page load (e.g. in a global provider) so affiliate links
  * landing on any route are tracked. Last-click attribution: a new ref always
  * overwrites a previous one.
+ * Also logs the click to the backend for analytics.
  */
 export function captureAffiliateRef(): void {
   if (typeof window === "undefined") return;
@@ -16,8 +17,12 @@ export function captureAffiliateRef(): void {
     const ref = params.get("ref");
 
     if (ref && ref.trim().length > 0) {
-      localStorage.setItem(AFFILIATE_STORAGE_KEY, ref.trim());
+      const cleanRef = ref.trim();
+      localStorage.setItem(AFFILIATE_STORAGE_KEY, cleanRef);
       localStorage.setItem(AFFILIATE_TIMESTAMP_KEY, Date.now().toString());
+
+      // Log click to backend for analytics
+      logAffiliateClick(cleanRef);
 
       // Clean the ref param from URL without a full page reload
       const url = new URL(window.location.href);
@@ -26,6 +31,29 @@ export function captureAffiliateRef(): void {
     }
   } catch {
     // localStorage may be blocked in some browsers
+  }
+}
+
+/**
+ * Log an affiliate click to the backend for tracking.
+ * Captures referrer, device info, and timestamp.
+ */
+async function logAffiliateClick(ref: string): Promise<void> {
+  try {
+    await fetch("/api/affiliates/track-click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ref,
+        referrer: document.referrer || null,
+        userAgent: navigator.userAgent,
+        screenResolution: `${window.screen.width}x${window.screen.height}`,
+        language: navigator.language,
+        timestamp: Date.now(),
+      }),
+    });
+  } catch {
+    // Non-blocking: don't break the user experience if tracking fails
   }
 }
 

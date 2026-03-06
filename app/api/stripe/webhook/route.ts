@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendPurchaseEvent, sendStartTrialEvent, generateEventId } from "@/lib/meta-capi";
+import { sendCommissionEmail } from "@/lib/email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-12-15.clover",
@@ -144,6 +145,16 @@ export async function POST(request: NextRequest) {
                 onConflict: "stripe_subscription_id",
               });
               console.log(`Affiliate referral recorded: ${affiliateRef} → subscription ${subscriptionId}`);
+
+              // Mark recent clicks as converted (attribution tracking)
+              await supabase
+                .from("affiliate_clicks")
+                .update({ converted: true })
+                .eq("affiliate_ref", affiliateRef)
+                .eq("converted", false)
+                .gte("clicked_at", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+                .order("clicked_at", { ascending: false })
+                .limit(1);
             } catch (affErr) {
               console.error("Error recording affiliate referral (non-fatal):", affErr);
             }
@@ -315,6 +326,29 @@ export async function POST(request: NextRequest) {
                 console.error("Error recording affiliate commission:", commErr);
               } else {
                 console.log(`Affiliate commission recorded: ${referral.affiliate_ref} earns $${(commissionAmount / 100).toFixed(2)} from invoice ${invoiceId} [${commissionStatus}]`);
+
+                // --- Send commission email notification ---
+                if (commissionStatus === "paid" && affiliate?.email) {
+                  try {
+                    // Check if this is their first commission
+                    const { count: previousCommissions } = await supabase
+                      .from("affiliate_commissions")
+                      .select("*", { count: "exact", head: true })
+                      .eq("affiliate_ref", referral.affiliate_ref)
+                      .lt("created_at", new Date().toISOString()); // Before now
+
+                    const isFirstCommission = (previousCommissions || 0) === 0;
+
+                    await sendCommissionEmail(
+                      affiliate.email,
+                      affiliate.name,
+                      `$${(commissionAmount / 100).toFixed(2)}`,
+                      isFirstCommission
+                    );
+                  } catch (emailErr: any) {
+                    console.error("Error sending commission email (non-fatal):", emailErr.message);
+                  }
+                }
               }
             }
           } catch (affErr) {

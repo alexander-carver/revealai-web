@@ -21,6 +21,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // --- FRAUD PROTECTION: Block self-referrals ---
+    let cleanAffiliateRef = affiliateRef;
+    if (affiliateRef && email) {
+      try {
+        // Check if this email belongs to the affiliate themselves
+        const { data: affiliateData } = await supabase
+          .from("affiliates")
+          .select("email, ref_slug")
+          .eq("ref_slug", affiliateRef)
+          .maybeSingle();
+
+        if (affiliateData?.email?.toLowerCase() === email.toLowerCase()) {
+          console.log(`[FRAUD] Blocked self-referral: ${email} tried to use their own ref ${affiliateRef}`);
+          cleanAffiliateRef = undefined; // Strip the affiliate ref
+        }
+      } catch {
+        // Non-blocking: continue with original ref if check fails
+      }
+    }
+
     // Detect if we're using test or live mode based on the secret key
     const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_");
     
@@ -209,11 +231,11 @@ export async function POST(request: NextRequest) {
         plan,
         ...(customerEmail && { email: customerEmail }),
         ...(deviceId && { deviceId }),
-        ...(affiliateRef && { affiliate_ref: affiliateRef }),
+        ...(cleanAffiliateRef && { affiliate_ref: cleanAffiliateRef }),
       },
       subscription_data: {
         metadata: {
-          ...(affiliateRef && { affiliate_ref: affiliateRef }),
+          ...(cleanAffiliateRef && { affiliate_ref: cleanAffiliateRef }),
         },
       },
     };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { 
+import {
   Copy, 
   Plus, 
   ExternalLink, 
@@ -13,7 +13,9 @@ import {
   DollarSign,
   Users,
   LogOut,
-  CreditCard
+  CreditCard,
+  TrendingUp,
+  Download
 } from "lucide-react";
 
 interface Affiliate {
@@ -76,6 +78,10 @@ export default function AdminAffiliatesPage() {
   const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
+  // Leaderboard state
+  const [leaderboard, setLeaderboard] = useState<any>(null);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+
   // Copy feedback
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -126,8 +132,26 @@ export default function AdminAffiliatesPage() {
   }, [isAuthenticated, password]);
 
   useEffect(() => {
-    if (isAuthenticated) fetchAffiliates();
+    if (isAuthenticated) {
+      fetchAffiliates();
+      fetchLeaderboard();
+    }
   }, [isAuthenticated, fetchAffiliates]);
+
+  const fetchLeaderboard = async () => {
+    if (!password) return;
+    setLeaderboardLoading(true);
+    try {
+      const res = await fetch(`/api/affiliates/leaderboard?secret=${encodeURIComponent(password)}`);
+      if (!res.ok) throw new Error("Failed to fetch leaderboard");
+      const data = await res.json();
+      setLeaderboard(data);
+    } catch (err: any) {
+      console.error("Leaderboard error:", err);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,6 +267,14 @@ export default function AdminAffiliatesPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <a
+                href={`/api/affiliates/export?secret=${encodeURIComponent(password)}&type=commissions`}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                title="Export commissions CSV"
+              >
+                <Download className="w-4 h-4" />
+                Export CSV
+              </a>
               <button
                 onClick={() => setShowCreateForm(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
@@ -385,6 +417,116 @@ export default function AdminAffiliatesPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Leaderboard Section */}
+        {leaderboard && (
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Top Earners */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-green-600" />
+                Top Earners (This Month)
+              </h3>
+              {leaderboardLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+              ) : leaderboard.top_earners_this_month?.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No earnings yet this month</p>
+              ) : (
+                <div className="space-y-3">
+                  {leaderboard.top_earners_this_month.map((earner: any, idx: number) => (
+                    <div key={earner.ref_slug} className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        idx === 0 ? "bg-yellow-100 text-yellow-700" :
+                        idx === 1 ? "bg-gray-100 text-gray-700" :
+                        idx === 2 ? "bg-orange-100 text-orange-700" :
+                        "bg-gray-50 text-gray-500"
+                      }`}>
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{earner.name}</p>
+                        <p className="text-sm text-gray-500">@{earner.ref_slug}</p>
+                      </div>
+                      <span className="font-bold text-green-600">{earner.earnings}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Most Referrals */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-600" />
+                Most Referrals (All Time)
+              </h3>
+              {leaderboardLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+              ) : leaderboard.most_referrals_all_time?.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No referrals yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {leaderboard.most_referrals_all_time.map((ref: any, idx: number) => (
+                    <div key={ref.ref_slug} className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        idx === 0 ? "bg-yellow-100 text-yellow-700" :
+                        idx === 1 ? "bg-gray-100 text-gray-700" :
+                        idx === 2 ? "bg-orange-100 text-orange-700" :
+                        "bg-gray-50 text-gray-500"
+                      }`}>
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{ref.name}</p>
+                        <p className="text-sm text-gray-500">@{ref.ref_slug}</p>
+                      </div>
+                      <span className="font-bold text-blue-600">{ref.count} refs</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Highest Conversion */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-purple-600" />
+                Best Conversion (30 Days)
+              </h3>
+              {leaderboardLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+              ) : leaderboard.highest_conversion_rates?.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">Not enough data yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {leaderboard.highest_conversion_rates.map((conv: any, idx: number) => (
+                    <div key={conv.ref_slug} className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        idx === 0 ? "bg-yellow-100 text-yellow-700" :
+                        idx === 1 ? "bg-gray-100 text-gray-700" :
+                        idx === 2 ? "bg-orange-100 text-orange-700" :
+                        "bg-gray-50 text-gray-500"
+                      }`}>
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{conv.name}</p>
+                        <p className="text-xs text-gray-500">{conv.clicks} clicks → {conv.conversions} conv</p>
+                      </div>
+                      <span className="font-bold text-purple-600">{conv.conversion_rate}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
