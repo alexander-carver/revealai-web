@@ -39,6 +39,8 @@ interface Stats {
   commissions: {
     total_earned: string;
     total_earned_cents: number;
+    total_gmv: string;
+    total_gmv_cents: number;
     pending: string;
     pending_cents: number;
     paid: string;
@@ -52,6 +54,7 @@ interface Stats {
   }>;
   recent_commissions: Array<{
     commission_amount_cents: number;
+    invoice_amount_cents: number;
     status: string;
     created_at: string;
   }>;
@@ -63,6 +66,10 @@ export default function AffiliateDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  
+  // Date filtering for commissions
+  const [dateFilter, setDateFilter] = useState<"all" | "30d" | "90d" | "this_year">("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   // Check auth and fetch stats
   useEffect(() => {
@@ -125,6 +132,39 @@ export default function AffiliateDashboard() {
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  const formatCurrency = (cents: number) => {
+    return `$${(cents / 100).toFixed(2)}`;
+  };
+
+  const filterCommissionsByDate = (commissions: Stats["recent_commissions"]) => {
+    if (!commissions || dateFilter === "all") return commissions;
+    
+    const now = new Date();
+    const cutoff = new Date();
+    
+    switch (dateFilter) {
+      case "30d":
+        cutoff.setDate(now.getDate() - 30);
+        break;
+      case "90d":
+        cutoff.setDate(now.getDate() - 90);
+        break;
+      case "this_year":
+        cutoff.setMonth(0, 1);
+        break;
+    }
+    
+    return commissions.filter(c => new Date(c.created_at) >= cutoff);
+  };
+
+  const sortCommissions = (commissions: Stats["recent_commissions"]) => {
+    if (!commissions) return [];
+    const sorted = [...commissions];
+    return sortOrder === "newest" 
+      ? sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      : sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   };
 
   if (loading) {
@@ -216,20 +256,32 @@ export default function AffiliateDashboard() {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Earned */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-200">
+        {/* Stats Grid - GMV & Commission highlighted */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          {/* Total GMV */}
+          <div className="bg-white rounded-2xl p-6 border-2 border-blue-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-blue-600" />
+              </div>
+              <p className="text-sm text-gray-500 font-medium">Total GMV</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{stats.commissions.total_gmv || "$0.00"}</p>
+            <p className="text-sm text-blue-600 mt-2">Total sales you referred</p>
+          </div>
+
+          {/* Total Commission */}
+          <div className="bg-white rounded-2xl p-6 border-2 border-green-200 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
                 <DollarSign className="w-5 h-5 text-green-600" />
               </div>
-              <p className="text-sm text-gray-500 font-medium">Total Earned</p>
+              <p className="text-sm text-gray-500 font-medium">Total Commission</p>
             </div>
             <p className="text-3xl font-bold text-gray-900">{stats.commissions.total_earned}</p>
             <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
               <ArrowUpRight className="w-4 h-4" />
-              Lifetime earnings
+              Your earnings ({stats.affiliate.commission_rate}% of GMV)
             </p>
           </div>
 
@@ -293,43 +345,110 @@ export default function AffiliateDashboard() {
           </div>
         </div>
 
-        {/* Recent Commissions */}
+        {/* Recent Commissions with Date Filter */}
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Commissions</h2>
-          {stats.recent_commissions.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
-              No commissions yet. Keep sharing your link!
-            </p>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {stats.recent_commissions.map((commission, idx) => (
-                <div key={idx} className="flex items-center justify-between py-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      commission.status === "paid" ? "bg-green-100" : "bg-yellow-100"
-                    }`}>
-                      <DollarSign className={`w-5 h-5 ${
-                        commission.status === "paid" ? "text-green-600" : "text-yellow-600"
-                      }`} />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Commission History</h2>
+            <div className="flex items-center gap-3">
+              {/* Date Filter */}
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
+                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="all">All time</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+                <option value="this_year">This year</option>
+              </select>
+              {/* Sort Order */}
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+            </div>
+          </div>
+          
+          {(() => {
+            const filtered = filterCommissionsByDate(stats.recent_commissions);
+            const sorted = sortCommissions(filtered);
+            
+            if (sorted.length === 0) {
+              return (
+                <p className="text-gray-500 text-center py-8">
+                  No commissions found for this period. Keep sharing your link!
+                </p>
+              );
+            }
+            
+            return (
+              <div className="divide-y divide-gray-100">
+                {/* Table Header */}
+                <div className="hidden sm:grid grid-cols-4 gap-4 py-3 px-4 text-sm font-medium text-gray-500 border-b border-gray-200">
+                  <div>Date</div>
+                  <div className="text-right">Sale Amount (GMV)</div>
+                  <div className="text-right">Your Commission</div>
+                  <div className="text-right">Status</div>
+                </div>
+                
+                {sorted.map((commission, idx) => (
+                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 py-4 px-4 items-center hover:bg-gray-50 transition-colors">
+                    {/* Date */}
+                    <div className="text-sm text-gray-900">
+                      {formatDate(commission.created_at)}
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        ${(commission.commission_amount_cents / 100).toFixed(2)}
-                      </p>
-                      <p className="text-sm text-gray-500">{formatDate(commission.created_at)}</p>
+                    
+                    {/* GMV / Sale Amount */}
+                    <div className="text-right">
+                      <span className="text-sm text-gray-600">{formatCurrency(commission.invoice_amount_cents || 0)}</span>
+                    </div>
+                    
+                    {/* Commission */}
+                    <div className="text-right">
+                      <span className="font-semibold text-green-600">
+                        +{formatCurrency(commission.commission_amount_cents)}
+                      </span>
+                      <span className="hidden sm:inline text-xs text-gray-400 ml-1">
+                        ({Math.round((commission.commission_amount_cents / (commission.invoice_amount_cents || 1)) * 100)}%)
+                      </span>
+                    </div>
+                    
+                    {/* Status */}
+                    <div className="text-right">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                        commission.status === "paid"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          commission.status === "paid" ? "bg-green-600" : "bg-yellow-600"
+                        }`} />
+                        {commission.status === "paid" ? "Paid" : "Pending"}
+                      </span>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    commission.status === "paid"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}>
-                    {commission.status === "paid" ? "Paid" : "Pending"}
-                  </span>
+                ))}
+                
+                {/* Summary Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 py-4 px-4 bg-gray-50 rounded-b-xl mt-2">
+                  <div className="text-sm font-medium text-gray-500">Period Summary</div>
+                  <div className="text-right text-sm text-gray-600">
+                    {formatCurrency(sorted.reduce((sum, c) => sum + (c.invoice_amount_cents || 0), 0))} GMV
+                  </div>
+                  <div className="text-right text-sm font-semibold text-green-600">
+                    {formatCurrency(sorted.reduce((sum, c) => sum + c.commission_amount_cents, 0))} earned
+                  </div>
+                  <div className="text-right text-sm text-gray-500">
+                    {sorted.length} payments
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Footer */}

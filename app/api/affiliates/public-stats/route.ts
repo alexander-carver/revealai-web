@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
     // Recent commissions (last 10)
     const recentCommissions = (commissions || []).slice(0, 10).map((c: any) => ({
       commission_amount_cents: c.commission_amount_cents,
+      invoice_amount_cents: c.invoice_amount_cents || 0,
       status: c.status,
       created_at: c.created_at,
     }));
