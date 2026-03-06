@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
               // Look up the affiliate's Connect account for automatic payouts
               const { data: affiliate } = await supabase
                 .from("affiliates")
-                .select("stripe_connect_account_id, status")
+                .select("stripe_connect_account_id, status, email, name")
                 .eq("ref_slug", referral.affiliate_ref)
                 .eq("status", "active")
                 .maybeSingle();
