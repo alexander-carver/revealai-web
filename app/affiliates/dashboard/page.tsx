@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
 import {
   Copy,
   CheckCircle,
@@ -9,12 +10,10 @@ import {
   Users,
   MousePointer,
   DollarSign,
-  ExternalLink,
   Loader2,
   AlertCircle,
-  Calendar,
+  LogOut,
   ArrowUpRight,
-  Link as LinkIcon,
 } from "lucide-react";
 
 interface Stats {
@@ -58,32 +57,53 @@ interface Stats {
 }
 
 export default function AffiliateDashboard() {
-  const searchParams = useSearchParams();
-  const ref = searchParams.get("ref");
-
+  const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
-  const fetchStats = useCallback(async () => {
-    if (!ref) {
-      setError("No affiliate reference found. Use ?ref=YOUR_SLUG in the URL.");
-      setLoading(false);
-      return;
-    }
+  // Check auth and fetch stats
+  useEffect(() => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.push("/affiliates/login?redirect=/affiliates/dashboard");
+        return;
+      }
 
-    try {
-      const res = await fetch(`/api/affiliates/public-stats?ref=${encodeURIComponent(ref)}`);
-      if (!res.ok) throw new Error("Failed to load stats");
-      const data = await res.json();
-      setStats(data);
-    } catch (err: any) {
-      setError(err.message || "Error loading dashboard");
-    } finally {
-      setLoading(false);
-    }
-  }, [ref]);
+      setUser(session.user);
+
+      // Get affiliate ref from user_id
+      const { data: affiliate } = await supabase
+        .from("affiliates")
+        .select("ref_slug")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (!affiliate) {
+        setError("No affiliate account found for this user.");
+        setLoading(false);
+        return;
+      }
+
+      // Fetch stats using the ref
+      try {
+        const res = await fetch(`/api/affiliates/public-stats?ref=${encodeURIComponent(affiliate.ref_slug)}`);
+        if (!res.ok) throw new Error("Failed to load stats");
+        const data = await res.json();
+        setStats(data);
+      } catch (err: any) {
+        setError(err.message || "Error loading dashboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
+  }, [router]);
 
   useEffect(() => {
     fetchStats();
@@ -94,6 +114,11 @@ export default function AffiliateDashboard() {
     navigator.clipboard.writeText(stats.affiliate.affiliate_link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/affiliates/login");
   };
 
   const formatMonth = (monthStr: string) => {
@@ -149,9 +174,18 @@ export default function AffiliateDashboard() {
                 Welcome back, {stats.affiliate.name}!
               </p>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-full text-sm font-medium">
-              <TrendingUp className="w-4 h-4" />
-              {stats.affiliate.commission_rate}% commission rate
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-full text-sm font-medium">
+                <TrendingUp className="w-4 h-4" />
+                {stats.affiliate.commission_rate}% commission rate
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Sign out"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>

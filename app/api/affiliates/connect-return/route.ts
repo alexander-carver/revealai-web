@@ -52,18 +52,7 @@ export async function GET(request: NextRequest) {
         .eq("ref_slug", ref);
 
       const origin = request.nextUrl.origin;
-      const affiliateLink = `${origin}/?ref=${ref}`;
-
-      return new NextResponse(
-        renderHTML(
-          "You're all set!",
-          `Your payout account is connected. You'll earn ${Math.round(affiliate.commission_rate * 100)}% commission on every sale, for life.<br/><br/>` +
-          `<strong>Your affiliate link:</strong><br/>` +
-          `<code style="background:#f3f4f6;padding:8px 16px;border-radius:8px;font-size:14px;display:inline-block;margin-top:8px;word-break:break-all;">${affiliateLink}</code><br/><br/>` +
-          `Share this link with your audience. When someone subscribes through it, you earn commission on every payment they make — forever.`
-        ),
-        { headers: { "Content-Type": "text/html" } }
-      );
+      return NextResponse.redirect(`${origin}/affiliates/dashboard`);
     }
 
     // Not fully onboarded yet — send them back to complete it

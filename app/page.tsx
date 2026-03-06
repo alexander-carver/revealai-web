@@ -658,6 +658,7 @@ function HomeContent() {
                 <li><a href="https://polished-factory-180.notion.site/Reveal-AI-People-Search-279df7bf5f6a80559673d41efdd0a82e" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">FAQ</a></li>
                 <li><a href="https://polished-factory-180.notion.site/Support-278df7bf5f6a80e5986bc22ac7786ced" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">Support</a></li>
                 <li><a href="https://polished-factory-180.notion.site/Feedback-Suggestions-279df7bf5f6a8090b058f19161d822ca" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">Feedback</a></li>
+                <li><Link href="/affiliates/login" className="text-sm text-red-600 hover:text-red-700 transition font-medium">Become an Affiliate ↗</Link></li>
               </ul>
             </div>
 
