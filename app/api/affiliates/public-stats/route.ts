@@ -64,11 +64,12 @@ export async function GET(request: NextRequest) {
     // Commission stats
     const { data: commissions } = await supabase
       .from("affiliate_commissions")
-      .select("commission_amount_cents, status, created_at")
+      .select("commission_amount_cents, invoice_amount_cents, status, created_at")
       .eq("affiliate_ref", ref)
       .order("created_at", { ascending: false });
 
     let totalEarnedCents = 0;
+    let totalGMVCents = 0;
     let pendingCents = 0;
     let paidCents = 0;
 
@@ -83,6 +84,7 @@ export async function GET(request: NextRequest) {
     if (commissions) {
       for (const c of commissions) {
         totalEarnedCents += c.commission_amount_cents;
+        totalGMVCents += c.invoice_amount_cents || 0;
         if (c.status === "pending") pendingCents += c.commission_amount_cents;
         if (c.status === "paid") paidCents += c.commission_amount_cents;
 
@@ -124,6 +126,8 @@ export async function GET(request: NextRequest) {
       commissions: {
         total_earned: `$${(totalEarnedCents / 100).toFixed(2)}`,
         total_earned_cents: totalEarnedCents,
+        total_gmv: `$${(totalGMVCents / 100).toFixed(2)}`,
+        total_gmv_cents: totalGMVCents,
         pending: `$${(pendingCents / 100).toFixed(2)}`,
         pending_cents: pendingCents,
         paid: `$${(paidCents / 100).toFixed(2)}`,
