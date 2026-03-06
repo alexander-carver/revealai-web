@@ -18,9 +18,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing ref" }, { status: 400 });
     }
 
-    // Get IP address (for fraud detection)
+    // Get IP address (for fraud detection) from headers
     const forwarded = request.headers.get("x-forwarded-for");
-    const ip = forwarded ? forwarded.split(",")[0].trim() : request.ip || "unknown";
+    const realIp = request.headers.get("x-real-ip");
+    const ip = forwarded 
+      ? forwarded.split(",")[0].trim() 
+      : realIp 
+      || "unknown";
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
