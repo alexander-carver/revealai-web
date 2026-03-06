@@ -81,8 +81,7 @@ export default function AffiliateDashboard() {
         .maybeSingle();
 
       if (!affiliate) {
-        setError("No affiliate account found for this user.");
-        setLoading(false);
+        router.push("/affiliates/signup");
         return;
       }
 
