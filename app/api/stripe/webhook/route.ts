@@ -3,10 +3,7 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendPurchaseEvent, sendStartTrialEvent, generateEventId } from "@/lib/meta-capi";
 import { sendCommissionEmail } from "@/lib/email";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-12-15.clover",
-});
+import { getStripe } from "@/lib/stripe-server";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -16,6 +13,7 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const stripe = getStripe();
   // Reject early if webhook secret is not configured (do not read/log body)
   if (!webhookSecret || webhookSecret.length === 0) {
     return NextResponse.json(

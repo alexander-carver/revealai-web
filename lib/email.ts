@@ -1,13 +1,21 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || "affiliates@revealai-peoplesearch.com";
+
+function getResend(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 /**
  * Send email to an affiliate
  */
 export async function sendAffiliateEmail(to: string, subject: string, html: string) {
-  if (!process.env.RESEND_API_KEY) {
+  const resend = getResend();
+  if (!resend) {
     console.log("[Email] RESEND_API_KEY not set, skipping email:", subject);
     return { success: false, skipped: true };
   }

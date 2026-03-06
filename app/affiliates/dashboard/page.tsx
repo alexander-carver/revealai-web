@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import {
@@ -10,6 +10,7 @@ import {
   Users,
   MousePointer,
   DollarSign,
+  Calendar,
   Loader2,
   AlertCircle,
   LogOut,
@@ -62,7 +63,6 @@ export default function AffiliateDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [user, setUser] = useState<any>(null);
 
   // Check auth and fetch stats
   useEffect(() => {
@@ -73,9 +73,6 @@ export default function AffiliateDashboard() {
         router.push("/affiliates/login?redirect=/affiliates/dashboard");
         return;
       }
-
-      setUser(session.user);
-
       // Get affiliate ref from user_id
       const { data: affiliate } = await supabase
         .from("affiliates")
@@ -104,10 +101,6 @@ export default function AffiliateDashboard() {
 
     init();
   }, [router]);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
 
   const copyLink = () => {
     if (!stats?.affiliate.affiliate_link) return;

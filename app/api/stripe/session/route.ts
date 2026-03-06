@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { getStripe } from "@/lib/stripe-server";
 
 // Force this route to be dynamic since it uses searchParams
 export const dynamic = 'force-dynamic';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-12-15.clover",
-});
-
 export async function GET(request: NextRequest) {
   try {
+    const stripe = getStripe();
     const searchParams = request.nextUrl.searchParams;
     const sessionId = searchParams.get("session_id");
 

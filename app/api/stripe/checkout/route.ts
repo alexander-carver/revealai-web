@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendInitiateCheckoutEvent, generateEventId } from "@/lib/meta-capi";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-12-15.clover",
-});
+import { getStripe } from "@/lib/stripe-server";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
+    const stripe = getStripe();
     const { plan, userId, email, deviceId, affiliateRef } = await request.json();
 
     if (!plan) {
