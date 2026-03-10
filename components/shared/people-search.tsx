@@ -8,7 +8,6 @@ import {
   MapPin,
   ArrowRight,
   Sparkles,
-  AlertTriangle,
   Star,
   Shield,
 } from "lucide-react";
@@ -101,7 +100,7 @@ export function PeopleSearch() {
       const params = new URLSearchParams({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        type: searchType === 'datingapps' ? 'social' : searchType,
+        type: searchType,
       });
 
       if (formData.city.trim()) {
@@ -131,7 +130,7 @@ export function PeopleSearch() {
     const params = new URLSearchParams({
       firstName: formData.firstName.trim(),
       lastName: formData.lastName.trim(),
-      type: searchType === 'datingapps' ? 'social' : searchType,
+      type: searchType,
     });
 
     if (formData.city.trim()) {
@@ -290,8 +289,11 @@ export function PeopleSearch() {
                   <Sparkles className="w-4 h-4" />
                   <span>AI-Powered Search</span>
                 </div>
-                <CardTitle className="text-2xl md:text-3xl font-bold text-gray-900">
-                  Search Anyone Instantly — <span className="text-red-600">People, Phone, Address & More</span>
+                <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
+                  Search Anyone Instantly
+                  <br className="sm:hidden" />
+                  <span className="hidden sm:inline"> — </span>
+                  <span className="text-red-600">People, Phone, Address & More</span>
                 </CardTitle>
               </div>
             </CardHeader>

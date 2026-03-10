@@ -14,7 +14,7 @@ const COUNTDOWN_STORAGE_KEY = "revealai_paywall_countdown";
 
 // Benefits with styled text
 const benefits = [
-  <>Find Hidden <span className="text-red-600 font-semibold">Dating Apps</span> (Tinder, Bumble, Grindr)</>,
+  <>Find <span className="text-red-600 font-semibold">Social Profiles</span> & Online Presence</>,
   <>People Search: <span className="font-bold">Vehicle</span>, Reverse Phone, Address</>,
   <>Look into <span className="italic">Criminal</span> History</>,
   <>Remove <span className="underline">Yourself</span> from Reveal AI Search</>,
