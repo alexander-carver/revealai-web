@@ -46,18 +46,18 @@ export async function POST(request: NextRequest) {
     
     // Define product IDs - HARDCODED to ensure correct products are used
     // Main paywall products:
-    // - Weekly: prod_TexubYU0K47p6u ($6.99/week)
+    // - Weekly: prod_Tn7ov8WD9p7Zty ($6.99/week)
     // - Yearly: prod_Tn7peqRLz4B8Ho ($39.99/year)
-    // - Abandoned Trial: prod_TexubYU0K47p6u + $5 coupon ($1.99 first week, then $6.99/week)
-    // - Free Trial: Same as weekly, no trial (charges $6.99 immediately)
+    // - Abandoned Trial: prod_Tn7ov8WD9p7Zty + $5 coupon ($1.99 first week, then $6.99/week)
+    // - Free Trial: prod_Tn7ov8WD9p7Zty with 7-day free trial
     const productIds: Record<string, string> = {
-      weekly: "prod_TexubYU0K47p6u", // $6.99/week
+      weekly: "prod_Tn7ov8WD9p7Zty", // $6.99/week
       yearly: "prod_Tn7peqRLz4B8Ho", // $39.99/year - DO NOT CHANGE
-      free_trial: "prod_TexubYU0K47p6u", // $6.99/week, charges immediately
+      free_trial: "prod_Tn7ov8WD9p7Zty", // $6.99/week with 7-day free trial
       // Abandoned trial - $1.99 first week (via $5 coupon), then $6.99/week
-      abandoned_trial: "prod_TexubYU0K47p6u",
+      abandoned_trial: "prod_Tn7ov8WD9p7Zty",
       // Test plan - use test product ID if set, otherwise use weekly for testing
-      test: process.env.STRIPE_TEST_PRODUCT_ID || "prod_TexubYU0K47p6u",
+      test: process.env.STRIPE_TEST_PRODUCT_ID || "prod_Tn7ov8WD9p7Zty",
     };
 
     const productId = productIds[plan as string];
@@ -232,6 +232,8 @@ export async function POST(request: NextRequest) {
         ...(cleanAffiliateRef && { affiliate_ref: cleanAffiliateRef }),
       },
       subscription_data: {
+        // Add 7-day free trial for free_trial plan
+        ...(plan === "free_trial" && { trial_period_days: 7 }),
         metadata: {
           ...(cleanAffiliateRef && { affiliate_ref: cleanAffiliateRef }),
         },
@@ -246,7 +248,7 @@ export async function POST(request: NextRequest) {
 
     // Server-side CAPI: InitiateCheckout (redundant with browser pixel for better match quality)
     try {
-      const value = plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : 6.99;
+      const value = plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : plan === 'free_trial' ? 0 : 6.99;
       await sendInitiateCheckoutEvent({
         eventId: generateEventId('ic_srv'),
         email: customerEmail || undefined,

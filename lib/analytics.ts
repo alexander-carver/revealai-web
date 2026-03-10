@@ -81,7 +81,7 @@ export function trackCTAClick(buttonName: string) {
  */
 export function trackInitiateCheckout(plan: string = 'free_trial'): string {
   const eventId = generateEventId('ic');
-  const value = plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : 9.99;
+  const value = plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : plan === 'free_trial' ? 0 : 6.99;
 
   trackGA4('begin_checkout', {
     currency: 'USD',

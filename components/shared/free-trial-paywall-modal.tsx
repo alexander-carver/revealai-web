@@ -147,9 +147,9 @@ export function FreeTrialPaywallModal() {
             {/* Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                GET <span className="text-red-600">WEEKLY</span> ACCESS
+                START YOUR <span className="text-red-600">FREE</span> TRIAL
               </h2>
-              <p className="text-gray-500 text-sm">$6.99/week, charged today. Cancel anytime.</p>
+              <p className="text-gray-500 text-sm">7 days free, then $6.99/week. Cancel anytime.</p>
             </div>
 
             {/* Benefits List */}
@@ -164,16 +164,16 @@ export function FreeTrialPaywallModal() {
               ))}
             </div>
 
-            {/* Plan Selection - Weekly, charges immediately */}
+            {/* Plan Selection - 7 days free trial */}
             <div className="mb-6">
               <div className="relative w-full p-4 rounded-xl border-2 border-red-500 bg-red-50">
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="font-bold text-gray-900">WEEKLY ACCESS</div>
-                    <div className="text-gray-500 text-sm">Charged today, then weekly</div>
+                    <div className="text-gray-500 text-sm">7 days free, then $6.99/week</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-red-600">$6.99<span className="text-sm font-normal text-gray-500">/week</span></div>
+                    <div className="text-xl font-bold text-red-600">FREE<span className="text-sm font-normal text-gray-500"> for 7 days</span></div>
                   </div>
                 </div>
               </div>
