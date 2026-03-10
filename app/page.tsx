@@ -84,7 +84,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 function HomeContent() {
   const { user } = useAuth();
-  const { isPro, refreshSubscription, showAbandonedPaywall } = useSubscription();
+  const { isPro, refreshSubscription, showAbandonedPaywall, showFreeTrialPaywallDirectly } = useSubscription();
   const searchParams = useSearchParams();
   // TEMPORARILY DISABLED: Onboarding flow
   // const [showOnboarding, setShowOnboarding] = useState(false);
@@ -146,6 +146,20 @@ function HomeContent() {
       localStorage.removeItem("revealai_checkout_timestamp");
     }
   }, [searchParams, isPro, showAbandonedPaywall]);
+
+  // Show free trial paywall after 80 seconds for non-pro users
+  useEffect(() => {
+    // Only show if user is not pro and hasn't dismissed the free trial paywall before
+    const hasDismissedFreeTrial = localStorage.getItem("revealai_free_trial_dismissed");
+    
+    if (isPro || hasDismissedFreeTrial === "true") return;
+
+    const timer = setTimeout(() => {
+      showFreeTrialPaywallDirectly();
+    }, 80000); // 80 seconds
+
+    return () => clearTimeout(timer);
+  }, [isPro, showFreeTrialPaywallDirectly]);
 
   // TEMPORARILY DISABLED: Handle onboarding completion
   // const handleOnboardingComplete = useCallback(() => {
