@@ -25,7 +25,7 @@ import { lookupMockProfileByDetails } from "@/lib/mock-data";
 export function PeopleSearch() {
   const router = useRouter();
   const { isPro, showFreeTrialPaywall, isPaywallVisible, isAbandonedPaywallVisible } = useSubscription();
-  const [searchType, setSearchType] = useState<"fullreport" | "datingapps">("fullreport");
+  const [searchType, setSearchType] = useState<"fullreport" | "social">("fullreport");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -84,7 +84,7 @@ export function PeopleSearch() {
     }
 
     // Track search button click
-    trackSearchButtonClick(searchType === 'fullreport' ? 'full_report' : 'dating_apps');
+    trackSearchButtonClick(searchType === 'fullreport' ? 'full_report' : 'social_profiles');
 
     const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
 
@@ -101,7 +101,7 @@ export function PeopleSearch() {
       const params = new URLSearchParams({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        type: searchType,
+        type: searchType === 'datingapps' ? 'social' : searchType,
       });
 
       if (formData.city.trim()) {
@@ -131,7 +131,7 @@ export function PeopleSearch() {
     const params = new URLSearchParams({
       firstName: formData.firstName.trim(),
       lastName: formData.lastName.trim(),
-      type: searchType,
+      type: searchType === 'datingapps' ? 'social' : searchType,
     });
 
     if (formData.city.trim()) {
@@ -291,20 +291,20 @@ export function PeopleSearch() {
                   <span>AI-Powered Search</span>
                 </div>
                 <CardTitle className="text-2xl md:text-3xl font-bold text-gray-900">
-                  Search to <span className="text-red-600">Find Dirt</span> on Anyone
+                  Search Anyone Instantly — <span className="text-red-600">People, Phone, Address & More</span>
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <Tabs value={searchType} onValueChange={(v) => setSearchType(v as "fullreport" | "datingapps")}>
+              <Tabs value={searchType} onValueChange={(v) => setSearchType(v as "fullreport" | "social")}>
                 <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1 bg-gray-100">
                   <TabsTrigger value="fullreport" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">
                     <Search className="w-4 h-4 md:w-5 md:h-5" />
                     <span>Full Report</span>
                   </TabsTrigger>
-                  <TabsTrigger value="datingapps" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">
-                    <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
-                    <span>Dating Apps</span>
+                  <TabsTrigger value="social" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">
+                    <Search className="w-4 h-4 md:w-5 md:h-5" />
+                    <span>Social & Online</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -350,15 +350,15 @@ export function PeopleSearch() {
                   </div>
                 </TabsContent>
 
-                {/* Dating Apps Search */}
-                <TabsContent value="datingapps">
-                  <div className="bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200 rounded-xl p-4 mb-4">
+                {/* Social & Online Search */}
+                <TabsContent value="social">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-xl p-4 mb-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-5 h-5 text-red-500" />
-                      <h3 className="font-semibold text-lg text-gray-900">Find Dating App Profiles</h3>
+                      <Search className="w-5 h-5 text-blue-500" />
+                      <h3 className="font-semibold text-lg text-gray-900">Find Social Profiles & Online Presence</h3>
                     </div>
                     <p className="text-sm text-gray-600">
-                      Search Tinder, Bumble, Hinge, Match, eHarmony, OkCupid, Plenty of Fish, Grindr, and more.
+                      Search across social media platforms, online profiles, and digital footprints.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

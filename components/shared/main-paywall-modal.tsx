@@ -11,7 +11,7 @@ import { getAffiliateRef } from "@/lib/affiliate";
 
 // Benefits with styled text
 const benefits = [
-  <>Find Hidden <span className="text-red-600 font-semibold text-lg">Dating Apps</span></>,
+  <>Find <span className="text-red-600 font-semibold text-lg">Social Profiles</span> & Online Presence</>,
   <><span className="font-bold text-lg">Vehicle</span>, Reverse Phone, Address</>,
   <>Look into <span className="italic text-lg">Criminal</span> History</>,
   <>Remove <span className="underline text-lg">Yourself</span> from Reveal AI Search</>,
