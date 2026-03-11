@@ -291,8 +291,7 @@ export function PeopleSearch() {
                 </div>
                 <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
                   Search Anyone Instantly
-                  <br className="sm:hidden" />
-                  <span className="hidden sm:inline"> — </span>
+                  <br />
                   <span className="text-red-600">People, Phone, Address & More</span>
                 </CardTitle>
               </div>
