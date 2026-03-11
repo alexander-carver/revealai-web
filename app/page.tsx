@@ -669,9 +669,8 @@ function HomeContent() {
               <h4 className="font-semibold text-sm mb-4 text-foreground">Resources</h4>
               <ul className="space-y-2.5">
                 <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground transition">Blog</Link></li>
-                <li><a href="https://polished-factory-180.notion.site/Reveal-AI-People-Search-279df7bf5f6a80559673d41efdd0a82e" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">FAQ</a></li>
-                <li><a href="https://polished-factory-180.notion.site/Support-278df7bf5f6a80e5986bc22ac7786ced" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">Support</a></li>
-                <li><a href="https://polished-factory-180.notion.site/Feedback-Suggestions-279df7bf5f6a8090b058f19161d822ca" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">Feedback</a></li>
+                <li><Link href="/support" className="text-sm text-muted-foreground hover:text-foreground transition">FAQ & Support</Link></li>
+                <li><a href="mailto:realrevealaiofficial@gmail.com" className="text-sm text-muted-foreground hover:text-foreground transition">Contact Us</a></li>
                 <li><Link href="/affiliates/login" className="text-sm text-red-600 hover:text-red-700 transition font-medium">Become an Affiliate ↗</Link></li>
               </ul>
             </div>
@@ -680,8 +679,8 @@ function HomeContent() {
             <div>
               <h4 className="font-semibold text-sm mb-4 text-foreground">Legal</h4>
               <ul className="space-y-2.5">
-                <li><a href="https://polished-factory-180.notion.site/Privacy-Policy-278df7bf5f6a801bb270d8216c5182c9" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">Privacy Policy</a></li>
-                <li><a href="https://polished-factory-180.notion.site/Terms-of-Service-279df7bf5f6a8064bad7c5481a8e9a1b" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition">Terms of Service</a></li>
+                <li><Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition">Terms of Service</Link></li>
                 <li><Link href="/settings" className="text-sm text-muted-foreground hover:text-foreground transition">Settings</Link></li>
               </ul>
             </div>
@@ -693,9 +692,9 @@ function HomeContent() {
               &copy; {new Date().getFullYear()} RevealAI. All rights reserved.
             </p>
             <div className="flex items-center gap-6 text-xs text-muted-foreground">
-              <a href="https://polished-factory-180.notion.site/Privacy-Policy-278df7bf5f6a801bb270d8216c5182c9" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">Privacy</a>
-              <a href="https://polished-factory-180.notion.site/Terms-of-Service-279df7bf5f6a8064bad7c5481a8e9a1b" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">Terms</a>
-              <a href="https://polished-factory-180.notion.site/Support-278df7bf5f6a80e5986bc22ac7786ced" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">Support</a>
+              <Link href="/privacy-policy" className="hover:text-foreground transition">Privacy</Link>
+              <Link href="/terms" className="hover:text-foreground transition">Terms</Link>
+              <Link href="/support" className="hover:text-foreground transition">Support</Link>
             </div>
           </div>
         </div>

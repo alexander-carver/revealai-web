@@ -178,9 +178,9 @@ export function ResultsPaywallModal() {
             {/* Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                GET <span className="text-red-600">WEEKLY</span> ACCESS
+                START YOUR <span className="text-red-600">FREE</span> TRIAL
               </h2>
-              <p className="text-gray-500 text-sm">$6.99/week, charged today. Cancel anytime.</p>
+              <p className="text-gray-500 text-sm">7 days free, then $6.99/week. Cancel anytime.</p>
             </div>
 
             {/* Benefits List */}
@@ -230,7 +230,7 @@ export function ResultsPaywallModal() {
             <div className="flex items-center justify-center gap-3 mt-6 text-xs text-gray-400">
               <a href="/terms" className="hover:text-gray-600 transition-colors focus:outline-none focus:underline">Terms</a>
               <span>·</span>
-              <a href="/privacy" className="hover:text-gray-600 transition-colors focus:outline-none focus:underline">Privacy Policy</a>
+              <a href="/privacy-policy" className="hover:text-gray-600 transition-colors focus:outline-none focus:underline">Privacy Policy</a>
               <span>·</span>
               <button className="hover:text-gray-600 transition-colors focus:outline-none focus:underline">Restore</button>
             </div>

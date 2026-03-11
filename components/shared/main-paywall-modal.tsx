@@ -228,7 +228,7 @@ export function MainPaywallModal() {
             <div className="flex items-center justify-center gap-3 mt-6 text-xs text-gray-400">
               <a href="/terms" className="hover:text-gray-600 transition-colors focus:outline-none focus:underline">Terms</a>
               <span>·</span>
-              <a href="/privacy" className="hover:text-gray-600 transition-colors focus:outline-none focus:underline">Privacy Policy</a>
+              <a href="/privacy-policy" className="hover:text-gray-600 transition-colors focus:outline-none focus:underline">Privacy Policy</a>
               <span>·</span>
               <button className="hover:text-gray-600 transition-colors focus:outline-none focus:underline">Restore</button>
             </div>
