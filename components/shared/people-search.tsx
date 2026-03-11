@@ -289,9 +289,9 @@ export function PeopleSearch() {
                   <Sparkles className="w-4 h-4" />
                   <span>AI-Powered Search</span>
                 </div>
-                <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 leading-none">
-                  Search Anyone Instantly
-                  <span className="block text-red-600/60 text-sm sm:text-base md:text-lg font-normal mt-0.5">People, Phone, Address & More</span>
+                <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
+                  Search <span className="text-red-600">Anyone</span> Instantly
+                  <span className="block text-gray-500/70 text-sm sm:text-base md:text-lg font-normal mt-0.5">People, Phone, Address & More</span>
                 </CardTitle>
               </div>
             </CardHeader>
