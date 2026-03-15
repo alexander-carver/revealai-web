@@ -13,6 +13,34 @@ const stripeClient = new stripe.Stripe(stripeSecret, {
   httpClient: stripe.Stripe.createFetchHttpClient(),
 });
 
+const weeklyProductIds = [
+  Deno.env.get("STRIPE_WEEKLY_PRODUCT_ID"),
+  Deno.env.get("STRIPE_MOBILE_WEEKLY_PRODUCT_ID"),
+].filter((value): value is string => Boolean(value));
+
+const yearlyProductIds = [
+  Deno.env.get("STRIPE_YEARLY_PRODUCT_ID"),
+  Deno.env.get("STRIPE_MOBILE_YEARLY_PRODUCT_ID"),
+].filter((value): value is string => Boolean(value));
+
+function normalizeTierForPlan(plan?: string | null): "weekly" | "yearly" {
+  switch (plan) {
+    case "weekly":
+    case "free_trial":
+    case "abandoned_trial":
+      return "weekly";
+    default:
+      return "yearly";
+  }
+}
+
+function inferTierFromProductId(productId?: string | null): "weekly" | "yearly" | null {
+  if (!productId) return null;
+  if (weeklyProductIds.includes(productId)) return "weekly";
+  if (yearlyProductIds.includes(productId)) return "yearly";
+  return null;
+}
+
 serve(async (req) => {
   try {
     console.log("Webhook received");
@@ -63,7 +91,7 @@ serve(async (req) => {
           subscriptionId: session.subscription,
         });
 
-        const subscriptionTier = plan === "weekly" ? "weekly" : "yearly";
+        const subscriptionTier = normalizeTierForPlan(plan);
         
         // Get subscription details from Stripe
         const subscriptionId = session.subscription as string;
@@ -212,22 +240,10 @@ serve(async (req) => {
           
           // Determine tier from subscription items
           const priceId = subscription.items.data[0]?.price.id;
-          const weeklyProductId = Deno.env.get("STRIPE_WEEKLY_PRODUCT_ID");
-          const yearlyProductId = Deno.env.get("STRIPE_YEARLY_PRODUCT_ID");
-          
-          if (!weeklyProductId || !yearlyProductId) {
-            console.error("Missing STRIPE_WEEKLY_PRODUCT_ID or STRIPE_YEARLY_PRODUCT_ID");
-          }
-          
-          // Get product ID from price
           let tier = "yearly"; // default
           if (priceId) {
             const price = await stripeClient.prices.retrieve(priceId);
-            if (price.product === weeklyProductId) {
-              tier = "weekly";
-            } else if (price.product === yearlyProductId) {
-              tier = "yearly";
-            }
+            tier = inferTierFromProductId(price.product as string) ?? "yearly";
           }
 
           // Safely handle current_period_end - validate it's a valid number

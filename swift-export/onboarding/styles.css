@@ -1,0 +1,121 @@
+/* ============================================
+   ONBOARDING FLOW STYLES
+   ============================================ */
+
+/* ----------------------------------------
+   Orbit Animation for Screen3
+   ---------------------------------------- */
+
+.onboarding-orbit-container {
+  animation: orbit-rotate 20s linear infinite;
+}
+
+.onboarding-orbit-item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Position items using the --angle CSS variable */
+  transform: rotate(var(--angle, 0deg)) translateX(100px) rotate(calc(var(--angle, 0deg) * -1));
+  /* Counter-rotate so items stay upright */
+  animation: counter-rotate 20s linear infinite;
+}
+
+@keyframes orbit-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes counter-rotate {
+  from {
+    transform: rotate(var(--angle, 0deg)) translateX(100px) rotate(calc(var(--angle, 0deg) * -1)) rotate(0deg);
+  }
+  to {
+    transform: rotate(var(--angle, 0deg)) translateX(100px) rotate(calc(var(--angle, 0deg) * -1)) rotate(-360deg);
+  }
+}
+
+/* Responsive orbit radius */
+@media (min-width: 640px) {
+  .onboarding-orbit-item {
+    transform: rotate(var(--angle, 0deg)) translateX(120px) rotate(calc(var(--angle, 0deg) * -1));
+  }
+
+  @keyframes counter-rotate {
+    from {
+      transform: rotate(var(--angle, 0deg)) translateX(120px) rotate(calc(var(--angle, 0deg) * -1)) rotate(0deg);
+    }
+    to {
+      transform: rotate(var(--angle, 0deg)) translateX(120px) rotate(calc(var(--angle, 0deg) * -1)) rotate(-360deg);
+    }
+  }
+}
+
+/* ----------------------------------------
+   Orbit Animation for LoadingScreen
+   ---------------------------------------- */
+
+.orbit-item {
+  animation: orbit 10s linear infinite;
+  /* Start at different angles */
+  transform: rotate(var(--start-angle, 0deg)) translateX(96px) rotate(calc(var(--start-angle, 0deg) * -1));
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(var(--start-angle, 0deg)) translateX(96px) rotate(calc(var(--start-angle, 0deg) * -1)) rotate(0deg);
+  }
+  to {
+    transform: rotate(var(--start-angle, 0deg)) translateX(96px) rotate(calc(var(--start-angle, 0deg) * -1)) rotate(-360deg);
+  }
+}
+
+/* Slow spin for the dashed orbit ring */
+.animate-spin-slow {
+  animation: spin 10s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ----------------------------------------
+   Fade In Animation (used in Screen2)
+   ---------------------------------------- */
+
+@keyframes onboarding-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ----------------------------------------
+   Utility Classes
+   ---------------------------------------- */
+
+/* Pulse animation for "Explore Now" button */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}

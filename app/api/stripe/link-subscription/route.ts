@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { getSessionFromRequest } from "@/lib/auth-server";
+import {
+  inferTierFromProductId,
+  normalizeTierForPlan,
+} from "@/lib/stripe-plan-config";
 import { getStripe } from "@/lib/stripe-server";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -66,8 +70,8 @@ export async function POST(request: NextRequest) {
             const priceId = subscriptions.data[0].items.data[0]?.price.id;
             if (priceId) {
               const price = await stripe.prices.retrieve(priceId);
-              const weeklyProductId = process.env.STRIPE_WEEKLY_PRODUCT_ID;
-              plan = price.product === weeklyProductId ? "weekly" : "yearly";
+              const inferredTier = inferTierFromProductId(price.product as string);
+              plan = inferredTier ?? "yearly";
             }
           }
         }
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     // Get subscription details
     const subscription = await stripe.subscriptions.retrieve(subscriptionId) as Stripe.Subscription;
-    const subscriptionTier = plan === "weekly" ? "weekly" : "yearly";
+    const subscriptionTier = normalizeTierForPlan(plan);
 
     // Link subscription to user
     const { error } = await supabase
@@ -121,4 +125,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

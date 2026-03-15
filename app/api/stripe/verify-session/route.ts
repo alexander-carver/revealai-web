@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
+import { normalizeTierForPlan } from "@/lib/stripe-plan-config";
 import { getStripe } from "@/lib/stripe-server";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -267,8 +268,7 @@ export async function POST(request: NextRequest) {
 
     // Determine plan from metadata or default
     const plan = session.metadata?.plan || "yearly";
-    // free_trial uses weekly billing, so treat it as weekly tier
-    const tier = (plan === "weekly" || plan === "free_trial") ? "weekly" : "yearly";
+    const tier = normalizeTierForPlan(plan);
 
     console.log("Creating subscription for user:", finalUserId, "tier:", tier);
 
@@ -314,4 +314,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

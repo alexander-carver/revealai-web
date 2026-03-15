@@ -3,6 +3,11 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendPurchaseEvent, sendStartTrialEvent, generateEventId } from "@/lib/meta-capi";
 import { sendCommissionEmail } from "@/lib/email";
+import {
+  inferTierFromProductId,
+  normalizeTierForPlan,
+  resolveCheckoutProductId,
+} from "@/lib/stripe-plan-config";
 import { getStripe } from "@/lib/stripe-server";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -91,8 +96,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (userId) {
-          // free_trial converts to weekly after trial, abandoned_trial also converts to weekly
-          const subscriptionTier = plan === "weekly" || plan === "free_trial" || plan === "abandoned_trial" ? "weekly" : "yearly";
+          const subscriptionTier = normalizeTierForPlan(plan);
           
           // Get subscription details
           const subscriptionId = session.subscription as string;
@@ -191,9 +195,8 @@ export async function POST(request: NextRequest) {
             console.error("CAPI tracking error (non-fatal):", capiErr);
           }
 
-          // Safety net for abandoned_trial: if the subscription uses the old $1.99 product,
-          // schedule the upgrade to $9.99/week immediately. New checkouts use the coupon approach
-          // (so the product is already $9.99), but this catches any old-flow subscriptions.
+          // Safety net for abandoned_trial: if the subscription uses the legacy intro product,
+          // schedule the upgrade to the configured weekly product after the first period.
           if (plan === "abandoned_trial" && subscriptionId) {
             try {
               const sub = await stripe.subscriptions.retrieve(subscriptionId);
@@ -201,9 +204,15 @@ export async function POST(request: NextRequest) {
               const subProductId = lineItem?.price?.product as string;
               const abandonedTrialProductId = process.env.STRIPE_ABANDONED_TRIAL_PRODUCT_ID || "prod_TnGdDqDGvyBlhK";
 
-              // Only upgrade if still on the old $1.99 product (not already using $9.99 via coupon)
+              // Only upgrade if still on the legacy intro product.
               if (subProductId === abandonedTrialProductId && lineItem) {
-                const weeklyProductId = process.env.STRIPE_WEEKLY_PRODUCT_ID || "prod_TexubYU0K47p6u";
+                const weeklyProductId = resolveCheckoutProductId(
+                  "weekly",
+                  session.metadata?.platform === "mobile" ? "mobile" : "web"
+                );
+                if (!weeklyProductId) {
+                  throw new Error("Missing weekly product ID for abandoned trial migration");
+                }
                 const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
                 const weeklyPriceId = weeklyProduct.default_price as string;
 
@@ -231,7 +240,9 @@ export async function POST(request: NextRequest) {
                     ],
                   });
 
-                  console.log(`Created subscription schedule for abandoned_trial ${subscriptionId}: $1.99 → $9.99 after first period`);
+                  console.log(
+                    `Created subscription schedule for abandoned_trial ${subscriptionId}: intro price → weekly price after first period`
+                  );
                 }
               }
             } catch (scheduleError: any) {
@@ -354,7 +365,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Handle upgrade from $1.99 to $9.99 for abandoned_trial subscriptions (legacy only)
+        // Handle upgrade from intro pricing to the configured weekly product (legacy only)
         if (event.type === "invoice.payment_succeeded" && invoiceSubId && 
             (invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create")) {
           try {
@@ -368,7 +379,10 @@ export async function POST(request: NextRequest) {
               const hasUpgraded = subscription.metadata?.upgraded_to_weekly === "true";
               
               if (!hasUpgraded) {
-                const weeklyProductId = process.env.STRIPE_WEEKLY_PRODUCT_ID || "prod_TexubYU0K47p6u";
+                const weeklyProductId = resolveCheckoutProductId("weekly");
+                if (!weeklyProductId) {
+                  throw new Error("Missing weekly product ID for abandoned trial upgrade");
+                }
                 
                 const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
                 const weeklyPriceId = weeklyProduct.default_price as string;
@@ -386,7 +400,9 @@ export async function POST(request: NextRequest) {
                     },
                   });
                   
-                  console.log(`Scheduled upgrade for subscription ${invoiceSubId} from $1.99 to $9.99/week (effective next billing cycle)`);
+                  console.log(
+                    `Scheduled upgrade for subscription ${invoiceSubId} from intro price to weekly price (effective next billing cycle)`
+                  );
                 }
               }
             }
@@ -402,11 +418,15 @@ export async function POST(request: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
         const subscriptionStatus = subscription.status;
+        const currentProductId = subscription.items.data[0]?.price?.product as
+          | string
+          | undefined;
+        const currentTier = inferTierFromProductId(currentProductId) ?? "yearly";
 
         // --- Abandoned trial auto-upgrade ---
-        // Check if this is an active $1.99 abandoned_trial subscription that needs upgrading to $9.99/week.
+        // Check if this is an active legacy intro subscription that needs upgrading to weekly pricing.
         // This fires on every renewal (current_period_end changes), so it catches existing subscribers
-        // who were stuck at $1.99 because the invoice.payment_succeeded webhook wasn't configured.
+        // who were stuck on intro pricing because the invoice.payment_succeeded webhook wasn't configured.
         if (subscriptionStatus === "active" && event.type === "customer.subscription.updated") {
           try {
             const lineItem = subscription.items.data[0];
@@ -416,7 +436,10 @@ export async function POST(request: NextRequest) {
             if (subProductId === abandonedTrialProductId) {
               const hasUpgraded = subscription.metadata?.upgraded_to_weekly === "true";
               if (!hasUpgraded) {
-                const weeklyProductId = process.env.STRIPE_WEEKLY_PRODUCT_ID || "prod_TexubYU0K47p6u";
+                const weeklyProductId = resolveCheckoutProductId("weekly");
+                if (!weeklyProductId) {
+                  throw new Error("Missing weekly product ID for abandoned trial auto-upgrade");
+                }
                 const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
                 const weeklyPriceId = weeklyProduct.default_price as string;
 
@@ -432,7 +455,9 @@ export async function POST(request: NextRequest) {
                       upgraded_to_weekly: "true",
                     },
                   });
-                  console.log(`Auto-upgraded abandoned trial subscription ${subscription.id} from $1.99 to $9.99/week`);
+                  console.log(
+                    `Auto-upgraded abandoned trial subscription ${subscription.id} from intro price to weekly price`
+                  );
                 }
               }
             }
@@ -455,6 +480,7 @@ export async function POST(request: NextRequest) {
               .from("subscriptions")
               .update({
                 stripe_subscription_id: subscription.id,
+                tier: currentTier,
                 status: "active",
                 current_period_end: new Date(
                   (subscription as any).current_period_end * 1000
@@ -480,6 +506,12 @@ export async function POST(request: NextRequest) {
                   .from("subscriptions")
                   .update({
                     stripe_subscription_id: latestActive.id,
+                    tier:
+                      inferTierFromProductId(
+                        latestActive.items.data[0]?.price?.product as
+                          | string
+                          | undefined
+                      ) ?? currentTier,
                     status: "active",
                     current_period_end: new Date(
                       (latestActive as any).current_period_end * 1000
@@ -536,4 +568,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

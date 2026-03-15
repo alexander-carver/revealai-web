@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendInitiateCheckoutEvent, generateEventId } from "@/lib/meta-capi";
+import {
+  introCouponIdForPlatform,
+  resolveCheckoutProductId,
+  type CheckoutPlatform,
+  type CheckoutPlan,
+} from "@/lib/stripe-plan-config";
 import { getStripe } from "@/lib/stripe-server";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -10,9 +16,13 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 export async function POST(request: NextRequest) {
   try {
     const stripe = getStripe();
-    const { plan, userId, email, deviceId, affiliateRef } = await request.json();
+    const { plan, userId, email, deviceId, affiliateRef, platform } =
+      await request.json();
+    const checkoutPlan = plan as CheckoutPlan;
+    const checkoutPlatform: CheckoutPlatform =
+      platform === "mobile" ? "mobile" : "web";
 
-    if (!plan) {
+    if (!checkoutPlan) {
       return NextResponse.json(
         { error: "Missing plan" },
         { status: 400 }
@@ -44,30 +54,18 @@ export async function POST(request: NextRequest) {
     // Detect if we're using test or live mode based on the secret key
     const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_");
     
-    // Define product IDs - HARDCODED to ensure correct products are used
-    // Main paywall products:
-    // - Weekly: prod_Tn7ov8WD9p7Zty ($6.99/week)
-    // - Yearly: prod_Tn7peqRLz4B8Ho ($39.99/year)
-    // - Abandoned Trial: prod_Tn7ov8WD9p7Zty + $5 coupon ($1.99 first week, then $6.99/week)
-    // - Free Trial: prod_Tn7ov8WD9p7Zty with 7-day free trial
-    const productIds: Record<string, string> = {
-      weekly: "prod_Tn7ov8WD9p7Zty", // $6.99/week
-      yearly: "prod_Tn7peqRLz4B8Ho", // $39.99/year - DO NOT CHANGE
-      free_trial: "prod_Tn7ov8WD9p7Zty", // $6.99/week with 7-day free trial
-      // Abandoned trial - $1.99 first week (via $5 coupon), then $6.99/week
-      abandoned_trial: "prod_Tn7ov8WD9p7Zty",
-      // Test plan - use test product ID if set, otherwise use weekly for testing
-      test: process.env.STRIPE_TEST_PRODUCT_ID || "prod_Tn7ov8WD9p7Zty",
-    };
-
-    const productId = productIds[plan as string];
+    const productId = resolveCheckoutProductId(checkoutPlan, checkoutPlatform);
     
     // Log which product ID is being used for debugging
-    console.log(`[Checkout] Plan: ${plan}, Product ID: ${productId}`);
+    console.log(
+      `[Checkout] Platform: ${checkoutPlatform}, Plan: ${checkoutPlan}, Product ID: ${productId}`
+    );
 
     if (!productId) {
       return NextResponse.json(
-        { error: `Invalid plan: ${plan}. STRIPE_${plan.toUpperCase()}_PRODUCT_ID environment variable is required for production plans.` },
+        {
+          error: `Invalid plan: ${plan}. Configure the matching Stripe product ID for the requested platform.`,
+        },
         { status: 400 }
       );
     }
@@ -118,31 +116,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For abandoned_trial: use the $6.99/week product with a one-time $5.00 coupon (72% off)
-    // This makes the first charge $1.99 ($6.99 - $5.00) and all subsequent charges $6.99
+    // For abandoned_trial: use the configured weekly product with a one-time intro coupon.
     let abandonedTrialCouponId: string | undefined;
-    if (plan === "abandoned_trial") {
+    if (checkoutPlan === "abandoned_trial") {
       try {
-        // Use the weekly product ($6.99/week)
-        const weeklyProductId = productIds["weekly"];
+        const weeklyProductId = resolveCheckoutProductId("weekly", checkoutPlatform);
+        if (!weeklyProductId) {
+          throw new Error(`Missing weekly product for ${checkoutPlatform}`);
+        }
         const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
         priceId = weeklyProduct.default_price as string;
         
-        // Create or retrieve the one-time coupon ($5.00 off first invoice only = 72% off)
-        const COUPON_ID = "revealai_abandoned_72";
+        const COUPON_ID = introCouponIdForPlatform(checkoutPlatform);
         try {
           await stripe.coupons.retrieve(COUPON_ID);
         } catch {
           await stripe.coupons.create({
             id: COUPON_ID,
-            amount_off: 500, // $5.00 off ($6.99 - $5 = $1.99 first week)
+            amount_off: 500,
             currency: "usd",
-            duration: "once", // Only applies to the first invoice
-            name: "72% OFF - First Week $1.99",
+            duration: "once",
+            name: "Introductory Offer - First Week $1.99",
           });
         }
         abandonedTrialCouponId = COUPON_ID;
-        console.log(`[Checkout] abandoned_trial: using weekly product with $5.00 coupon (first charge = $1.99)`);
+        console.log(
+          `[Checkout] abandoned_trial: using ${checkoutPlatform} weekly product with intro coupon`
+        );
       } catch (error) {
         console.error("[Checkout] Error setting up abandoned trial coupon:", error);
         priceId = product.default_price as string;
@@ -226,14 +226,15 @@ export async function POST(request: NextRequest) {
       cancel_url: `${request.nextUrl.origin}/?canceled=true`,
       metadata: {
         ...(userId && { userId }),
-        plan,
+        plan: checkoutPlan,
+        platform: checkoutPlatform,
         ...(customerEmail && { email: customerEmail }),
         ...(deviceId && { deviceId }),
         ...(cleanAffiliateRef && { affiliate_ref: cleanAffiliateRef }),
       },
       subscription_data: {
         // Add 7-day free trial for free_trial plan
-        ...(plan === "free_trial" && { trial_period_days: 7 }),
+        ...(checkoutPlan === "free_trial" && { trial_period_days: 7 }),
         metadata: {
           ...(cleanAffiliateRef && { affiliate_ref: cleanAffiliateRef }),
         },
@@ -241,20 +242,27 @@ export async function POST(request: NextRequest) {
     };
 
     // Idempotency key: same user+plan within same minute returns same session (avoids duplicate sessions on double-click)
-    const idempotencyKey = `${userId || deviceId || "anon"}-${plan}-${Math.floor(Date.now() / 60000)}`;
+    const idempotencyKey = `${userId || deviceId || "anon"}-${checkoutPlatform}-${checkoutPlan}-${Math.floor(Date.now() / 60000)}`;
     const session = await stripe.checkout.sessions.create(sessionConfig, {
       idempotencyKey,
     });
 
     // Server-side CAPI: InitiateCheckout (redundant with browser pixel for better match quality)
     try {
-      const value = plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : plan === 'free_trial' ? 0 : 6.99;
+      const value =
+        checkoutPlan === "yearly"
+          ? 39.99
+          : checkoutPlan === "abandoned_trial"
+            ? 1.99
+            : checkoutPlan === "free_trial"
+              ? 0
+              : 6.99;
       await sendInitiateCheckoutEvent({
-        eventId: generateEventId('ic_srv'),
+        eventId: generateEventId("ic_srv"),
         email: customerEmail || undefined,
         value,
-        currency: 'USD',
-        plan: plan as string,
+        currency: "USD",
+        plan: checkoutPlan,
         sourceUrl: request.nextUrl.origin,
         externalId: userId || deviceId,
       });
@@ -271,4 +279,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
