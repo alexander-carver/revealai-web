@@ -28,7 +28,14 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
 import { lookupMockProfileByDetails, emmaSmithProfile, kyleAndersonProfile } from "@/lib/mock-data";
-import { Logo } from "@/components/shared/logo";
+const VIRAL_SOCIAL_LOGOS = [
+  { src: "/sources/source-1.png", alt: "LinkedIn" },
+  { src: "/sources/source-2.png", alt: "Instagram" },
+  { src: "/sources/source-3.png", alt: "Facebook" },
+  { src: "/sources/source-4.png", alt: "Forum" },
+  { src: "/sources/source-5.png", alt: "Dating app" },
+  { src: "/sources/source-6.png", alt: "Snapchat" },
+];
 
 // Parse Perplexity response to extract structured data
 function parsePerplexityResponse(content: string, personName: string) {
@@ -602,9 +609,22 @@ function SearchResultContent() {
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Name and Location */}
         <div className="mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-4 mb-2">
+          <div className="mb-2">
             <div className="flex-1">
-              <h1 className="text-4xl font-bold">{fullName}</h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-4xl font-bold">{fullName}</h1>
+                {isViralMockProfile && (
+                  <div className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                    <span className="text-xl leading-none" aria-label="Attractive rating">
+                      🥵
+                    </span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-black leading-none text-rose-600">8.8</span>
+                      <span className="text-sm font-semibold leading-none text-rose-300">/10</span>
+                    </div>
+                  </div>
+                )}
+              </div>
               {location && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Badge variant="outline" className="text-sm">
@@ -613,38 +633,7 @@ function SearchResultContent() {
                 </div>
               )}
             </div>
-            {isViralMockProfile && (
-              <div className="flex items-center gap-2">
-                <Logo size="sm" showText={true} className="flex-shrink-0" />
-              </div>
-            )}
           </div>
-
-          {/* Viral Score Cards - only for mock demo profiles */}
-          {isViralMockProfile && (
-            <div className="flex flex-wrap gap-3 mt-4">
-              <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-3 shadow-sm animate-badge-pulse">
-                <div className="flex flex-col items-center justify-center rounded-lg bg-red-600 px-3 py-1.5 shadow">
-                  <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Cheater</span>
-                  <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Score</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl md:text-5xl font-black text-red-600 leading-none">91</span>
-                  <span className="text-lg md:text-xl font-bold text-red-400 leading-none">/100</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-xl border border-pink-200 bg-pink-50 px-5 py-3 shadow-sm animate-badge-pulse">
-                <div className="flex flex-col items-center justify-center rounded-lg bg-gradient-to-b from-pink-500 to-rose-600 px-3 py-1.5 shadow">
-                  <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Attractive</span>
-                  <span className="text-white text-xs font-bold uppercase leading-none tracking-wide">Score</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl md:text-5xl font-black text-pink-600 leading-none">8.8</span>
-                  <span className="text-lg md:text-xl font-bold text-pink-400 leading-none">/10</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Image Gallery - Full Width */}
@@ -708,6 +697,33 @@ function SearchResultContent() {
             </div>
           </Card>
         </div>
+
+        {isViralMockProfile && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold tracking-tight text-black">Socials</h2>
+            <div className="mt-4 flex flex-wrap items-center gap-3 sm:gap-4">
+              {VIRAL_SOCIAL_LOGOS.map((logo) => (
+                <div
+                  key={logo.src}
+                  className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition-transform duration-200 hover:-translate-y-0.5"
+                  aria-label={logo.alt}
+                  title={logo.alt}
+                >
+                  <Image
+                    src={logo.src}
+                    alt={logo.alt}
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 object-contain"
+                  />
+                </div>
+              ))}
+              <div className="flex h-14 items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-600 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+                +5 more
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Profile Info Section */}
         <div className="space-y-6 mb-8">
