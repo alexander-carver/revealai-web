@@ -43,7 +43,6 @@ import { trackViewContent } from "@/lib/analytics";
 const modalLoading = () => null; // Modals render nothing when not visible
 const MainPaywallModal = dynamic(() => import("@/components/shared/main-paywall-modal").then((m) => ({ default: m.MainPaywallModal })), { ssr: false, loading: modalLoading });
 const ResultsPaywallModal = dynamic(() => import("@/components/shared/results-paywall-modal").then((m) => ({ default: m.ResultsPaywallModal })), { ssr: false, loading: modalLoading });
-const AbandonedPaywallModal = dynamic(() => import("@/components/shared/abandoned-paywall-modal").then((m) => ({ default: m.AbandonedPaywallModal })), { ssr: false, loading: modalLoading });
 const FreeTrialPaywallModal = dynamic(() => import("@/components/shared/free-trial-paywall-modal").then((m) => ({ default: m.FreeTrialPaywallModal })), { ssr: false, loading: modalLoading });
 const ScrollToTop = dynamic(() => import("@/components/shared/scroll-to-top").then((m) => ({ default: m.ScrollToTop })), { ssr: false });
 const CookieConsent = dynamic(() => import("@/components/shared/cookie-consent").then((m) => ({ default: m.CookieConsent })), { ssr: false });
@@ -84,7 +83,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 function HomeContent() {
   const { user } = useAuth();
-  const { isPro, refreshSubscription, showAbandonedPaywall, showFreeTrialPaywallDirectly } = useSubscription();
+  const { isPro, refreshSubscription, showFreeTrialPaywallDirectly } = useSubscription();
   const searchParams = useSearchParams();
   // TEMPORARILY DISABLED: Onboarding flow
   // const [showOnboarding, setShowOnboarding] = useState(false);
@@ -136,8 +135,10 @@ function HomeContent() {
     
     // If user came back from Stripe with canceled=true and they're not Pro
     if (canceled === "true" && checkoutInitiated === "true" && !isPro) {
-      // Show abandoned paywall
-      showAbandonedPaywall();
+      // Show the annual rescue offer after an abandoned checkout.
+      localStorage.removeItem("revealai_checkout_initiated");
+      localStorage.removeItem("revealai_checkout_timestamp");
+      showFreeTrialPaywallDirectly();
       // Clear the canceled param from URL
       window.history.replaceState({}, "", "/");
     } else if (isPro && checkoutInitiated === "true") {
@@ -145,21 +146,7 @@ function HomeContent() {
       localStorage.removeItem("revealai_checkout_initiated");
       localStorage.removeItem("revealai_checkout_timestamp");
     }
-  }, [searchParams, isPro, showAbandonedPaywall]);
-
-  // Show free trial paywall after 80 seconds for non-pro users
-  useEffect(() => {
-    // Only show if user is not pro and hasn't dismissed the free trial paywall before
-    const hasDismissedFreeTrial = localStorage.getItem("revealai_free_trial_dismissed");
-    
-    if (isPro || hasDismissedFreeTrial === "true") return;
-
-    const timer = setTimeout(() => {
-      showFreeTrialPaywallDirectly();
-    }, 80000); // 80 seconds
-
-    return () => clearTimeout(timer);
-  }, [isPro, showFreeTrialPaywallDirectly]);
+  }, [searchParams, isPro, showFreeTrialPaywallDirectly]);
 
   // TEMPORARILY DISABLED: Handle onboarding completion
   // const handleOnboardingComplete = useCallback(() => {
@@ -274,7 +261,6 @@ function HomeContent() {
       <MainPaywallModal />
       <ResultsPaywallModal />
       {/* Abandoned paywall - shown when user returns from Stripe without completing checkout */}
-      <AbandonedPaywallModal />
       {/* Free trial paywall - shown when user closes abandoned paywall */}
       <FreeTrialPaywallModal />
       {/* Global UI components */}
@@ -581,7 +567,7 @@ function HomeContent() {
               },
               {
                 question: "Do you offer a free trial?",
-                answer: "Yes! New users get free access to try our basic search features. Upgrade to Pro for unlimited searches and advanced features.",
+                answer: "Yes. Our annual plans can include a 3-day free trial, and eligible visitors may also see special annual promotional offers before checkout.",
               },
             ].map((faq, index) => (
               <FAQItem key={index} question={faq.question} answer={faq.answer} />
@@ -717,4 +703,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-

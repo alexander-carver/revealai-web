@@ -8,6 +8,7 @@ import Image from "next/image";
 import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
 import { getDeviceId } from "@/lib/device-id";
 import { getAffiliateRef } from "@/lib/affiliate";
+import { formatUsd, PUBLIC_PRICING } from "@/lib/pricing";
 
 // Benefits with styled text
 const benefits = [
@@ -18,39 +19,11 @@ const benefits = [
   <>Find Unclaimed <span className="font-bold">Money</span> for Free</>,
 ];
 
-const INITIAL_COUNTDOWN_SECONDS = 300; // 5 minutes
-
 export function FreeTrialPaywallModal() {
   const { isFreeTrialPaywallVisible, hideFreeTrialPaywall } = useSubscription();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
-  const [countdown, setCountdown] = useState(INITIAL_COUNTDOWN_SECONDS);
-
-  // Initialize countdown timer when paywall becomes visible
-  useEffect(() => {
-    if (!isFreeTrialPaywallVisible) return;
-
-    // Reset countdown to 5 minutes when paywall appears
-    setCountdown(INITIAL_COUNTDOWN_SECONDS);
-
-    // Update countdown every second
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        const newValue = Math.max(0, prev - 1);
-        return newValue;
-      });
-    }, 1000); // Update every second
-
-    return () => clearInterval(interval);
-  }, [isFreeTrialPaywallVisible]);
-
-  // Format countdown as MM:SS
-  const formatCountdown = (totalSeconds: number) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = Math.floor(totalSeconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
 
   // Show close button instantly
   useEffect(() => {
@@ -65,7 +38,7 @@ export function FreeTrialPaywallModal() {
 
   const handleStartFreeTrial = async () => {
     // Track CTA click
-    trackCTAClick("Free Trial Paywall - Continue");
+    trackCTAClick("Free Trial Paywall - Annual Trial");
     
     setIsLoading(true);
     try {
@@ -132,14 +105,22 @@ export function FreeTrialPaywallModal() {
           
           {/* Card Content */}
           <div className="relative z-10 px-6 sm:px-8 py-8 sm:py-10">
-            {/* Countdown Timer - Large and Prominent at Top */}
+            {/* Promotional headline */}
             <div className="mb-8 flex flex-col items-center">
               <div className="text-center mb-2">
                 <span className="text-red-600 font-bold text-lg sm:text-xl">Limited time offer</span>
               </div>
-              <div className="text-center">
-                <span className="text-red-600 font-mono font-black text-5xl sm:text-6xl tabular-nums tracking-tight">
-                  {formatCountdown(countdown)}
+              <div className="text-center mb-2">
+                <span className="text-red-600 font-black text-5xl sm:text-6xl tracking-tight">
+                  80% OFF
+                </span>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-center">
+                <span className="text-black text-xl font-semibold line-through">
+                  {formatUsd(PUBLIC_PRICING.annualTrialCompareAtPrice)}
+                </span>
+                <span className="text-gray-400 text-base">
+                  ${(PUBLIC_PRICING.annualTrialPrice / 12).toFixed(2)}/mo
                 </span>
               </div>
             </div>
@@ -149,7 +130,9 @@ export function FreeTrialPaywallModal() {
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                 START YOUR <span className="text-red-600">FREE</span> TRIAL
               </h2>
-              <p className="text-gray-500 text-sm">7 days free, then $6.99/week. Cancel anytime.</p>
+              <p className="text-gray-500 text-sm">
+                {PUBLIC_PRICING.freeTrialDays} days free, then {formatUsd(PUBLIC_PRICING.annualTrialPrice)}/year. Cancel anytime.
+              </p>
             </div>
 
             {/* Benefits List */}
@@ -164,16 +147,21 @@ export function FreeTrialPaywallModal() {
               ))}
             </div>
 
-            {/* Plan Selection - 7 days free trial */}
+            {/* Plan Selection */}
             <div className="mb-6">
               <div className="relative w-full p-4 rounded-xl border-2 border-red-500 bg-red-50">
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-bold text-gray-900">WEEKLY ACCESS</div>
-                    <div className="text-gray-500 text-sm">7 days free, then $6.99/week</div>
+                    <div className="font-bold text-gray-900">YEARLY ACCESS</div>
+                    <div className="text-gray-500 text-sm">
+                      {PUBLIC_PRICING.freeTrialDays} days free, then {formatUsd(PUBLIC_PRICING.annualTrialPrice)}/year
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-red-600">FREE<span className="text-sm font-normal text-gray-500"> for 7 days</span></div>
+                    <div className="text-xl font-bold text-red-600">
+                      FREE
+                      <span className="text-sm font-normal text-gray-500"> for {PUBLIC_PRICING.freeTrialDays} days</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -199,7 +187,7 @@ export function FreeTrialPaywallModal() {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  CONTINUE
+                  Start My Free {PUBLIC_PRICING.freeTrialDays}-Day Trial
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}

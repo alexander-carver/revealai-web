@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Logo } from "@/components/shared/logo";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Mail, HelpCircle, MessageSquare } from "lucide-react";
+import { formatUsd, PUBLIC_PRICING } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Support & FAQ | Reveal AI",
@@ -89,12 +90,12 @@ export default function SupportPage() {
 
             <FAQItem 
               question="How do subscriptions work?"
-              answer={<>We offer <strong>Weekly</strong> ($6.99/week) and <strong>Yearly</strong> ($39.99/year) subscription plans. Payments are processed through Stripe and Apple's App Store. Subscriptions automatically renew unless canceled at least 24 hours before the renewal date. You can manage or cancel your subscription anytime in your account settings.</>}
+              answer={<>We offer <strong>Weekly</strong> ({formatUsd(PUBLIC_PRICING.weekly)}/week) and <strong>Yearly</strong> ({formatUsd(PUBLIC_PRICING.yearly)}/year) subscription plans. Some annual offers include a {PUBLIC_PRICING.freeTrialDays}-day free trial or promotional annual pricing such as {formatUsd(PUBLIC_PRICING.annualTrialPrice)}/year. Payments are processed through Stripe and Apple&apos;s App Store. Subscriptions automatically renew unless canceled at least 24 hours before the renewal date. You can manage or cancel your subscription anytime in your account settings.</>}
             />
 
             <FAQItem 
               question="Do you offer a free trial?"
-              answer="Yes, Reveal AI offers a 7-day free trial depending on the subscription plan. Free trials automatically convert into a paid subscription unless canceled before the trial ends."
+              answer={`Yes. Annual offers can include a ${PUBLIC_PRICING.freeTrialDays}-day free trial. Free trials automatically convert into a paid subscription unless canceled before the trial ends.`}
             />
 
             <FAQItem 

@@ -2,7 +2,6 @@
 
 import { Navigation } from "./navigation";
 import { MainPaywallModal } from "./main-paywall-modal";
-import { AbandonedPaywallModal } from "./abandoned-paywall-modal";
 import { cn } from "@/lib/utils";
 import { ScrollToTop } from "@/components/shared/scroll-to-top";
 
@@ -27,10 +26,7 @@ export function AppLayout({ children, className }: AppLayoutProps) {
       </main>
       {/* Main paywall - shown immediately when non-pro users try to search */}
       <MainPaywallModal />
-      {/* Abandoned paywall - shown for transaction abandoned scenarios */}
-      <AbandonedPaywallModal />
       <ScrollToTop />
     </div>
   );
 }
-

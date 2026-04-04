@@ -6,8 +6,10 @@ import { sendCommissionEmail } from "@/lib/email";
 import {
   inferTierFromProductId,
   normalizeTierForPlan,
+  resolveCheckoutPriceId,
   resolveCheckoutProductId,
 } from "@/lib/stripe-plan-config";
+import { getCheckoutValue } from "@/lib/pricing";
 import { getStripe } from "@/lib/stripe-server";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -164,7 +166,7 @@ export async function POST(request: NextRequest) {
 
           // --- Server-side Meta CAPI: Purchase + StartTrial ---
           try {
-            const amount = session.amount_total ? session.amount_total / 100 : (plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : 9.99);
+            const amount = session.amount_total ? session.amount_total / 100 : getCheckoutValue(plan);
             const currency = (session.currency || 'usd').toUpperCase();
             // Deterministic event_id: same as what /api/stripe/session returns to the browser
             const capiEventId = `pur_${session.id.replace('cs_', '').substring(0, 16)}`;
@@ -180,7 +182,7 @@ export async function POST(request: NextRequest) {
               externalId: userId || deviceId,
             });
 
-            if (plan === 'free_trial' || plan === 'abandoned_trial') {
+            if (plan === "yearly" || plan === "free_trial") {
               await sendStartTrialEvent({
                 eventId: generateEventId('st_srv'),
                 email: customerEmail || '',
@@ -206,17 +208,22 @@ export async function POST(request: NextRequest) {
 
               // Only upgrade if still on the legacy intro product.
               if (subProductId === abandonedTrialProductId && lineItem) {
+                const weeklyPriceId = resolveCheckoutPriceId(
+                  "weekly",
+                  session.metadata?.platform === "mobile" ? "mobile" : "web"
+                );
                 const weeklyProductId = resolveCheckoutProductId(
                   "weekly",
                   session.metadata?.platform === "mobile" ? "mobile" : "web"
                 );
-                if (!weeklyProductId) {
+                if (!weeklyPriceId && !weeklyProductId) {
                   throw new Error("Missing weekly product ID for abandoned trial migration");
                 }
-                const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
-                const weeklyPriceId = weeklyProduct.default_price as string;
+                const resolvedWeeklyPriceId = weeklyPriceId
+                  ? weeklyPriceId
+                  : (await stripe.products.retrieve(weeklyProductId!)).default_price as string;
 
-                if (weeklyPriceId) {
+                if (resolvedWeeklyPriceId) {
                   // Use subscription schedule for reliable automatic upgrade after first period
                   const schedule = await stripe.subscriptionSchedules.create({
                     from_subscription: subscriptionId,
@@ -235,7 +242,7 @@ export async function POST(request: NextRequest) {
                         end_date: currentPhase.end_date,
                       },
                       {
-                        items: [{ price: weeklyPriceId, quantity: 1 }],
+                        items: [{ price: resolvedWeeklyPriceId, quantity: 1 }],
                       },
                     ],
                   });
@@ -379,19 +386,21 @@ export async function POST(request: NextRequest) {
               const hasUpgraded = subscription.metadata?.upgraded_to_weekly === "true";
               
               if (!hasUpgraded) {
+                const weeklyPriceId = resolveCheckoutPriceId("weekly");
                 const weeklyProductId = resolveCheckoutProductId("weekly");
-                if (!weeklyProductId) {
+                if (!weeklyPriceId && !weeklyProductId) {
                   throw new Error("Missing weekly product ID for abandoned trial upgrade");
                 }
                 
-                const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
-                const weeklyPriceId = weeklyProduct.default_price as string;
+                const resolvedWeeklyPriceId = weeklyPriceId
+                  ? weeklyPriceId
+                  : (await stripe.products.retrieve(weeklyProductId!)).default_price as string;
                 
-                if (weeklyPriceId) {
+                if (resolvedWeeklyPriceId) {
                   await stripe.subscriptions.update(invoiceSubId, {
                     items: [{
                       id: lineItem.id,
-                      price: weeklyPriceId,
+                      price: resolvedWeeklyPriceId,
                     }],
                     proration_behavior: "none",
                     metadata: {
@@ -436,18 +445,20 @@ export async function POST(request: NextRequest) {
             if (subProductId === abandonedTrialProductId) {
               const hasUpgraded = subscription.metadata?.upgraded_to_weekly === "true";
               if (!hasUpgraded) {
+                const weeklyPriceId = resolveCheckoutPriceId("weekly");
                 const weeklyProductId = resolveCheckoutProductId("weekly");
-                if (!weeklyProductId) {
+                if (!weeklyPriceId && !weeklyProductId) {
                   throw new Error("Missing weekly product ID for abandoned trial auto-upgrade");
                 }
-                const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
-                const weeklyPriceId = weeklyProduct.default_price as string;
+                const resolvedWeeklyPriceId = weeklyPriceId
+                  ? weeklyPriceId
+                  : (await stripe.products.retrieve(weeklyProductId!)).default_price as string;
 
-                if (weeklyPriceId && lineItem) {
+                if (resolvedWeeklyPriceId && lineItem) {
                   await stripe.subscriptions.update(subscription.id, {
                     items: [{
                       id: lineItem.id,
-                      price: weeklyPriceId,
+                      price: resolvedWeeklyPriceId,
                     }],
                     proration_behavior: "none",
                     metadata: {

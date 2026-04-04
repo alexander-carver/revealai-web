@@ -4,10 +4,12 @@ import { createClient } from "@supabase/supabase-js";
 import { sendInitiateCheckoutEvent, generateEventId } from "@/lib/meta-capi";
 import {
   introCouponIdForPlatform,
+  resolveCheckoutPriceId,
   resolveCheckoutProductId,
   type CheckoutPlatform,
   type CheckoutPlan,
 } from "@/lib/stripe-plan-config";
+import { getCheckoutValue, PUBLIC_PRICING } from "@/lib/pricing";
 import { getStripe } from "@/lib/stripe-server";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -54,78 +56,132 @@ export async function POST(request: NextRequest) {
     // Detect if we're using test or live mode based on the secret key
     const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_");
     
-    const productId = resolveCheckoutProductId(checkoutPlan, checkoutPlatform);
+    const configuredPriceId = resolveCheckoutPriceId(checkoutPlan, checkoutPlatform);
+    const configuredProductId = resolveCheckoutProductId(checkoutPlan, checkoutPlatform);
     
     // Log which product ID is being used for debugging
     console.log(
-      `[Checkout] Platform: ${checkoutPlatform}, Plan: ${checkoutPlan}, Product ID: ${productId}`
+      `[Checkout] Platform: ${checkoutPlatform}, Plan: ${checkoutPlan}, Price ID: ${configuredPriceId}, Product ID: ${configuredProductId}`
     );
 
-    if (!productId) {
+    if (!configuredPriceId && !configuredProductId) {
       return NextResponse.json(
         {
-          error: `Invalid plan: ${plan}. Configure the matching Stripe product ID for the requested platform.`,
+          error: `Invalid plan: ${plan}. Configure the matching Stripe product or price ID for the requested platform.`,
         },
         { status: 400 }
       );
     }
     
-    // Fetch the product to get its default price and verify mode match
-    let product: Stripe.Product;
-    try {
-      product = await stripe.products.retrieve(productId);
-      
-      // Verify the product mode matches the key mode
-      const productIsTest = product.livemode === false;
-      
-      if (isTestMode && !productIsTest) {
-        return NextResponse.json(
-          { error: `Product ${productId} is a live mode product, but you're using a test mode key. Please create a test product or use live mode keys.` },
-          { status: 400 }
-        );
-      }
-      
-      if (!isTestMode && productIsTest) {
-        return NextResponse.json(
-          { error: `Product ${productId} is a test mode product, but you're using a live mode key.` },
-          { status: 400 }
-        );
-      }
-    } catch (error: any) {
-      if (error.code === "resource_missing") {
-        const modeHint = isTestMode 
-          ? "Make sure you're using a test mode product ID and test mode keys."
-          : "Make sure you're using a live mode product ID and live mode keys. Check your Stripe Dashboard.";
-        return NextResponse.json(
-          { 
-            error: `Product ${productId} not found in ${isTestMode ? 'test' : 'live'} mode. ${modeHint}`,
-            productId,
-            isTestMode
-          },
-          { status: 400 }
-        );
-      }
-      throw error;
-    }
-    let priceId = product.default_price as string;
+    // Prefer explicit price IDs so pricing changes can be rolled out safely without
+    // depending on a product's default_price setting.
+    let product: Stripe.Product | null = null;
+    let priceId = configuredPriceId;
 
-    if (!priceId) {
-      return NextResponse.json(
-        { error: "Product has no default price" },
-        { status: 400 }
-      );
+    if (configuredPriceId) {
+      try {
+        const price = await stripe.prices.retrieve(configuredPriceId, {
+          expand: ["product"],
+        });
+        const priceIsTest = price.livemode === false;
+
+        if (isTestMode && !priceIsTest) {
+          return NextResponse.json(
+            { error: `Price ${configuredPriceId} is a live mode price, but you're using a test mode key.` },
+            { status: 400 }
+          );
+        }
+
+        if (!isTestMode && priceIsTest) {
+          return NextResponse.json(
+            { error: `Price ${configuredPriceId} is a test mode price, but you're using a live mode key.` },
+            { status: 400 }
+          );
+        }
+
+        if (price.type !== "recurring") {
+          return NextResponse.json(
+            { error: `Price ${configuredPriceId} must be recurring for subscription checkout.` },
+            { status: 400 }
+          );
+        }
+
+      } catch (error: any) {
+        if (error.code === "resource_missing") {
+          const modeHint = isTestMode
+            ? "Make sure you're using a test mode price ID and test mode keys."
+            : "Make sure you're using a live mode price ID and live mode keys. Check your Stripe Dashboard.";
+          return NextResponse.json(
+            {
+              error: `Price ${configuredPriceId} not found in ${isTestMode ? "test" : "live"} mode. ${modeHint}`,
+              priceId: configuredPriceId,
+              isTestMode,
+            },
+            { status: 400 }
+          );
+        }
+        throw error;
+      }
+    } else {
+      try {
+        product = await stripe.products.retrieve(configuredProductId!);
+        
+        const productIsTest = product.livemode === false;
+        
+        if (isTestMode && !productIsTest) {
+          return NextResponse.json(
+            { error: `Product ${configuredProductId} is a live mode product, but you're using a test mode key. Please create a test product or use live mode keys.` },
+            { status: 400 }
+          );
+        }
+        
+        if (!isTestMode && productIsTest) {
+          return NextResponse.json(
+            { error: `Product ${configuredProductId} is a test mode product, but you're using a live mode key.` },
+            { status: 400 }
+          );
+        }
+      } catch (error: any) {
+        if (error.code === "resource_missing") {
+          const modeHint = isTestMode 
+            ? "Make sure you're using a test mode product ID and test mode keys."
+            : "Make sure you're using a live mode product ID and live mode keys. Check your Stripe Dashboard.";
+          return NextResponse.json(
+            { 
+              error: `Product ${configuredProductId} not found in ${isTestMode ? 'test' : 'live'} mode. ${modeHint}`,
+              productId: configuredProductId,
+              isTestMode
+            },
+            { status: 400 }
+          );
+        }
+        throw error;
+      }
+
+      priceId = product.default_price as string;
+
+      if (!priceId) {
+        return NextResponse.json(
+          { error: "Product has no default price" },
+          { status: 400 }
+        );
+      }
     }
 
     // For abandoned_trial: use the configured weekly product with a one-time intro coupon.
     let abandonedTrialCouponId: string | undefined;
     if (checkoutPlan === "abandoned_trial") {
       try {
+        const weeklyPriceId = resolveCheckoutPriceId("weekly", checkoutPlatform);
         const weeklyProductId = resolveCheckoutProductId("weekly", checkoutPlatform);
-        if (!weeklyProductId) {
-          throw new Error(`Missing weekly product for ${checkoutPlatform}`);
+        if (weeklyPriceId) {
+          priceId = weeklyPriceId;
+        } else if (weeklyProductId) {
+          const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
+          priceId = weeklyProduct.default_price as string;
+        } else {
+          throw new Error(`Missing weekly pricing for ${checkoutPlatform}`);
         }
-        const weeklyProduct = await stripe.products.retrieve(weeklyProductId);
-        priceId = weeklyProduct.default_price as string;
         
         const COUPON_ID = introCouponIdForPlatform(checkoutPlatform);
         try {
@@ -145,7 +201,9 @@ export async function POST(request: NextRequest) {
         );
       } catch (error) {
         console.error("[Checkout] Error setting up abandoned trial coupon:", error);
-        priceId = product.default_price as string;
+        if (!priceId && product?.default_price) {
+          priceId = product.default_price as string;
+        }
       }
     }
 
@@ -233,8 +291,10 @@ export async function POST(request: NextRequest) {
         ...(cleanAffiliateRef && { affiliate_ref: cleanAffiliateRef }),
       },
       subscription_data: {
-        // Add 7-day free trial for free_trial plan
-        ...(checkoutPlan === "free_trial" && { trial_period_days: 7 }),
+        // Main yearly and abandoned-checkout annual offer both start with a 3-day free trial.
+        ...((checkoutPlan === "yearly" || checkoutPlan === "free_trial") && {
+          trial_period_days: PUBLIC_PRICING.freeTrialDays,
+        }),
         metadata: {
           ...(cleanAffiliateRef && { affiliate_ref: cleanAffiliateRef }),
         },
@@ -249,18 +309,10 @@ export async function POST(request: NextRequest) {
 
     // Server-side CAPI: InitiateCheckout (redundant with browser pixel for better match quality)
     try {
-      const value =
-        checkoutPlan === "yearly"
-          ? 39.99
-          : checkoutPlan === "abandoned_trial"
-            ? 1.99
-            : checkoutPlan === "free_trial"
-              ? 0
-              : 6.99;
       await sendInitiateCheckoutEvent({
         eventId: generateEventId("ic_srv"),
         email: customerEmail || undefined,
-        value,
+        value: getCheckoutValue(checkoutPlan),
         currency: "USD",
         plan: checkoutPlan,
         sourceUrl: request.nextUrl.origin,

@@ -9,6 +9,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
 import { getDeviceId } from "@/lib/device-id";
 import { getAffiliateRef } from "@/lib/affiliate";
+import { formatUsd, PUBLIC_PRICING } from "@/lib/pricing";
 
 // Benefits with styled text
 const benefits = [
@@ -156,7 +157,7 @@ export function AbandonedPaywallModal() {
                 <div className="flex justify-between items-start">
                   <div className="text-left">
                     <div className="font-bold text-gray-900 text-base mb-0.5">WEEKLY ACCESS</div>
-                    <div className="text-gray-500 text-xs">Then $6.99 per week</div>
+                    <div className="text-gray-500 text-xs">Then {formatUsd(PUBLIC_PRICING.weekly)} per week</div>
                   </div>
                   <div className="text-right">
                     <div className="text-gray-900 font-semibold text-sm">ONLY $1.99</div>
@@ -211,4 +212,3 @@ export function AbandonedPaywallModal() {
     </div>
   );
 }
-

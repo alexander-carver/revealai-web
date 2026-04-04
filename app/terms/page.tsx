@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Logo } from "@/components/shared/logo";
 import Link from "next/link";
+import { formatUsd, PUBLIC_PRICING } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Terms of Service | Reveal AI",
@@ -22,7 +23,7 @@ export default function TermsOfServicePage() {
       {/* Content */}
       <main className="container mx-auto px-4 py-12 max-w-4xl">
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Terms of Service</h1>
-        <p className="text-gray-500 mb-8">Last updated: March 11, 2025</p>
+        <p className="text-gray-500 mb-8">Last updated: April 4, 2026</p>
 
         <div className="prose prose-gray max-w-none">
           <p className="text-gray-600 leading-relaxed mb-8">
@@ -40,9 +41,10 @@ export default function TermsOfServicePage() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Subscriptions & Payments</h2>
             <ul className="list-disc pl-6 space-y-2 text-gray-600">
-              <li>Reveal AI offers <strong>weekly and yearly subscription plans</strong> ($6.99/week and $39.99/year).</li>
+              <li>Reveal AI offers <strong>weekly and yearly subscription plans</strong> ({formatUsd(PUBLIC_PRICING.weekly)}/week and {formatUsd(PUBLIC_PRICING.yearly)}/year).</li>
               <li>Subscriptions are billed through <strong>Stripe</strong> and Apple's App Store and managed via your account settings.</li>
-              <li><strong>Free trials</strong> (if offered) will automatically convert to paid subscriptions unless canceled at least 24 hours before the trial period ends.</li>
+              <li><strong>Annual plans may include a {PUBLIC_PRICING.freeTrialDays}-day free trial</strong>, and eligible users may receive promotional annual pricing such as {formatUsd(PUBLIC_PRICING.annualTrialPrice)}/year.</li>
+              <li><strong>Free trials and promotional offers</strong> automatically convert to paid subscriptions unless canceled at least 24 hours before the trial period ends.</li>
               <li><strong>Refunds and cancellations</strong> are handled according to Stripe and Apple policies. We do not provide separate refunds.</li>
             </ul>
           </section>

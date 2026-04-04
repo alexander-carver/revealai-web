@@ -1,6 +1,8 @@
 // Analytics tracking helper for GA4 and Meta Pixel
 // All Meta Pixel events include an event_id for deduplication with Conversions API (CAPI)
 
+import { getCheckoutValue } from "@/lib/pricing";
+
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
@@ -81,7 +83,7 @@ export function trackCTAClick(buttonName: string) {
  */
 export function trackInitiateCheckout(plan: string = 'free_trial'): string {
   const eventId = generateEventId('ic');
-  const value = plan === 'yearly' ? 39.99 : plan === 'abandoned_trial' ? 1.99 : plan === 'free_trial' ? 0 : 6.99;
+  const value = getCheckoutValue(plan);
 
   trackGA4('begin_checkout', {
     currency: 'USD',

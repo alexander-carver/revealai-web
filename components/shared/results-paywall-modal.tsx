@@ -8,6 +8,7 @@ import Image from "next/image";
 import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
 import { getDeviceId } from "@/lib/device-id";
 import { getAffiliateRef } from "@/lib/affiliate";
+import { formatUsd, PUBLIC_PRICING } from "@/lib/pricing";
 
 const INITIAL_COUNTDOWN_SECONDS = 472; // 7 minutes 52 seconds
 const COUNTDOWN_STORAGE_KEY = "revealai_paywall_countdown";
@@ -96,12 +97,12 @@ export function ResultsPaywallModal() {
 
   const handleStartFreeTrial = async () => {
     // Track CTA click
-    trackCTAClick("Results Paywall - Continue");
+    trackCTAClick("Results Paywall - Yearly Trial");
     
     setIsLoading(true);
     try {
       // Track initiate checkout
-      trackInitiateCheckout("free_trial");
+      trackInitiateCheckout("yearly");
       
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
@@ -109,7 +110,7 @@ export function ResultsPaywallModal() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          plan: "free_trial",
+          plan: "yearly",
           userId: user?.id || undefined,
           email: user?.email || undefined,
           deviceId: getDeviceId(),
@@ -180,7 +181,9 @@ export function ResultsPaywallModal() {
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                 START YOUR <span className="text-red-600">FREE</span> TRIAL
               </h2>
-              <p className="text-gray-500 text-sm">7 days free, then $6.99/week. Cancel anytime.</p>
+              <p className="text-gray-500 text-sm">
+                {PUBLIC_PRICING.freeTrialDays} days free, then {formatUsd(PUBLIC_PRICING.yearly)}/year. Cancel anytime.
+              </p>
             </div>
 
             {/* Benefits List */}
@@ -215,7 +218,7 @@ export function ResultsPaywallModal() {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  CONTINUE
+                  Start My {PUBLIC_PRICING.freeTrialDays}-Day Free Trial
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -240,4 +243,3 @@ export function ResultsPaywallModal() {
     </div>
   );
 }
-

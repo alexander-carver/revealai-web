@@ -8,6 +8,11 @@ import Image from "next/image";
 import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
 import { getDeviceId } from "@/lib/device-id";
 import { getAffiliateRef } from "@/lib/affiliate";
+import {
+  formatUsd,
+  PUBLIC_PRICING,
+  getYearlyWeeklyEquivalent,
+} from "@/lib/pricing";
 
 // Benefits with styled text
 const benefits = [
@@ -19,16 +24,15 @@ const benefits = [
 ];
 
 export function MainPaywallModal() {
-  const { isPaywallVisible, hidePaywall, showAbandonedPaywall } = useSubscription();
+  const { isPaywallVisible, hidePaywall } = useSubscription();
   const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<"weekly" | "yearly">("yearly");
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
 
-  // Only when user closes via X: hide main paywall and show $1.99 paywall
+  // Close the paywall without showing a secondary rescue offer.
   const handleCloseByX = () => {
     hidePaywall();
-    showAbandonedPaywall();
   };
 
   // Show close button instantly
@@ -83,12 +87,18 @@ export function MainPaywallModal() {
   };
 
   // Calculate savings for yearly plan
-  const weeklyPrice = 6.99;
-  const yearlyPrice = 39.99;
-  const weeklyYearlyTotal = weeklyPrice * 52;
-  const savings = weeklyYearlyTotal - yearlyPrice;
-  const savingsPercent = Math.round((savings / weeklyYearlyTotal) * 100);
-  const yearlyWeeklyEquivalent = (yearlyPrice / 52).toFixed(2);
+  const weeklyPrice = PUBLIC_PRICING.weekly;
+  const yearlyPrice = PUBLIC_PRICING.yearly;
+  const yearlyWeeklyEquivalent = getYearlyWeeklyEquivalent().toFixed(2);
+  const ctaLabel =
+    selectedPlan === "yearly"
+      ? `Start My ${PUBLIC_PRICING.freeTrialDays}-Day Free Trial`
+      : "Unlock Results";
+  const yearlyHeader = (
+    <>
+      Start your {PUBLIC_PRICING.freeTrialDays}-day <span className="text-red-600">FREE</span> trial to unlock results.
+    </>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -125,7 +135,7 @@ export function MainPaywallModal() {
             {/* Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                GET <span className="text-red-600">PRO</span> ACCESS
+                {selectedPlan === "yearly" ? yearlyHeader : <>GET <span className="text-red-600">PRO</span> ACCESS</>}
               </h2>
             </div>
 
@@ -141,53 +151,51 @@ export function MainPaywallModal() {
               ))}
             </div>
 
-            {/* Plan Selection - Weekly and Yearly */}
+            {/* Plan Selection - Calm yearly-first layout */}
             <div className="mb-6 space-y-2.5">
-              {/* Yearly Plan */}
               <button
                 onClick={() => setSelectedPlan("yearly")}
-                className={`relative w-full p-[18px] rounded-xl border-2 transition-all ${
+                className={`relative w-full rounded-xl border-2 p-5 transition-all ${
                   selectedPlan === "yearly"
                     ? "border-red-500 bg-red-50"
                     : "border-black bg-white hover:border-gray-700"
                 }`}
               >
-                {/* SAVE Badge - positioned on top right */}
-                {selectedPlan === "yearly" && (
-                  <div className="absolute -top-2.5 right-3">
-                    <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
-                      SAVE {savingsPercent}%
+                <div className="absolute -top-2.5 right-3">
+                  <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
+                    BEST VALUE
+                  </div>
+                </div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="text-left">
+                    <div className="font-bold text-gray-900 text-[17px] mb-0.5">YEARLY ACCESS</div>
+                    <div className="text-gray-500 text-[13px]">
+                      {PUBLIC_PRICING.freeTrialDays} days free, then {formatUsd(yearlyPrice)}/year
                     </div>
                   </div>
-                )}
-                <div className="flex justify-between items-start">
-                  <div className="text-left">
-                    <div className="font-bold text-gray-900 text-base mb-0.5">YEARLY ACCESS</div>
-                    <div className="text-gray-500 text-xs">Just ${yearlyPrice.toFixed(2)} per year</div>
-                  </div>
                   <div className="text-right">
-                    <div className="text-gray-900 font-semibold text-base">${yearlyWeeklyEquivalent}</div>
-                    <div className="text-gray-900 text-sm font-bold">per week</div>
+                    <div className="text-gray-900 font-semibold text-xl">{formatUsd(Number(yearlyWeeklyEquivalent))}</div>
+                    <div className="text-gray-900 text-[13px] font-bold">per week</div>
                   </div>
                 </div>
               </button>
 
-              {/* Weekly Plan */}
               <button
                 onClick={() => setSelectedPlan("weekly")}
-                className={`relative w-full p-[18px] rounded-xl border-2 transition-all ${
+                className={`relative w-full rounded-xl border-2 px-4 py-3 transition-all ${
                   selectedPlan === "weekly"
                     ? "border-red-500 bg-red-50"
                     : "border-black bg-white hover:border-gray-700"
                 }`}
               >
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between gap-4">
                   <div className="text-left">
-                    <div className="font-bold text-gray-900 text-base">WEEKLY ACCESS</div>
+                    <div className="font-bold text-gray-900 text-[15px]">WEEKLY ACCESS</div>
+                    <div className="text-gray-500 text-[12px]">Instant access for {formatUsd(weeklyPrice)}/week</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-gray-900 font-semibold text-base">${weeklyPrice.toFixed(2)}</div>
-                    <div className="text-gray-900 text-sm font-bold">per week</div>
+                    <div className="text-gray-900 font-semibold text-[17px]">{formatUsd(weeklyPrice)}</div>
+                    <div className="text-gray-900 text-[13px] font-bold">per week</div>
                   </div>
                 </div>
               </button>
@@ -213,7 +221,7 @@ export function MainPaywallModal() {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  CONTINUE
+                  {ctaLabel}
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -238,4 +246,3 @@ export function MainPaywallModal() {
     </div>
   );
 }
-

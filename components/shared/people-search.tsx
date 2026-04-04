@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Search,
   User,
@@ -20,6 +21,15 @@ import { MostSearched } from "./most-searched";
 import { trackSearchButtonClick } from "@/lib/analytics";
 import { SearchLoadingScreen } from "./search-loading-screen";
 import { lookupMockProfileByDetails } from "@/lib/mock-data";
+
+const SOCIAL_SOURCE_LOGO_PATHS = [
+  "/sources/source-1.png",
+  "/sources/source-2.png",
+  "/sources/source-3.png",
+  "/sources/source-4.png",
+  "/sources/source-5.png",
+  "/sources/source-6.png",
+];
 
 export function PeopleSearch() {
   const router = useRouter();
@@ -355,11 +365,31 @@ export function PeopleSearch() {
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-xl p-4 mb-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Search className="w-5 h-5 text-blue-500" />
-                      <h3 className="font-semibold text-lg text-gray-900">Find Social Profiles & Online Presence</h3>
+                      <h3 className="font-semibold text-lg text-gray-900">Find Following, Social Profiles & Online Presence</h3>
                     </div>
                     <p className="text-sm text-gray-600">
                       Search across social media platforms, online profiles, and digital footprints.
                     </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      {SOCIAL_SOURCE_LOGO_PATHS.map((logo, index) => (
+                        <div
+                          key={logo}
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 border border-blue-200 flex items-center justify-center overflow-hidden shadow-sm"
+                        >
+                          <Image
+                            src={logo}
+                            alt={`Social source ${index + 1}`}
+                            width={18}
+                            height={18}
+                            className="w-4 h-4 sm:w-[18px] sm:h-[18px] object-contain"
+                            loading="lazy"
+                          />
+                        </div>
+                      ))}
+                      <span className="text-[11px] sm:text-xs text-blue-700 bg-white/80 border border-blue-200 px-2 py-1 rounded-full">
+                        Social, dating apps, forums + more
+                      </span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input
