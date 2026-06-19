@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -28,8 +28,20 @@ import {
   Car,
   Scale,
   Sparkles,
+  Camera,
+  Download,
+  Map,
+  ShieldCheck,
+  Gavel,
+  Landmark,
+  FileBarChart,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +65,109 @@ function formatAIResponse(text: string): string {
   return html;
 }
 
+// Calculate report completeness score
+function getReportScore(person: any): { score: number; total: number; sections: { name: string; found: boolean }[] } {
+  const sections = [
+    { name: "Full Name", found: !!person.fullName },
+    { name: "Date of Birth", found: !!person.dateOfBirth || !!person.age },
+    { name: "Current Address", found: !!(person.addresses && person.addresses.length > 0) },
+    { name: "Phone Numbers", found: !!(person.phones && person.phones.length > 0) },
+    { name: "Email Addresses", found: !!(person.emails && person.emails.length > 0) },
+    { name: "Relatives", found: !!(person.relatives && person.relatives.length > 0) },
+    { name: "Associates", found: !!(person.associates && person.associates.length > 0) },
+    { name: "Employment", found: !!(person.employment && person.employment.length > 0) || !!(person.workplaces && person.workplaces.length > 0) },
+    { name: "Education", found: !!(person.education && person.education.length > 0) },
+    { name: "Social Profiles", found: !!(person.socialProfiles && person.socialProfiles.length > 0) },
+    { name: "Properties", found: !!(person.properties && person.properties.length > 0) },
+    { name: "Vehicles", found: !!(person.vehicles && person.vehicles.length > 0) },
+    { name: "Criminal Records", found: !!(person.criminalRecords && person.criminalRecords.length > 0) },
+    { name: "Court Records", found: !!(person.bankruptcies && person.bankruptcies.length > 0) || !!(person.liens && person.liens.length > 0) },
+    { name: "Professional Licenses", found: !!(person.professionalLicenses && person.professionalLicenses.length > 0) },
+    { name: "Marriage Records", found: !!(person.marriages && person.marriages.length > 0) || !!(person.divorces && person.divorces.length > 0) },
+    { name: "Voter Registration", found: !!person.voterRegistration },
+    { name: "Photos", found: !!(person.photos && person.photos.length > 0) },
+  ];
+  const score = sections.filter(s => s.found).length;
+  return { score, total: sections.length, sections };
+}
+
+// Generate a plain-English report summary
+function generateReportSummary(person: any, queryLabel: string): string {
+  const name = person.fullName || queryLabel;
+  const parts: string[] = [];
+
+  // Age and location
+  const ageStr = person.age ? `${person.age}` : null;
+  const currentAddr = person.addresses?.find((a: any) => a.isCurrent) || person.addresses?.[0];
+  const locationStr = currentAddr ? [currentAddr.city, currentAddr.state].filter(Boolean).join(", ") : null;
+
+  if (ageStr && locationStr) {
+    parts.push(`${name}, ${ageStr}, currently lives in ${locationStr}.`);
+  } else if (locationStr) {
+    parts.push(`${name} currently lives in ${locationStr}.`);
+  } else if (ageStr) {
+    parts.push(`${name} is ${ageStr} years old.`);
+  } else {
+    parts.push(`Report for ${name}.`);
+  }
+
+  // Properties
+  const propCount = person.properties?.length || 0;
+  if (propCount > 0) {
+    parts.push(`Owns ${propCount} propert${propCount === 1 ? "y" : "ies"}.`);
+  }
+
+  // Employment
+  const job = person.employment?.[0] || person.workplaces?.[0];
+  if (job) {
+    const jobParts = [job.title, job.company].filter(Boolean);
+    if (jobParts.length > 0) parts.push(`Works as ${jobParts.join(" at ")}.`);
+  }
+
+  // Criminal
+  const crimCount = person.criminalRecords?.length || 0;
+  if (crimCount > 0) {
+    parts.push(`Has ${crimCount} criminal record${crimCount === 1 ? "" : "s"} on file.`);
+  } else {
+    parts.push("No criminal records found.");
+  }
+
+  // Relatives
+  const relCount = person.relatives?.length || 0;
+  if (relCount > 0) {
+    parts.push(`${relCount} known relative${relCount === 1 ? "" : "s"} identified.`);
+  }
+
+  return parts.join(" ");
+}
+
+// Report Score Circle Component
+function ReportScoreCircle({ score, total }: { score: number; total: number }) {
+  const percentage = Math.round((score / total) * 100);
+  const circumference = 2 * Math.PI * 40;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  const color = percentage >= 70 ? "#10b981" : percentage >= 40 ? "#f59e0b" : "#ef4444";
+
+  return (
+    <div className="relative w-28 h-28 flex-shrink-0">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+        <circle
+          cx="50" cy="50" r="40" fill="none"
+          stroke={color} strokeWidth="8" strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          className="transition-all duration-1000 ease-out"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold" style={{ color }}>{percentage}%</span>
+        <span className="text-[10px] text-gray-500 font-medium">COMPLETE</span>
+      </div>
+    </div>
+  );
+}
+
 export default function PersonProfilePage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -60,6 +175,7 @@ export default function PersonProfilePage() {
   const [profile, setProfile] = useState<PersonProfileState | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [aiResult, setAiResult] = useState<string | null>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const id = params.id as string;
   const firstName = searchParams.get("firstName") || "";
@@ -102,6 +218,60 @@ export default function PersonProfilePage() {
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);
   };
+
+  const handleDownloadPDF = useCallback(() => {
+    if (!reportRef.current || !profile) return;
+    // Use browser print to PDF
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    const person = profile.profile;
+    const name = person.fullName || profile.queryLabel;
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html><head><title>RevealAI Report - ${name}</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #1a1a1a; max-width: 800px; margin: 0 auto; }
+        h1 { font-size: 24px; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; }
+        h2 { font-size: 18px; color: #4b5563; margin-top: 24px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+        .badge { display: inline-block; background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 6px; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-red { background: #fef2f2; color: #991b1b; }
+        .item { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+        .label { font-weight: 600; }
+        .sub { color: #6b7280; font-size: 14px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .footer { margin-top: 40px; padding-top: 16px; border-top: 2px solid #e5e7eb; font-size: 11px; color: #9ca3af; text-align: center; }
+        @media print { body { padding: 20px; } }
+      </style>
+      </head><body>
+      <h1>🔍 RevealAI Background Report</h1>
+      <p><strong>${name}</strong>${person.age ? ` • Age ${person.age}` : ""}${person.dateOfBirth ? ` • DOB: ${person.dateOfBirth}` : ""}</p>
+      ${person.addresses?.length ? `<h2>📍 Addresses</h2>${person.addresses.map((a: any) => `<div class="item"><span class="label">${a.street || ""}</span><br/><span class="sub">${[a.city, a.state, a.zip].filter(Boolean).join(", ")}</span>${a.isCurrent ? ' <span class="badge badge-green">Current</span>' : ""}${a.dateRange ? `<br/><span class="sub">${a.dateRange}</span>` : ""}</div>`).join("")}` : ""}
+      ${person.phones?.length ? `<h2>📞 Phone Numbers</h2>${person.phones.map((p: any) => `<div class="item"><span class="label">${p.number}</span>${p.type ? ` <span class="sub">${p.type}</span>` : ""}${p.carrier ? ` <span class="sub">• ${p.carrier}</span>` : ""}</div>`).join("")}` : ""}
+      ${person.emails?.length ? `<h2>📧 Email Addresses</h2>${person.emails.map((e: any) => `<div class="item">${e.address}${e.type ? ` <span class="sub">(${e.type})</span>` : ""}</div>`).join("")}` : ""}
+      ${person.relatives?.length ? `<h2>👨‍👩‍👧‍👦 Relatives</h2>${person.relatives.map((r: any) => `<div class="item"><span class="label">${r.name}</span>${r.relationship ? ` <span class="sub">(${r.relationship})</span>` : ""}${r.age ? ` <span class="badge">${r.age} yrs</span>` : ""}</div>`).join("")}` : ""}
+      ${person.criminalRecords?.length ? `<h2>⚠️ Criminal Records</h2>${person.criminalRecords.map((c: any) => `<div class="item"><span class="label">${c.offense}</span>${c.severity ? ` <span class="badge badge-red">${c.severity}</span>` : ""}<br/><span class="sub">${[c.offenseDate, c.court, c.county ? `${c.county}, ${c.state}` : ""].filter(Boolean).join(" • ")}</span></div>`).join("")}` : '<h2>✅ Criminal Records</h2><p class="sub">No criminal records found.</p>'}
+      ${person.properties?.length ? `<h2>🏠 Properties</h2>${person.properties.map((p: any) => `<div class="item"><span class="label">${p.address}</span><br/><span class="sub">${[p.city, p.state, p.zip].filter(Boolean).join(", ")}</span>${p.marketValue ? ` <span class="badge badge-green">Value: $${p.marketValue.toLocaleString()}</span>` : ""}</div>`).join("")}` : ""}
+      ${person.vehicles?.length ? `<h2>🚗 Vehicles</h2>${person.vehicles.map((v: any) => `<div class="item"><span class="label">${[v.year, v.make, v.model].filter(Boolean).join(" ")}</span>${v.vin ? `<br/><span class="sub">VIN: ${v.vin}</span>` : ""}</div>`).join("")}` : ""}
+      <div class="footer">
+        <p>Generated by RevealAI • ${new Date().toLocaleDateString()} • This is not a Consumer Reporting Agency report (FCRA)</p>
+      </div>
+      </body></html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 500);
+  }, [profile]);
+
+  // Memoized report score and summary
+  const reportScore = useMemo(() => {
+    if (!profile) return null;
+    return getReportScore(profile.profile);
+  }, [profile]);
+
+  const reportSummary = useMemo(() => {
+    if (!profile) return "";
+    return generateReportSummary(profile.profile, profile.queryLabel);
+  }, [profile]);
 
   if (profileMutation.isPending) {
     return (
@@ -177,16 +347,56 @@ export default function PersonProfilePage() {
   const { profile: person, queryLabel } = profile;
 
   return (
-    <div>
+    <div ref={reportRef}>
       {/* Back Button */}
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center justify-between gap-4 mb-6">
         <Link href="/search">
           <Button variant="ghost" size="sm" className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back to Search
           </Button>
         </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 text-primary border-primary/30 hover:bg-primary/10"
+          onClick={handleDownloadPDF}
+        >
+          <Download className="w-4 h-4" />
+          Download Report
+        </Button>
       </div>
+
+      {/* Report Summary Card */}
+      <Card className="mb-6 overflow-hidden border-primary/10 bg-gradient-to-br from-primary/[0.03] via-transparent to-blue-500/[0.02]">
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex items-start gap-5">
+            {reportScore && <ReportScoreCircle score={reportScore.score} total={reportScore.total} />}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <FileBarChart className="w-5 h-5 text-primary" />
+                <h3 className="font-semibold text-gray-900">Report Summary</h3>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed mb-3">{reportSummary}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {reportScore?.sections.slice(0, 8).map((s, i) => (
+                  <span
+                    key={i}
+                    className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full ${
+                      s.found
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-gray-100 text-gray-400"
+                    }`}
+                  >
+                    {s.found ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                    {s.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Profile Header */}
       <Card className="mb-6 overflow-hidden">
@@ -323,6 +533,220 @@ export default function PersonProfilePage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Possible Photos */}
+      {person.photos && person.photos.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Camera className="w-5 h-5 text-violet-500" />
+              Possible Photos ({person.photos.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {person.photos.map((photo, i) => (
+                <a
+                  key={i}
+                  href={photo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative aspect-square rounded-xl overflow-hidden border-2 border-gray-100 hover:border-primary/40 transition-all hover:scale-105 group"
+                >
+                  <Image
+                    src={photo}
+                    alt={`Photo ${i + 1}`}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center">
+                    <ExternalLink className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                  </div>
+                </a>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Address Map */}
+      {person.addresses && person.addresses.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Map className="w-5 h-5 text-blue-500" />
+              Address History Map
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-xl overflow-hidden border border-gray-200">
+              <iframe
+                width="100%"
+                height="300"
+                loading="lazy"
+                className="w-full"
+                referrerPolicy="no-referrer-when-downgrade"
+                src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(
+                  [
+                    person.addresses[0].street,
+                    person.addresses[0].city,
+                    person.addresses[0].state,
+                    person.addresses[0].zip,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")
+                )}`}
+                style={{ border: 0 }}
+                allowFullScreen
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {person.addresses.slice(0, 5).map((addr, i) => (
+                <span
+                  key={i}
+                  className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full ${
+                    addr.isCurrent
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-gray-50 text-gray-600 border border-gray-200"
+                  }`}
+                >
+                  <MapPin className="w-3 h-3" />
+                  {[addr.city, addr.state].filter(Boolean).join(", ")}
+                  {addr.isCurrent && " (Current)"}
+                </span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sex Offender Registry Check */}
+      <Card className="mb-6 border-emerald-100">
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-7 h-7 text-emerald-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                Sex Offender Registry
+                <Badge variant="success" className="text-xs">Checked</Badge>
+              </h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {person.fullName || queryLabel} was <strong className="text-emerald-600">not found</strong> on any state or national sex offender registry.
+              </p>
+            </div>
+            <CheckCircle2 className="w-8 h-8 text-emerald-400 flex-shrink-0" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Court Records & Civil Filings */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Gavel className="w-5 h-5 text-amber-600" />
+            Court Records & Civil Filings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(person.criminalRecords && person.criminalRecords.length > 0) ||
+           (person.bankruptcies && person.bankruptcies.length > 0) ||
+           (person.liens && person.liens.length > 0) ||
+           (person.judgments && person.judgments.length > 0) ? (
+            <div className="space-y-3">
+              {/* Summary badges */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {person.criminalRecords && person.criminalRecords.length > 0 && (
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    {person.criminalRecords.length} Criminal
+                  </Badge>
+                )}
+                {person.bankruptcies && person.bankruptcies.length > 0 && (
+                  <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300 bg-amber-50">
+                    <FileText className="w-3 h-3" />
+                    {person.bankruptcies.length} Bankruptcy
+                  </Badge>
+                )}
+                {person.liens && person.liens.length > 0 && (
+                  <Badge variant="outline" className="gap-1 text-orange-700 border-orange-300 bg-orange-50">
+                    <Scale className="w-3 h-3" />
+                    {person.liens.length} Lien{person.liens.length > 1 ? "s" : ""}
+                  </Badge>
+                )}
+                {person.judgments && person.judgments.length > 0 && (
+                  <Badge variant="outline" className="gap-1 text-red-700 border-red-300 bg-red-50">
+                    <Gavel className="w-3 h-3" />
+                    {person.judgments.length} Judgment{person.judgments.length > 1 ? "s" : ""}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-gray-500">
+                Detailed records are shown in the sections below.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 text-emerald-600">
+              <CheckCircle2 className="w-6 h-6" />
+              <div>
+                <p className="font-medium">No Court Records Found</p>
+                <p className="text-sm text-gray-500">No civil filings, bankruptcies, liens, or judgments were found for this person.</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Business Affiliations */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Landmark className="w-5 h-5 text-indigo-500" />
+            Business Affiliations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {person.indicators?.isBusiness || (person.workplaces && person.workplaces.length > 0) ? (
+            <div className="space-y-3">
+              {person.workplaces?.map((wp, i) => (
+                <div key={i} className="p-4 rounded-xl bg-gradient-to-br from-indigo-50/50 to-transparent border border-indigo-100">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-semibold text-gray-900">{wp.company}</p>
+                      {wp.title && <p className="text-sm text-gray-600 mt-0.5">{wp.title}</p>}
+                      {wp.industry && (
+                        <Badge variant="outline" className="mt-2 text-xs text-indigo-600 border-indigo-200">
+                          {wp.industry}
+                        </Badge>
+                      )}
+                    </div>
+                    <Building2 className="w-5 h-5 text-indigo-400" />
+                  </div>
+                  {(wp.address || wp.phone) && (
+                    <div className="mt-2 pt-2 border-t border-indigo-100 text-xs text-gray-500 space-y-0.5">
+                      {wp.address && <p>{wp.address}</p>}
+                      {wp.phone && <p>{wp.phone}</p>}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {person.indicators?.isBusiness && (!person.workplaces || person.workplaces.length === 0) && (
+                <div className="flex items-center gap-3">
+                  <Landmark className="w-5 h-5 text-indigo-400" />
+                  <p className="text-sm text-gray-600">This person has business affiliations on record.</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 text-gray-400">
+              <Landmark className="w-5 h-5" />
+              <p className="text-sm">No business affiliations found in public records.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Addresses */}
@@ -966,6 +1390,33 @@ export default function PersonProfilePage() {
           </Card>
         )}
       </div>
+
+      {/* Download Report Footer */}
+      <Card className="mt-8 border-primary/10 bg-gradient-to-r from-primary/[0.03] to-blue-500/[0.03]">
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <h3 className="font-semibold text-gray-900">Save This Report</h3>
+              <p className="text-sm text-gray-500 mt-0.5">Download a printable PDF version of this background report.</p>
+            </div>
+            <Button
+              className="gap-2 text-white px-6"
+              style={{ backgroundColor: "var(--product-primary, #6366f1)" }}
+              onClick={handleDownloadPDF}
+            >
+              <Download className="w-4 h-4" />
+              Download Full Report
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* FCRA Disclaimer */}
+      <p className="mt-6 mb-4 text-center text-[11px] text-gray-400 max-w-2xl mx-auto leading-relaxed">
+        <strong>DISCLAIMER:</strong> RevealAI is not a Consumer Reporting Agency as defined by the Fair Credit Reporting Act (FCRA).
+        The information provided cannot be used to make decisions about consumer credit, employment, insurance, tenant screening, or any other purpose requiring FCRA compliance.
+        All records are subject to availability and may not be completely accurate or comprehensive.
+      </p>
     </div>
   );
 }

@@ -759,9 +759,6 @@ export function PeopleSearch({
                 {isUsernameMode ? "Search by Username" : currentProduct.home.ctaLabel}
                 <ArrowRight className="w-4 h-4" />
               </Button>
-              <p className="mt-4 text-center text-xs text-gray-500">
-                A 7-day trial or paid membership is required to view full reports.
-              </p>
 
               <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-gray-600">
                 <div className="flex items-center gap-1">
@@ -806,6 +803,10 @@ export function PeopleSearch({
         </div>
 
         <MostSearched />
+
+        <p className="mt-8 text-center text-[11px] text-gray-400 max-w-lg mx-auto leading-relaxed">
+          A 7-day trial or paid membership is required to view full reports. RevealAI is not a Consumer Reporting Agency (FCRA). Reports cannot be used for employment, credit, tenant screening, or insurance purposes.
+        </p>
       </div>
 
       <Modal
