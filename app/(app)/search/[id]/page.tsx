@@ -587,7 +587,7 @@ export default function PersonProfilePage() {
                 loading="lazy"
                 className="w-full"
                 referrerPolicy="no-referrer-when-downgrade"
-                src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(
+                src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&q=${encodeURIComponent(
                   [
                     person.addresses[0].street,
                     person.addresses[0].city,
