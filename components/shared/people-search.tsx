@@ -8,6 +8,7 @@ import {
   Car,
   ChevronDown,
   FileText,
+  Lock,
   MapPin,
   Phone,
   Search,
@@ -28,7 +29,8 @@ import {
 import { useSubscription } from "@/hooks/use-subscription";
 import { MostSearched } from "./most-searched";
 import { trackSearchButtonClick } from "@/lib/analytics";
-import { SearchLoadingScreen } from "./search-loading-screen";
+import { SearchLoadingScreen, type QuestionAnswers } from "./search-loading-screen";
+import { EmailCaptureModal } from "./email-capture-modal";
 import { lookupMockProfileByDetails } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { triggerHapticFeedback } from "@/lib/haptics";
@@ -97,6 +99,8 @@ export function PeopleSearch({
   const [socialSearchMode, setSocialSearchMode] =
     useState<SocialSearchMode>(initialSocialSearchMode);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  const [showEmailCapture, setShowEmailCapture] = useState(false);
+  const [capturedAnswers, setCapturedAnswers] = useState<QuestionAnswers>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingProduct, setLoadingProduct] = useState<SearchProductId>("people");
   const [isProductMenuOpen, setIsProductMenuOpen] = useState(false);
@@ -182,13 +186,16 @@ export function PeopleSearch({
       setSearchQuery(query);
       setLoadingProduct(productId);
       setShowLoadingScreen(true);
-
-      window.setTimeout(() => {
-        showFreeTrialPaywall(productId);
-      }, 8000);
     },
-    [showFreeTrialPaywall]
+    []
   );
+
+  const handleEmailCaptured = useCallback((email: string) => {
+    // Optionally save the email here in the future
+    console.log("Captured email:", email);
+    setShowEmailCapture(false);
+    showFreeTrialPaywall(loadingProduct);
+  }, [showFreeTrialPaywall, loadingProduct]);
 
   const executeSearch = useCallback(
     (search: PendingSearch) => {
@@ -431,13 +438,27 @@ export function PeopleSearch({
 
   if (showLoadingScreen) {
     return (
-      <SearchLoadingScreen
-        isVisible={showLoadingScreen}
-        searchQuery={searchQuery}
-        productId={loadingProduct}
-        onComplete={() => {}}
-        onCancel={() => setShowLoadingScreen(false)}
-      />
+      <>
+        <SearchLoadingScreen
+          isVisible={showLoadingScreen}
+          searchQuery={searchQuery}
+          productId={loadingProduct}
+          onComplete={(answers) => {
+            setCapturedAnswers(answers);
+            setShowEmailCapture(true);
+          }}
+          onCancel={() => {
+            setShowLoadingScreen(false);
+            setShowEmailCapture(false);
+          }}
+        />
+        <EmailCaptureModal
+          isOpen={showEmailCapture}
+          onContinue={handleEmailCaptured}
+          searchQuery={searchQuery}
+          answers={capturedAnswers}
+        />
+      </>
     );
   }
 
@@ -775,6 +796,11 @@ export function PeopleSearch({
             </div>
           </CardContent>
         </Card>
+
+        <div className="mx-auto mt-4 max-w-md flex items-center justify-center gap-2 rounded-full border border-green-100 bg-green-50/50 py-2 px-4 text-sm font-medium text-green-800 shadow-sm">
+          <Lock className="h-4 w-4 text-green-600" />
+          <span>100% Confidential — They won't be notified.</span>
+        </div>
 
         <MostSearched />
       </div>

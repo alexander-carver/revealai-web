@@ -120,14 +120,14 @@ export function AbandonedPaywallModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2.5 sm:p-4"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/80 pt-10 sm:pt-16 animate-fade-in backdrop-blur-sm"
       style={paywallThemeStyle}
     >
       {/* Paywall Card */}
-      <div className="relative z-10 w-full max-w-[420px] sm:max-w-[460px] max-[420px]:scale-[0.96] max-[420px]:transform-gpu">
-        <div className="relative max-h-[96dvh] overflow-hidden rounded-[24px] border border-gray-100 shadow-2xl sm:max-h-[90vh] sm:rounded-2xl">
+      <div className="relative z-10 w-full max-w-[600px] h-full animate-slide-up">
+        <div className="relative h-full overflow-hidden rounded-t-[32px] sm:rounded-t-[40px] border border-gray-100 shadow-2xl flex flex-col">
           {/* Card Background Image */}
-          <div className="absolute inset-0">
+          <div className="absolute inset-0 pointer-events-none">
             <Image
               src="/paywall_image_reveal2.png"
               alt=""
@@ -158,8 +158,8 @@ export function AbandonedPaywallModal() {
           </button>
           
           {/* Card Content */}
-          <div className="relative z-10 px-4 pb-3 pt-4 min-[390px]:px-5 min-[390px]:pb-4 min-[390px]:pt-5 sm:px-8 sm:py-10">
-            {/* Header */}
+          <div className="relative z-10 px-4 pb-3 pt-4 min-[390px]:px-5 min-[390px]:pb-4 min-[390px]:pt-5 sm:px-8 sm:py-10 flex-1 overflow-y-auto">
+            {/* Abandoned Header */}
             <div className="mb-4 text-center sm:mb-6">
               <p
                 className="text-[12px] font-semibold uppercase tracking-[0.12em] sm:text-[13px]"

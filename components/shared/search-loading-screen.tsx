@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Check, Lock, Star, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   getProductThemeStyle,
   getSearchProduct,
@@ -37,10 +39,38 @@ const SOURCE_LOGO_PATHS = [
   "/sources/source-6.png",
 ];
 
+
+const INTERACTIVE_QUESTIONS = [
+  {
+    title: "Do you want Social Media Profiles to pull up on this Report?",
+    type: "yesno",
+  },
+  {
+    title: "Do you want Friends & Relatives to pull up on this Report?",
+    type: "yesno",
+  },
+  {
+    title: "Do you want to enter a Vehicle Plate Number on this Report?",
+    type: "yesno",
+    needsInputOnYes: "Enter vehicle plate number...",
+    id: "plateNumber",
+  },
+  {
+    title: "Is there any more information we might need to know? (100% confidential)",
+    type: "text",
+    id: "additionalInfo",
+  },
+];
+
+export interface QuestionAnswers {
+  plateNumber?: string;
+  additionalInfo?: string;
+}
+
 interface SearchLoadingScreenProps {
   isVisible: boolean;
   searchQuery: string;
-  onComplete: () => void;
+  onComplete: (answers: QuestionAnswers) => void;
   onCancel: () => void;
   productId?: SearchProductId;
   showLongSearchNote?: boolean;
@@ -49,9 +79,9 @@ interface SearchLoadingScreenProps {
 export function SearchLoadingScreen({
   isVisible,
   searchQuery,
+  productId = "people",
   onComplete,
   onCancel,
-  productId = "people",
   showLongSearchNote = false,
 }: SearchLoadingScreenProps) {
   const product = getSearchProduct(productId);
@@ -59,13 +89,20 @@ export function SearchLoadingScreen({
   const testimonials = product.loading.testimonials;
   const productThemeStyle = getProductThemeStyle(productId);
 
-  // NOTE: Paywall is now handled by the parent component (people-search.tsx)
-  // This loading screen just shows the animation
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [currentCenterAvatar, setCurrentCenterAvatar] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
+
+  // Question State
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [showQuestion, setShowQuestion] = useState(false);
+  const [showFollowUpInput, setShowFollowUpInput] = useState(false);
+  const [textAnswer, setTextAnswer] = useState("");
+  const [answers, setAnswers] = useState<QuestionAnswers>({});
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [questionsFinishedTime, setQuestionsFinishedTime] = useState<number | null>(null);
 
   // Reset state when visibility changes
   useEffect(() => {
@@ -74,6 +111,13 @@ export function SearchLoadingScreen({
       setProgress(0);
       setCurrentTestimonial(0);
       setCurrentCenterAvatar(0);
+      setQuestionIndex(0);
+      setShowQuestion(false);
+      setShowFollowUpInput(false);
+      setIsCompleted(false);
+      setTextAnswer("");
+      setAnswers({});
+      setQuestionsFinishedTime(null);
       setStartTime(Date.now());
     } else {
       setStartTime(null);
@@ -81,31 +125,24 @@ export function SearchLoadingScreen({
   }, [isVisible]);
 
   // Main progress timer (12 seconds total for first 4 steps)
-  // Custom easing to slow down at 3s and 9s
   useEffect(() => {
-    if (!isVisible || !startTime) return;
+    if (!isVisible || !startTime || isCompleted) return;
 
-    const totalDuration = 12000; // 12 seconds
-    const interval = 50; // Update every 50ms for smooth animation
+    const totalDuration = 12000;
+    const interval = 50;
 
     const timer = setInterval(() => {
       const elapsed = Date.now() - startTime;
       
-      // Custom progress calculation with slowdowns at 3s and 9s
       let newProgress = 0;
       if (elapsed < 3000) {
-        // 0-3s: Fast progress to 25%
         newProgress = (elapsed / 3000) * 25;
       } else if (elapsed < 6000) {
-        // 3-6s: Normal progress from 25% to 50%
         newProgress = 25 + ((elapsed - 3000) / 3000) * 25;
       } else if (elapsed < 9000) {
-        // 6-9s: Normal progress from 50% to 75%
         newProgress = 50 + ((elapsed - 6000) / 3000) * 25;
       } else if (elapsed < 12000) {
-        // 9-12s: Slow progress from 75% to 100%
         const t = (elapsed - 9000) / 3000;
-        // Ease out curve for the final stretch
         newProgress = 75 + (Math.pow(t, 0.5) * 25);
       } else {
         newProgress = 100;
@@ -113,24 +150,64 @@ export function SearchLoadingScreen({
       
       setProgress(Math.min(newProgress, 100));
 
-      // Update current step based on elapsed time
       const newStep = progressSteps.findIndex(
         (step) => elapsed < step.completionTime
       );
       if (newStep !== -1) {
         setCurrentStep(newStep);
       } else {
-        // All timed steps completed, we're on step 5 (index 4)
         setCurrentStep(4);
       }
 
-      // At 12 seconds, animation is complete
-      // NOTE: Paywall logic is handled by parent component (people-search.tsx)
-      // This just keeps showing the loading animation indefinitely for non-Pro users
+      // Check if we should show a question
+      if (questionIndex === 0 && elapsed > 2000 && !showQuestion) {
+        setShowQuestion(true);
+      }
+
+      // Check completion condition
+      // Must reach 100% AND questions must be finished for at least 5 seconds
+      if (newProgress >= 100 && questionsFinishedTime && elapsed > questionsFinishedTime + 5000) {
+        setIsCompleted(true);
+        onComplete(answers);
+      }
+
     }, interval);
 
     return () => clearInterval(timer);
-  }, [isVisible, startTime, progressSteps]);
+  }, [isVisible, startTime, progressSteps, questionIndex, showQuestion, isCompleted, questionsFinishedTime, answers, onComplete]);
+
+  const proceedToNextQuestion = (currentAnswers: QuestionAnswers) => {
+    setShowQuestion(false);
+    setShowFollowUpInput(false);
+    setTextAnswer("");
+    const nextIndex = questionIndex + 1;
+    setQuestionIndex(nextIndex);
+    
+    // Schedule next question slightly later
+    if (nextIndex < INTERACTIVE_QUESTIONS.length) {
+      setTimeout(() => setShowQuestion(true), 1500);
+    } else {
+      // Questions finished! Mark the time so we wait 5 seconds before completing
+      setQuestionsFinishedTime(Date.now() - (startTime || 0));
+    }
+  };
+
+  const handleAnswerQuestion = (yesClicked?: boolean) => {
+    const currentQ = INTERACTIVE_QUESTIONS[questionIndex];
+
+    if (currentQ.type === "yesno" && currentQ.needsInputOnYes && yesClicked) {
+      setShowFollowUpInput(true);
+      return;
+    }
+
+    let newAnswers = { ...answers };
+    if (currentQ.id && textAnswer.trim()) {
+      newAnswers[currentQ.id as keyof QuestionAnswers] = textAnswer.trim();
+    }
+    setAnswers(newAnswers);
+
+    proceedToNextQuestion(newAnswers);
+  };
 
   // Testimonial rotation timer (every 10 seconds)
   useEffect(() => {
@@ -495,6 +572,83 @@ export function SearchLoadingScreen({
           />
         ))}
       </div>
+      {/* Question Overlay Modal */}
+      {showQuestion && questionIndex < INTERACTIVE_QUESTIONS.length && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 px-4 animate-fade-in backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-sm shadow-2xl animate-scale-in border" style={{ borderColor: productThemeStyle["--product-soft-border"] as string }}>
+            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-6 text-center leading-snug">
+              {INTERACTIVE_QUESTIONS[questionIndex].title}
+            </h3>
+
+            {INTERACTIVE_QUESTIONS[questionIndex].type === "yesno" && !showFollowUpInput ? (
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => handleAnswerQuestion(false)}
+                  className="flex-1 h-12 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold"
+                >
+                  No
+                </Button>
+                <Button
+                  onClick={() => handleAnswerQuestion(true)}
+                  className="flex-1 h-12 text-white font-semibold shadow-md"
+                  style={{ backgroundColor: "var(--product-primary)" }}
+                >
+                  Yes
+                </Button>
+              </div>
+            ) : showFollowUpInput ? (
+              <div className="flex flex-col gap-4">
+                <Input
+                  className="w-full rounded-xl border-gray-200 p-3 h-12 text-sm focus:border-green-500 focus:ring-green-500"
+                  placeholder={INTERACTIVE_QUESTIONS[questionIndex].needsInputOnYes}
+                  value={textAnswer}
+                  onChange={(e) => setTextAnswer(e.target.value)}
+                  autoFocus
+                />
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => handleAnswerQuestion()}
+                    className="flex-1 h-12 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold"
+                  >
+                    Skip
+                  </Button>
+                  <Button
+                    onClick={() => handleAnswerQuestion()}
+                    className="flex-1 h-12 text-white font-semibold shadow-md"
+                    style={{ backgroundColor: "var(--product-primary)" }}
+                  >
+                    Submit
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <textarea
+                  className="w-full rounded-xl border-gray-200 p-3 text-sm focus:border-green-500 focus:ring-green-500 min-h-[80px]"
+                  placeholder="Additional details..."
+                  value={textAnswer}
+                  onChange={(e) => setTextAnswer(e.target.value)}
+                />
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => handleAnswerQuestion()}
+                    className="flex-1 h-12 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold"
+                  >
+                    Skip
+                  </Button>
+                  <Button
+                    onClick={() => handleAnswerQuestion()}
+                    className="flex-1 h-12 text-white font-semibold shadow-md"
+                    style={{ backgroundColor: "var(--product-primary)" }}
+                  >
+                    Submit
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
