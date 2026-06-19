@@ -648,7 +648,16 @@ export function SearchLoadingScreen({
             )}
           </div>
         </div>
+        </div>
       )}
+
+      {/* FCRA Disclaimer at the bottom */}
+      <div className="absolute bottom-4 left-0 right-0 px-6 text-center z-10 pointer-events-none">
+        <p className="text-[10px] sm:text-xs text-gray-400/80 leading-tight max-w-3xl mx-auto">
+          <strong>DISCLAIMER:</strong> RevealAI is not a Consumer Reporting Agency as defined by the Fair Credit Reporting Act (FCRA). 
+          This report cannot be used to make decisions about consumer credit, employment, insurance, or tenant screening.
+        </p>
+      </div>
     </div>
   );
 }

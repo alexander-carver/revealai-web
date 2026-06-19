@@ -759,6 +759,9 @@ export function PeopleSearch({
                 {isUsernameMode ? "Search by Username" : currentProduct.home.ctaLabel}
                 <ArrowRight className="w-4 h-4" />
               </Button>
+              <p className="mt-4 text-center text-xs text-gray-500">
+                A 7-day trial or paid membership is required to view full reports.
+              </p>
 
               <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-gray-600">
                 <div className="flex items-center gap-1">
