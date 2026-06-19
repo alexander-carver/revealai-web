@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { getServerStripeSecretKey } from "@/lib/stripe-env";
 
 let stripeInstance: Stripe | null = null;
 
@@ -7,7 +8,7 @@ export function getStripe(): Stripe {
     return stripeInstance;
   }
 
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const secretKey = getServerStripeSecretKey();
   if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY is not configured");
   }

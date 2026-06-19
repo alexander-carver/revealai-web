@@ -4,21 +4,125 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Loader2, AlertCircle, RefreshCw } from "lucide-react";
-import { Logo } from "@/components/shared/logo";
-import { trackPurchase, identifyUser } from "@/lib/analytics";
+import { Check, Loader2, AlertCircle } from "lucide-react";
+import { identifyUser, trackPurchase } from "@/lib/analytics";
+import { useAuth } from "@/hooks/use-auth";
+import { getDeviceId } from "@/lib/device-id";
+import { getBillingCustomerEmail } from "@/lib/customer-email";
+import { supabase } from "@/lib/supabase/client";
+import {
+  getTrackedCheckoutPlan,
+  getTrackedCheckoutValue,
+  getWhopPurchaseEventId,
+} from "@/lib/whop-tracking";
 
 function CheckoutSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const sessionId = searchParams.get("session_id");
   const alreadySubscribed = searchParams.get("already_subscribed");
+  const provider = searchParams.get("provider") || "stripe";
+  const plan = searchParams.get("plan");
+  const whopPaymentId =
+    searchParams.get("payment_id") || searchParams.get("receipt_id");
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [accountSetupEmailSent, setAccountSetupEmailSent] = useState(false);
   const hasVerified = useRef(false);
+  const hasSentAccountSetupEmail = useRef(false);
+
+  const wait = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+  const trackWhopConversion = ({
+    membershipId,
+    trackedPlan,
+  }: {
+    membershipId?: string | null;
+    trackedPlan: string;
+  }) => {
+    if (!membershipId) return;
+
+    const trackedValue = getTrackedCheckoutValue(trackedPlan);
+    const purchaseStorageKey = `revealai_whop_purchase_${membershipId}`;
+
+    try {
+      if (!localStorage.getItem(purchaseStorageKey)) {
+        trackPurchase({
+          value: trackedValue,
+          currency: "USD",
+          transaction_id: membershipId,
+          plan: trackedPlan,
+          eventId: getWhopPurchaseEventId(membershipId),
+          sendMetaPixel: false,
+        });
+        localStorage.setItem(purchaseStorageKey, new Date().toISOString());
+      }
+    } catch (analyticsError) {
+      console.log("Whop analytics tracking failed, continuing anyway", analyticsError);
+    }
+  };
+
+  const activateWhopSubscription = async () => {
+    setStatus("loading");
+    setErrorMessage(null);
+
+    const trackedPlan = getTrackedCheckoutPlan(plan);
+
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const response = await fetch("/api/checkout/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider,
+          paymentId: whopPaymentId,
+          receiptId: searchParams.get("receipt_id") || undefined,
+          userId: user?.id || undefined,
+          email: user?.email || undefined,
+          deviceId: getDeviceId(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result?.success) {
+        localStorage.removeItem("revealai_checkout_initiated");
+        localStorage.removeItem("revealai_checkout_timestamp");
+        trackWhopConversion({
+          membershipId:
+            result.membershipId ||
+            result.subscription?.whop_membership_id ||
+            null,
+          trackedPlan,
+        });
+        setEmail(result.email || user?.email || null);
+        if (result.email || user?.email) {
+          identifyUser(result.email || user?.email || undefined, user?.id);
+        }
+        setStatus("success");
+        setTimeout(() => {
+          router.push("/?pro=true");
+        }, 2000);
+        return;
+      }
+
+      await wait(2000);
+    }
+
+    setStatus("error");
+    setErrorMessage(
+      "Your payment went through, but access is still syncing. Refresh in a moment if it doesn't unlock automatically."
+    );
+  };
 
   const activateSubscription = async () => {
+    if (provider === "whop") {
+      await activateWhopSubscription();
+      return;
+    }
+
     // If user already had an active subscription, show success and redirect
     if (alreadySubscribed === "true") {
       console.log("User already has an active subscription, redirecting...");
@@ -66,6 +170,7 @@ function CheckoutSuccessContent() {
               transaction_id: sessionData.transaction_id,
               plan: sessionData.plan,
               eventId: sessionData.event_id,
+              sendMetaPixel: false,
             });
           }
         } catch (e) {
@@ -97,7 +202,38 @@ function CheckoutSuccessContent() {
     if (hasVerified.current) return;
     hasVerified.current = true;
     activateSubscription();
-  }, [sessionId]);
+  }, [sessionId, provider, user?.id, user?.email]);
+
+  useEffect(() => {
+    if (status !== "success" || hasSentAccountSetupEmail.current) {
+      return;
+    }
+
+    const billingEmail = getBillingCustomerEmail(email);
+    const currentUserBillingEmail = getBillingCustomerEmail(user?.email);
+
+    if (!billingEmail || currentUserBillingEmail === billingEmail) {
+      return;
+    }
+
+    hasSentAccountSetupEmail.current = true;
+
+    supabase.auth
+      .resetPasswordForEmail(billingEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      .then(({ error }) => {
+        if (error) {
+          console.error("Failed to send account setup email:", error);
+          return;
+        }
+
+        setAccountSetupEmailSent(true);
+      })
+      .catch((resetError) => {
+        console.error("Failed to send account setup email:", resetError);
+      });
+  }, [status, email, user?.email]);
 
   // Loading state
   if (status === "loading") {
@@ -131,7 +267,12 @@ function CheckoutSuccessContent() {
             </p>
             {email && (
               <p className="text-sm text-muted-foreground mb-6">
-                Account created for: <strong>{email}</strong>
+                Access linked to: <strong>{email}</strong>
+              </p>
+            )}
+            {accountSetupEmailSent && email && (
+              <p className="text-sm text-muted-foreground mb-4">
+                We also sent a secure password setup email to <strong>{email}</strong>.
               </p>
             )}
             <p className="text-sm text-muted-foreground">
@@ -156,14 +297,16 @@ function CheckoutSuccessContent() {
             {errorMessage || "We couldn't activate your subscription."}
           </p>
           <p className="text-sm text-muted-foreground mb-6">
-            Don't worry - your payment was successful. Just click below to try again.
+            Your payment may have succeeded, but access has not finished syncing yet.
           </p>
           <div className="space-y-3">
-            <Button 
-              onClick={() => router.push("/")}
+            <Button
+              onClick={() =>
+                provider === "whop" ? activateWhopSubscription() : router.push("/")
+              }
               className="w-full"
             >
-              Return to Homepage
+              {provider === "whop" ? "Retry Access Sync" : "Return to Homepage"}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-4">

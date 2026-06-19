@@ -4,12 +4,14 @@ export const PUBLIC_PRICING = {
   freeTrialDays: 3,
   annualTrialPrice: 19.99,
   annualTrialCompareAtPrice: 29.99,
-  abandonedTrialIntro: 1.99,
+  abandonedTrialIntro: 19.99,
+  abandonedYearlyCompareAtPrice: 99.95,
 } as const;
 
 export type CheckoutValuePlan =
   | "weekly"
   | "yearly"
+  | "annual_offer"
   | "free_trial"
   | "abandoned_trial"
   | "test"
@@ -23,6 +25,8 @@ export function getCheckoutValue(plan: CheckoutValuePlan): number {
   switch (plan) {
     case "yearly":
       return PUBLIC_PRICING.yearly;
+    case "annual_offer":
+      return PUBLIC_PRICING.annualTrialPrice;
     case "abandoned_trial":
       return PUBLIC_PRICING.abandonedTrialIntro;
     case "free_trial":

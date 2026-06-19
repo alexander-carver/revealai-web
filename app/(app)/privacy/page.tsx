@@ -67,7 +67,7 @@ export default function PrivacyPage() {
                 <Button 
                   className="gap-2 bg-rose-600 hover:bg-rose-700"
                   size="lg"
-                  onClick={showFreeTrialPaywall}
+                  onClick={() => showFreeTrialPaywall()}
                 >
                   <Eye className="w-4 h-4" />
                   Run Full Privacy Scan
@@ -220,4 +220,3 @@ function DataBrokerRow({ broker }: { broker: DataBroker }) {
     </div>
   );
 }
-

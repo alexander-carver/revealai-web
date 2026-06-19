@@ -34,6 +34,8 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
       />
       {/* Content */}
       <div
+        role="dialog"
+        aria-modal="true"
         className={cn(
           "relative z-10 w-full max-w-lg mx-4 rounded-2xl bg-card border border-border shadow-2xl animate-fade-in",
           className
@@ -41,6 +43,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
       >
         <button
           onClick={onClose}
+          aria-label="Close dialog"
           className="absolute right-4 top-4 p-2 rounded-full hover:bg-muted transition-colors"
         >
           <X className="h-5 w-5" />
@@ -89,4 +92,3 @@ export function ModalFooter({ children, className }: ModalFooterProps) {
     </div>
   );
 }
-

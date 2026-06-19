@@ -24,12 +24,11 @@ export async function POST(request: NextRequest) {
       .from("subscriptions")
       .select("stripe_customer_id")
       .eq("user_id", userId)
-      .eq("status", "active")
       .maybeSingle();
 
     if (subError || !subscription?.stripe_customer_id) {
       return NextResponse.json(
-        { error: "No active subscription found" },
+        { error: "No billing profile found" },
         { status: 404 }
       );
     }
@@ -49,4 +48,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

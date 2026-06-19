@@ -1,15 +1,210 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { findAuthUserByEmail } from "@/lib/auth-admin";
 import { getSessionFromRequest } from "@/lib/auth-server";
-import {
-  inferTierFromProductId,
-  normalizeTierForPlan,
-} from "@/lib/stripe-plan-config";
 import { getStripe } from "@/lib/stripe-server";
+import { isAccessGrantingStripeSubscriptionStatus } from "@/lib/stripe-subscription-status";
+import {
+  findAccessGrantingStripeSubscriptionByEmail,
+  getDeviceEmail,
+  getTrackedSubscriptionByStripeIdentifiers,
+  getTrackedSubscriptionByUserId,
+  normalizeEmail,
+  snapshotAccessGrantingSubscription,
+  trackedSubscriptionGrantsAccess,
+  type TrackedSubscriptionRow,
+} from "@/lib/subscription-reconciliation";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+interface OwnershipCandidate {
+  source:
+    | "checkout_session"
+    | "device_subscription"
+    | "device_email"
+    | "account_email";
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string;
+  tier: "weekly" | "yearly";
+  currentPeriodEnd: string;
+  existingRecord: TrackedSubscriptionRow | null;
+}
+
+function sessionMatchesAuthenticatedIdentity(params: {
+  session: Stripe.Checkout.Session;
+  currentUserId: string;
+  currentUserEmail?: string | null;
+  deviceId?: string | null;
+  deviceEmail?: string | null;
+}) {
+  const { session, currentUserId, currentUserEmail, deviceId, deviceEmail } =
+    params;
+
+  if (
+    session.client_reference_id === currentUserId ||
+    session.metadata?.userId === currentUserId
+  ) {
+    return true;
+  }
+
+  if (deviceId && session.metadata?.deviceId === deviceId) {
+    return true;
+  }
+
+  const sessionEmail = normalizeEmail(
+    session.customer_email ||
+      session.customer_details?.email ||
+      session.metadata?.email
+  );
+
+  if (currentUserEmail && sessionEmail === currentUserEmail) {
+    return true;
+  }
+
+  if (deviceEmail && sessionEmail === deviceEmail) {
+    return true;
+  }
+
+  return false;
+}
+
+async function resolveSessionCandidate(params: {
+  stripe: Stripe;
+  supabase: SupabaseClient;
+  sessionId: string;
+  currentUserId: string;
+  currentUserEmail?: string | null;
+  deviceId?: string | null;
+  deviceEmail?: string | null;
+}) {
+  const {
+    stripe,
+    supabase,
+    sessionId,
+    currentUserId,
+    currentUserEmail,
+    deviceId,
+    deviceEmail,
+  } = params;
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ["subscription"],
+  });
+
+  if (
+    !sessionMatchesAuthenticatedIdentity({
+      session,
+      currentUserId,
+      currentUserEmail,
+      deviceId,
+      deviceEmail,
+    })
+  ) {
+    return null;
+  }
+
+  if (session.status !== "complete") {
+    return null;
+  }
+
+  if (
+    session.payment_status !== "paid" &&
+    session.payment_status !== "no_payment_required"
+  ) {
+    return null;
+  }
+
+  let stripeSubscription: Stripe.Subscription | null = null;
+  if (session.subscription) {
+    stripeSubscription =
+      typeof session.subscription === "string"
+        ? await stripe.subscriptions.retrieve(session.subscription)
+        : (session.subscription as Stripe.Subscription);
+  }
+
+  if (
+    !stripeSubscription ||
+    !isAccessGrantingStripeSubscriptionStatus(stripeSubscription.status)
+  ) {
+    return null;
+  }
+
+  const stripeCustomerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id || null;
+  const snapshot = snapshotAccessGrantingSubscription({
+    stripeCustomerId,
+    stripeSubscription,
+    fallbackPlan: session.metadata?.plan,
+  });
+  const existingRecord = await getTrackedSubscriptionByStripeIdentifiers(
+    supabase,
+    {
+      stripeCustomerId: snapshot.stripeCustomerId,
+      stripeSubscriptionId: snapshot.stripeSubscriptionId,
+    }
+  );
+
+  return {
+    source: "checkout_session" as const,
+    stripeCustomerId: snapshot.stripeCustomerId,
+    stripeSubscriptionId: snapshot.stripeSubscriptionId,
+    tier: snapshot.tier,
+    currentPeriodEnd: snapshot.currentPeriodEnd,
+    existingRecord,
+  };
+}
+
+async function resolveEmailCandidate(params: {
+  stripe: Stripe;
+  supabase: SupabaseClient;
+  email?: string | null;
+  source: OwnershipCandidate["source"];
+}) {
+  const { stripe, supabase, email, source } = params;
+  const accessGrantingSubscription =
+    await findAccessGrantingStripeSubscriptionByEmail(stripe, email);
+
+  if (!accessGrantingSubscription) {
+    return null;
+  }
+
+  const snapshot = snapshotAccessGrantingSubscription({
+    stripeCustomerId: accessGrantingSubscription.customerId,
+    stripeSubscription: accessGrantingSubscription.subscription,
+  });
+  const existingRecord = await getTrackedSubscriptionByStripeIdentifiers(
+    supabase,
+    {
+      stripeCustomerId: snapshot.stripeCustomerId,
+      stripeSubscriptionId: snapshot.stripeSubscriptionId,
+    }
+  );
+
+  return {
+    source,
+    stripeCustomerId: snapshot.stripeCustomerId,
+    stripeSubscriptionId: snapshot.stripeSubscriptionId,
+    tier: snapshot.tier,
+    currentPeriodEnd: snapshot.currentPeriodEnd,
+    existingRecord,
+  };
+}
+
+function dedupeCandidates(candidates: OwnershipCandidate[]) {
+  const dedupedCandidates = new Map<string, OwnershipCandidate>();
+
+  for (const candidate of candidates) {
+    if (!dedupedCandidates.has(candidate.stripeSubscriptionId)) {
+      dedupedCandidates.set(candidate.stripeSubscriptionId, candidate);
+    }
+  }
+
+  return Array.from(dedupedCandidates.values());
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,106 +216,243 @@ export async function POST(request: NextRequest) {
         { status: sessionResult.error.status }
       );
     }
-    const userId = sessionResult.user.id;
 
-    const { email, sessionId } = await request.json();
-
-    if (!email) {
-      return NextResponse.json(
-        { error: "Missing email" },
-        { status: 400 }
-      );
-    }
+    const { sessionId, deviceId } = await request.json();
+    const currentUser = sessionResult.user;
+    const currentUserId = currentUser.id;
+    const currentUserEmail = normalizeEmail(currentUser.email);
+    const deviceEmail = deviceId ? getDeviceEmail(deviceId) : null;
+    const now = new Date().toISOString();
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const currentTrackedSubscription = await getTrackedSubscriptionByUserId(
+      supabase,
+      currentUserId
+    );
 
-    // If we have a session ID, get the checkout session from Stripe
-    let customerId: string | undefined;
-    let subscriptionId: string | undefined;
-    let plan: string | undefined;
+    const candidates: OwnershipCandidate[] = [];
 
     if (sessionId) {
       try {
-        const session = await stripe.checkout.sessions.retrieve(sessionId);
-        customerId = session.customer as string;
-        subscriptionId = session.subscription as string;
-        plan = session.metadata?.plan || "yearly";
+        const sessionCandidate = await resolveSessionCandidate({
+          stripe,
+          supabase,
+          sessionId,
+          currentUserId,
+          currentUserEmail,
+          deviceId,
+          deviceEmail,
+        });
+
+        if (sessionCandidate) {
+          candidates.push(sessionCandidate);
+        }
       } catch (error) {
-        console.error("Error retrieving checkout session:", error);
+        console.error("Error resolving checkout-session ownership candidate:", error);
       }
     }
 
-    // If we don't have customer ID from session, try to find customer by email
-    if (!customerId && email) {
+    if (deviceEmail) {
       try {
-        const customers = await stripe.customers.list({
-          email,
-          limit: 1,
-        });
-        if (customers.data.length > 0) {
-          customerId = customers.data[0].id;
-          // Get the most recent subscription for this customer
-          const subscriptions = await stripe.subscriptions.list({
-            customer: customerId,
-            limit: 1,
-            status: "active",
-          });
-          if (subscriptions.data.length > 0) {
-            subscriptionId = subscriptions.data[0].id;
-            const priceId = subscriptions.data[0].items.data[0]?.price.id;
-            if (priceId) {
-              const price = await stripe.prices.retrieve(priceId);
-              const inferredTier = inferTierFromProductId(price.product as string);
-              plan = inferredTier ?? "yearly";
-            }
+        const deviceUser = await findAuthUserByEmail(supabase, deviceEmail);
+        if (deviceUser && deviceUser.id !== currentUserId) {
+          const deviceTrackedSubscription = await getTrackedSubscriptionByUserId(
+            supabase,
+            deviceUser.id
+          );
+
+          if (
+            deviceTrackedSubscription &&
+            trackedSubscriptionGrantsAccess(deviceTrackedSubscription) &&
+            deviceTrackedSubscription.stripe_subscription_id
+          ) {
+            candidates.push({
+              source: "device_subscription",
+              stripeCustomerId: deviceTrackedSubscription.stripe_customer_id,
+              stripeSubscriptionId:
+                deviceTrackedSubscription.stripe_subscription_id,
+              tier: deviceTrackedSubscription.tier,
+              currentPeriodEnd:
+                deviceTrackedSubscription.current_period_end || now,
+              existingRecord: deviceTrackedSubscription,
+            });
           }
         }
       } catch (error) {
-        console.error("Error finding customer by email:", error);
+        console.error("Error resolving tracked device subscription:", error);
+      }
+
+      try {
+        const deviceEmailCandidate = await resolveEmailCandidate({
+          stripe,
+          supabase,
+          email: deviceEmail,
+          source: "device_email",
+        });
+
+        if (deviceEmailCandidate) {
+          candidates.push(deviceEmailCandidate);
+        }
+      } catch (error) {
+        console.error("Error resolving device-email Stripe subscription:", error);
       }
     }
 
-    if (!customerId || !subscriptionId) {
-      return NextResponse.json(
-        { error: "Could not find subscription for this email" },
-        { status: 404 }
+    if (currentUserEmail) {
+      try {
+        const accountEmailCandidate = await resolveEmailCandidate({
+          stripe,
+          supabase,
+          email: currentUserEmail,
+          source: "account_email",
+        });
+
+        if (accountEmailCandidate) {
+          candidates.push(accountEmailCandidate);
+        }
+      } catch (error) {
+        console.error("Error resolving account-email Stripe subscription:", error);
+      }
+    }
+
+    const dedupedCandidates = dedupeCandidates(candidates);
+    const preferredCandidate = dedupedCandidates[0] ?? null;
+    const currentSubscriptionId =
+      currentTrackedSubscription?.stripe_subscription_id || null;
+    const currentSubscriptionHasAccess =
+      trackedSubscriptionGrantsAccess(currentTrackedSubscription);
+    const candidateConflictIds = dedupedCandidates
+      .filter(
+        (candidate) => candidate.stripeSubscriptionId !== currentSubscriptionId
+      )
+      .map((candidate) => candidate.stripeSubscriptionId);
+    const manualReviewRecommended =
+      candidateConflictIds.length > 1 ||
+      (currentSubscriptionHasAccess && candidateConflictIds.length > 0);
+
+    if (currentSubscriptionHasAccess) {
+      if (manualReviewRecommended) {
+        console.warn(
+          `[Billing] Manual review recommended for user ${currentUserId}: multiple access-granting subscriptions detected (${[
+            currentSubscriptionId,
+            ...candidateConflictIds,
+          ]
+            .filter(Boolean)
+            .join(", ")})`
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        reconciled: false,
+        manualReviewRecommended,
+        reason: manualReviewRecommended
+          ? "multiple_access_granting_subscriptions"
+          : "current_user_already_has_access",
+        subscription: currentTrackedSubscription,
+      });
+    }
+
+    if (!preferredCandidate) {
+      return NextResponse.json({
+        success: true,
+        reconciled: false,
+        manualReviewRecommended: false,
+        reason: "no_access_granting_subscription_found",
+      });
+    }
+
+    if (manualReviewRecommended) {
+      console.warn(
+        `[Billing] Manual review recommended while reconciling user ${currentUserId}; preferred subscription ${preferredCandidate.stripeSubscriptionId}, additional candidates: ${candidateConflictIds.join(
+          ", "
+        )}`
       );
     }
 
-    // Get subscription details
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId) as Stripe.Subscription;
-    const subscriptionTier = normalizeTierForPlan(plan);
+    const nextValues = {
+      user_id: currentUserId,
+      stripe_customer_id: preferredCandidate.stripeCustomerId,
+      stripe_subscription_id: preferredCandidate.stripeSubscriptionId,
+      billing_provider: "stripe",
+      whop_user_id: null,
+      whop_membership_id: null,
+      billing_manage_url: null,
+      tier: preferredCandidate.tier,
+      status: "active",
+      current_period_end: preferredCandidate.currentPeriodEnd,
+      updated_at: now,
+    };
 
-    // Link subscription to user
-    const { error } = await supabase
-      .from("subscriptions")
-      .upsert({
-        user_id: userId,
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscriptionId,
-        tier: subscriptionTier,
-        status: "active",
-        current_period_end: (subscription as any).current_period_end 
-          ? new Date((subscription as any).current_period_end * 1000).toISOString()
-          : new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, {
+    if (preferredCandidate.existingRecord) {
+      if (preferredCandidate.existingRecord.user_id === currentUserId) {
+        const { error } = await supabase
+          .from("subscriptions")
+          .update(nextValues)
+          .eq("id", preferredCandidate.existingRecord.id);
+
+        if (error) {
+          throw error;
+        }
+      } else {
+        if (
+          currentTrackedSubscription &&
+          currentTrackedSubscription.id !== preferredCandidate.existingRecord.id
+        ) {
+          const { error: deleteError } = await supabase
+            .from("subscriptions")
+            .delete()
+            .eq("id", currentTrackedSubscription.id);
+
+          if (deleteError) {
+            throw deleteError;
+          }
+        }
+
+        const { error } = await supabase
+          .from("subscriptions")
+          .update(nextValues)
+          .eq("id", preferredCandidate.existingRecord.id);
+
+        if (error) {
+          throw error;
+        }
+      }
+    } else if (currentTrackedSubscription) {
+      const { error } = await supabase
+        .from("subscriptions")
+        .update(nextValues)
+        .eq("id", currentTrackedSubscription.id);
+
+      if (error) {
+        throw error;
+      }
+    } else {
+      const { error } = await supabase.from("subscriptions").upsert(nextValues, {
         onConflict: "user_id",
       });
 
-    if (error) {
-      console.error("Error linking subscription:", error);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      if (error) {
+        throw error;
+      }
     }
 
-    return NextResponse.json({ success: true });
+    const reconciledSubscription = await getTrackedSubscriptionByUserId(
+      supabase,
+      currentUserId
+    );
+
+    return NextResponse.json({
+      success: true,
+      reconciled: true,
+      manualReviewRecommended,
+      source: preferredCandidate.source,
+      subscription: reconciledSubscription,
+    });
   } catch (error: any) {
     console.error("Link subscription error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to link subscription" },
+      { error: error.message || "Failed to reconcile subscription ownership" },
       { status: 500 }
     );
   }

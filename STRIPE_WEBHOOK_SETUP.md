@@ -19,6 +19,8 @@
    - ✅ `checkout.session.completed`
    - ✅ `customer.subscription.updated`
    - ✅ `customer.subscription.deleted`
+   - ✅ `invoice.payment_failed`
+   - ✅ `invoice.payment_action_required`
 6. Click **"Add endpoint"**
 
 ### 2. Get Webhook Signing Secret
@@ -97,4 +99,3 @@ Once the webhook is configured:
 3. ✅ Your app will show correct subscription status
 
 You're all set! 🎉
-

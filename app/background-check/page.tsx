@@ -50,14 +50,14 @@ export default function BackgroundCheckLanding() {
               Search criminal records, court filings, address history, and public records on anyone. AI-powered, comprehensive, and fast.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/search">
+              <Link href="/people-search">
                 <Button size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700 text-lg px-8 py-6 rounded-full shadow-lg shadow-blue-600/25 w-full sm:w-auto">
                   <Search className="w-5 h-5" />
                   Run a People Search
                   <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
-              <Link href="/records">
+              <Link href="/public-records-search">
                 <Button size="lg" variant="outline" className="gap-2 text-lg px-8 py-6 rounded-full w-full sm:w-auto">
                   <FileText className="w-5 h-5" />
                   Search Court Records
@@ -109,7 +109,7 @@ export default function BackgroundCheckLanding() {
             <p className="text-lg text-gray-500 mb-8">
               Get comprehensive background reports in seconds, not days.
             </p>
-            <Link href="/search">
+            <Link href="/people-search">
               <Button size="lg" className="gap-2 bg-red-600 hover:bg-red-700 text-lg px-8 py-6 rounded-full">
                 Start Searching Now
                 <ArrowRight className="w-5 h-5" />

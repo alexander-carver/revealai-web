@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import {
   FileText,
@@ -23,8 +24,10 @@ import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
 import { FullReportResult } from "@/components/shared/full-report-result";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+import { requestRevealSearch, type SearchReport } from "@/lib/reveal-search";
 
 export default function RecordsSearchPage() {
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { isPro, showFreeTrialPaywall } = useSubscription();
   const [formData, setFormData] = useState({
@@ -34,38 +37,41 @@ export default function RecordsSearchPage() {
     state: "",
     dob: "",
   });
-  const [searchResult, setSearchResult] = useState<string | null>(null);
+  const [searchResult, setSearchResult] = useState<{
+    content: string;
+    report: SearchReport;
+  } | null>(null);
   const [searchCount, setSearchCount] = useState(0);
 
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
+  const autoSearchStarted = useRef(false);
 
   const searchMutation = useMutation({
-    mutationFn: async (query: string) => {
-      const response = await fetch("/api/perplexity/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query,
-          userId: user?.id,
-          usePro: searchCount < 3,
-          isPro: isPro || false,
-        }),
+    mutationFn: async ({
+      query,
+      subjectName,
+      location,
+    }: {
+      query: string;
+      subjectName: string;
+      location?: string;
+    }) => {
+      return requestRevealSearch({
+        query,
+        userId: user?.id ?? "guest",
+        usePro: searchCount < 3,
+        isPro: isPro || false,
+        searchType: "records",
+        subjectName,
+        location,
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        if (response.status === 429) {
-          throw new Error(error.message || "Rate limit exceeded. Please try again later.");
-        }
-        throw new Error(error.error || "Search failed");
-      }
-
-      const data = await response.json();
-      return data.content;
     },
     onSuccess: (data) => {
-      setSearchResult(data);
+      setSearchResult({
+        content: data.content,
+        report: data.report,
+      });
       setSearchCount((prev) => prev + 1);
     },
   });
@@ -99,7 +105,11 @@ For each record found, include the case number, date, jurisdiction, status, and 
 
     setLoadingSearchQuery(fullName);
     setShowLoadingScreen(true);
-    searchMutation.mutate(query);
+    searchMutation.mutate({
+      query,
+      subjectName: fullName,
+      location,
+    });
   }, [formData, isPro, showFreeTrialPaywall, searchMutation, searchCount]);
 
   const handleLoadingComplete = useCallback(() => {
@@ -111,11 +121,63 @@ For each record found, include the case number, date, jurisdiction, status, and 
     setSearchResult(null);
   }, []);
 
+  useEffect(() => {
+    const firstName = searchParams.get("firstName");
+    const lastName = searchParams.get("lastName");
+    if (!firstName || !lastName || autoSearchStarted.current) {
+      return;
+    }
+
+    autoSearchStarted.current = true;
+    const city = searchParams.get("city") || "";
+    const state = searchParams.get("state") || "";
+
+    setFormData((prev) => ({
+      ...prev,
+      firstName,
+      lastName,
+      city,
+      state,
+    }));
+
+    if (!isPro) {
+      showFreeTrialPaywall();
+      return;
+    }
+
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
+    const location = [city.trim(), state.trim().toUpperCase()]
+      .filter(Boolean)
+      .join(", ");
+
+    const query = `Search for any public court records, criminal records, civil records, traffic violations, bankruptcy filings, liens, judgments, and other legal records for ${fullName}${location ? ` from ${location}` : ""}.
+
+Please provide:
+1. Any criminal records (felonies, misdemeanors, arrests)
+2. Civil court cases (lawsuits, disputes, small claims)
+3. Traffic violations and DUI records
+4. Bankruptcy filings
+5. Tax liens and judgments
+6. Sex offender registry check
+7. Any other public legal records
+
+For each record found, include the case number, date, jurisdiction, status, and a brief description. If no records are found in a category, state that clearly. Search federal, state, and local databases.`;
+
+    setLoadingSearchQuery(fullName);
+    setShowLoadingScreen(true);
+    searchMutation.mutate({
+      query,
+      subjectName: fullName,
+      location,
+    });
+  }, [isPro, searchMutation, searchParams, showFreeTrialPaywall]);
+
   return (
     <div>
       <SearchLoadingScreen
         isVisible={showLoadingScreen}
         searchQuery={loadingSearchQuery}
+        productId="records"
         onComplete={handleLoadingComplete}
         onCancel={handleLoadingCancel}
       />
@@ -205,9 +267,11 @@ For each record found, include the case number, date, jurisdiction, status, and 
       {searchResult && !showLoadingScreen && (
         <div className="mt-6">
           <FullReportResult
-            content={searchResult}
+            content={searchResult.content}
+            report={searchResult.report}
             searchCount={searchCount}
             personName={`${formData.firstName} ${formData.lastName}`.trim()}
+            searchType="records"
           />
         </div>
       )}

@@ -18,8 +18,8 @@
 ### 3. Create Products & Prices in Stripe
 1. Go to Stripe Dashboard → Products
 2. Create two products:
-   - **Weekly Plan**: $9.99/week (recurring)
-   - **Yearly Plan**: $49.99/year (recurring)
+   - **Weekly Plan**: $6.99/week (recurring)
+   - **Yearly Plan**: $29.99/year (recurring)
 3. Copy the **Price IDs** (starts with `price_...`)
 4. Add them to `.env.local`:
    ```
@@ -115,4 +115,3 @@ STRIPE_YEARLY_PRICE_ID=price_...
 - **Stripe checkout fails**: Verify API keys and price IDs are correct
 - **Webhook not receiving events**: Check webhook secret and endpoint URL
 - **Subscription not updating**: Check Supabase RLS policies and service role key
-

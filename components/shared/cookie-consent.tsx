@@ -42,9 +42,9 @@ export function CookieConsent() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-24 lg:bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-sm z-50 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-5">
-        <div className="flex items-start gap-3 mb-4">
+    <div className="fixed bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom-4 duration-500 px-3 pb-3 sm:px-4 sm:pb-4 md:bottom-4 md:left-auto md:right-4 md:max-w-sm md:px-0 md:pb-0">
+      <div className="bg-white rounded-t-2xl border border-gray-200 p-4 shadow-2xl md:rounded-2xl md:p-5">
+        <div className="mb-4 flex items-start gap-3">
           <div className="p-2 rounded-lg bg-amber-100 flex-shrink-0">
             <Cookie className="w-5 h-5 text-amber-600" />
           </div>

@@ -105,8 +105,8 @@ The web app connects to existing Supabase Edge Functions:
 ## Subscription Tiers
 
 - **Free**: Limited searches, basic features
-- **Pro Weekly**: $9.99/week - Unlimited access
-- **Pro Yearly**: $49.99/year - Unlimited access (best value)
+- **Pro Weekly**: $6.99/week - Unlimited access
+- **Pro Yearly**: $29.99/year - Unlimited access (best value)
 
 ## Deployment
 
@@ -150,4 +150,3 @@ npm start
 ## License
 
 Private - All rights reserved
-

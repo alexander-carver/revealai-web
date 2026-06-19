@@ -90,17 +90,17 @@ export default function SupportPage() {
 
             <FAQItem 
               question="How do subscriptions work?"
-              answer={<>We offer <strong>Weekly</strong> ({formatUsd(PUBLIC_PRICING.weekly)}/week) and <strong>Yearly</strong> ({formatUsd(PUBLIC_PRICING.yearly)}/year) subscription plans. Some annual offers include a {PUBLIC_PRICING.freeTrialDays}-day free trial or promotional annual pricing such as {formatUsd(PUBLIC_PRICING.annualTrialPrice)}/year. Payments are processed through Stripe and Apple&apos;s App Store. Subscriptions automatically renew unless canceled at least 24 hours before the renewal date. You can manage or cancel your subscription anytime in your account settings.</>}
+              answer={<>We offer <strong>Weekly</strong> ({formatUsd(PUBLIC_PRICING.weekly)}/week) and <strong>Yearly</strong> ({formatUsd(PUBLIC_PRICING.yearly)}/year) subscription plans. Select promotional annual offers may be billed immediately at the promotional yearly rate shown at checkout. Payments may be processed through Stripe, Whop, or Apple&apos;s App Store. Subscriptions automatically renew unless canceled before the renewal date. You can manage or cancel your subscription anytime in your account settings.</>}
             />
 
             <FAQItem 
-              question="Do you offer a free trial?"
-              answer={`Yes. Annual offers can include a ${PUBLIC_PRICING.freeTrialDays}-day free trial. Free trials automatically convert into a paid subscription unless canceled before the trial ends.`}
+              question="When am I billed?"
+              answer="Current web subscription offers are billed at checkout and renew automatically unless canceled before renewal."
             />
 
             <FAQItem 
               question="Can I get a refund?"
-              answer={<>Refunds are handled directly by <strong>Stripe</strong> and <strong>Apple</strong> according to their policies. To request a refund for Apple purchases, go to your Apple ID account settings or visit Apple's support page. For Stripe purchases, contact us at <a href="mailto:realrevealaiofficial@gmail.com" className="text-red-600 hover:underline">realrevealaiofficial@gmail.com</a>.</>}
+              answer={<>Refunds are handled according to the policy of the provider used for your purchase. For Apple purchases, go to your Apple ID account settings or visit Apple&apos;s support page. For Stripe or Whop purchases, contact us at <a href="mailto:realrevealaiofficial@gmail.com" className="text-red-600 hover:underline">realrevealaiofficial@gmail.com</a>.</>}
             />
 
             <FAQItem 

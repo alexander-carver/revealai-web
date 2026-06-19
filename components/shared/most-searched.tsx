@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { 
   TrendingUp, 
   ChevronRight, 
-  Star,
   Users,
   Eye
 } from "lucide-react";
@@ -22,6 +21,10 @@ interface MostSearchedProps {
 
 export function MostSearched({ onSelectProfile }: MostSearchedProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const activeProfiles = mockProfiles.slice(
+    0,
+    Math.max(0, mockProfiles.length - 4)
+  );
 
   return (
     <section className="mt-12">
@@ -44,7 +47,7 @@ export function MostSearched({ onSelectProfile }: MostSearchedProps) {
 
       {/* Celebrity Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
-        {mockProfiles.map((profile, index) => (
+        {activeProfiles.map((profile, index) => (
           <Link
             key={profile.id}
             href={`/profile/${profile.id}`}
@@ -131,6 +134,11 @@ export function MostSearched({ onSelectProfile }: MostSearchedProps) {
 
 // Compact version for sidebars or smaller spaces
 export function MostSearchedCompact({ onSelectProfile }: MostSearchedProps) {
+  const activeProfiles = mockProfiles.slice(
+    0,
+    Math.max(0, mockProfiles.length - 4)
+  );
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -139,7 +147,7 @@ export function MostSearchedCompact({ onSelectProfile }: MostSearchedProps) {
       </div>
       
       <div className="space-y-2">
-        {mockProfiles.slice(0, 5).map((profile, index) => (
+        {activeProfiles.slice(0, 5).map((profile, index) => (
           <Link
             key={profile.id}
             href={`/profile/${profile.id}`}
@@ -188,4 +196,3 @@ export function MostSearchedCompact({ onSelectProfile }: MostSearchedProps) {
     </div>
   );
 }
-

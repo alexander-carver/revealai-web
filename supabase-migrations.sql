@@ -4,6 +4,10 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   stripe_customer_id TEXT UNIQUE,
   stripe_subscription_id TEXT UNIQUE,
+  billing_provider TEXT NOT NULL DEFAULT 'stripe' CHECK (billing_provider IN ('stripe', 'whop')),
+  whop_user_id TEXT,
+  whop_membership_id TEXT UNIQUE,
+  billing_manage_url TEXT,
   tier TEXT NOT NULL CHECK (tier IN ('weekly', 'yearly')),
   status TEXT NOT NULL CHECK (status IN ('active', 'canceled', 'past_due', 'unpaid')),
   current_period_end TIMESTAMPTZ,
@@ -16,6 +20,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer_id ON subscriptions(stripe_customer_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_billing_provider ON subscriptions(billing_provider);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_whop_user_id ON subscriptions(whop_user_id);
 
 -- Enable Row Level Security
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
@@ -47,4 +53,3 @@ CREATE TRIGGER update_subscriptions_updated_at
   BEFORE UPDATE ON subscriptions
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
-

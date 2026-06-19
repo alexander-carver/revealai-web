@@ -73,7 +73,7 @@ When you're ready for production, see `SWITCH_TEST_LIVE_MODE.md` for instruction
 - `STRIPE_SECRET_KEY` = `YOUR_LIVE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET` = `whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX`
 - `STRIPE_WEEKLY_PRODUCT_ID` = `prod_TXnLmsWmubVfIh`
-- `STRIPE_YEARLY_PRODUCT_ID` = `prod_TXnMRenhMBjfBM`
+- `STRIPE_YEARLY_PRODUCT_ID` = `prod_UGRAUVMsp9toeI`
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `YOUR_LIVE_PUBLISHABLE_KEY`
 
 ## ❓ About Your New Live Secret Key
@@ -83,4 +83,3 @@ You created a new live secret key. **You don't need to do anything special** - j
 2. Supabase Edge Function secrets
 
 The webhook secret stays the same.
-

@@ -1,20 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { sendPurchaseEvent, sendStartTrialEvent, generateEventId } from "@/lib/meta-capi";
+import {
+  ensureDeviceAuthUser,
+  ensureEmailAuthUser,
+  findAuthUserByEmail,
+} from "@/lib/auth-admin";
+import { getBillingCustomerEmail } from "@/lib/customer-email";
+import { sendPurchaseEvent } from "@/lib/meta-capi";
 import { sendCommissionEmail } from "@/lib/email";
 import {
   inferTierFromProductId,
   normalizeTierForPlan,
-  resolveCheckoutPriceId,
-  resolveCheckoutProductId,
 } from "@/lib/stripe-plan-config";
 import { getCheckoutValue } from "@/lib/pricing";
+import { getServerStripeWebhookSecret } from "@/lib/stripe-env";
 import { getStripe } from "@/lib/stripe-server";
+import {
+  expireOpenCheckoutSessions,
+  listOpenCheckoutSessionsForIdentity,
+} from "@/lib/stripe-checkout-sessions";
+import {
+  isAccessGrantingStripeSubscriptionStatus,
+} from "@/lib/stripe-subscription-status";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
+const webhookSecret = getServerStripeWebhookSecret() || "";
+
+type TrackedSubscriptionStatus = "active" | "canceled" | "past_due" | "unpaid";
+
+function mapStripeSubscriptionStatus(
+  status?: string | null
+): TrackedSubscriptionStatus {
+  if (isAccessGrantingStripeSubscriptionStatus(status)) {
+    return "active";
+  }
+
+  if (status === "past_due" || status === "unpaid") {
+    return status;
+  }
+
+  return "canceled";
+}
+
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const invoiceSubscription = (invoice as any).subscription;
+
+  if (!invoiceSubscription) {
+    return null;
+  }
+
+  return typeof invoiceSubscription === "string"
+    ? invoiceSubscription
+    : invoiceSubscription.id;
+}
+
+function getMetadataValue(
+  metadata: Stripe.Metadata | null | undefined,
+  key: string
+) {
+  const value = metadata?.[key]?.trim();
+  return value || undefined;
+}
 
 // Disable body parsing for webhook
 export const runtime = "nodejs";
@@ -62,66 +110,136 @@ export async function POST(request: NextRequest) {
         let userId = session.metadata?.userId || session.client_reference_id;
         const plan = session.metadata?.plan || "yearly";
         const deviceId = session.metadata?.deviceId;
-        const customerEmail = session.customer_email || 
-                              session.customer_details?.email || 
-                              session.metadata?.email;
+        let customerEmail =
+          session.customer_email ||
+          session.customer_details?.email ||
+          session.metadata?.email;
+        const billingEmail = getBillingCustomerEmail(customerEmail);
+        const stripeCustomerId =
+          typeof session.customer === "string"
+            ? session.customer
+            : session.customer?.id || null;
+        const subscriptionId =
+          typeof session.subscription === "string"
+            ? session.subscription
+            : session.subscription?.id || null;
 
-        console.log("Session data:", { userId, plan, customer: session.customer, deviceId, customerEmail });
+        let stripeSubscription: Stripe.Subscription | null = null;
+        let currentPeriodEnd = new Date(
+          Date.now() + 365 * 24 * 60 * 60 * 1000
+        );
+        let appSubscriptionStatus: TrackedSubscriptionStatus = "active";
+
+        if (subscriptionId) {
+          try {
+            stripeSubscription = await stripe.subscriptions.retrieve(
+              subscriptionId
+            );
+            appSubscriptionStatus = mapStripeSubscriptionStatus(
+              stripeSubscription.status
+            );
+
+            const currentPeriodEndUnix = (stripeSubscription as any)
+              .current_period_end;
+            if (currentPeriodEndUnix) {
+              currentPeriodEnd = new Date(currentPeriodEndUnix * 1000);
+            }
+          } catch (e) {
+            console.error("Error fetching subscription:", e);
+          }
+        }
+
+        console.log("Session data:", {
+          userId,
+          plan,
+          customer: session.customer,
+          deviceId,
+          customerEmail: billingEmail || customerEmail,
+          subscriptionId,
+          appSubscriptionStatus,
+        });
+
+        if (billingEmail) {
+          try {
+            await ensureEmailAuthUser(supabase, billingEmail);
+          } catch (billingEmailEnsureError) {
+            console.error(
+              "Webhook: failed to ensure billing email user:",
+              billingEmailEnsureError
+            );
+          }
+        }
 
         // If no userId in metadata, try to resolve by deviceId (like verify-session does)
         if (!userId && deviceId) {
-          const deviceEmail = `device_${deviceId}@revealai.device`;
-          const { data: userData } = await supabase.auth.admin.listUsers();
-          if (userData?.users) {
-            const matchingUser = userData.users.find(
-              u => u.email?.toLowerCase() === deviceEmail.toLowerCase()
+          try {
+            const ensuredDeviceUser = await ensureDeviceAuthUser(
+              supabase,
+              deviceId
             );
-            if (matchingUser) {
-              userId = matchingUser.id;
-              console.log("Webhook: resolved user by deviceId:", userId);
-            }
+            userId = ensuredDeviceUser.userId;
+            console.log("Webhook: resolved user by deviceId:", userId);
+          } catch (deviceUserError) {
+            console.error(
+              "Webhook: failed to resolve user by deviceId:",
+              deviceUserError
+            );
           }
         }
 
         // If still no userId, try to resolve by customer email
         if (!userId && customerEmail) {
-          const { data: userData } = await supabase.auth.admin.listUsers();
-          if (userData?.users) {
-            const matchingUser = userData.users.find(
-              u => u.email?.toLowerCase() === customerEmail.toLowerCase()
+          try {
+            const matchingUser = await findAuthUserByEmail(
+              supabase,
+              customerEmail
             );
             if (matchingUser) {
               userId = matchingUser.id;
               console.log("Webhook: resolved user by email:", userId);
             }
+          } catch (userLookupError) {
+            console.error(
+              "Webhook: failed to resolve user by email:",
+              userLookupError
+            );
+          }
+        }
+
+        if (!userId && customerEmail) {
+          try {
+            const ensuredEmailUser = await ensureEmailAuthUser(
+              supabase,
+              customerEmail
+            );
+            userId = ensuredEmailUser.userId;
+            customerEmail = ensuredEmailUser.email;
+            console.log("Webhook: created or found user by email:", userId);
+          } catch (userCreationError) {
+            console.error(
+              "Webhook: failed to create user by email:",
+              userCreationError
+            );
           }
         }
 
         if (userId) {
           const subscriptionTier = normalizeTierForPlan(plan);
-          
-          // Get subscription details
-          const subscriptionId = session.subscription as string;
-          let currentPeriodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-          
-          if (subscriptionId) {
-            try {
-              const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-              currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
-            } catch (e) {
-              console.error("Error fetching subscription:", e);
-            }
-          }
 
           const { error } = await supabase
             .from("subscriptions")
             .upsert({
               user_id: userId,
-              stripe_customer_id: session.customer as string,
+              stripe_customer_id: stripeCustomerId,
               stripe_subscription_id: subscriptionId,
+              billing_provider: "stripe",
+              whop_user_id: null,
+              whop_membership_id: null,
+              billing_manage_url: null,
               tier: subscriptionTier,
-              status: "active",
+              status: appSubscriptionStatus,
               current_period_end: currentPeriodEnd.toISOString(),
+              customer_email: billingEmail,
               updated_at: new Date().toISOString(),
             }, {
               onConflict: "user_id",
@@ -133,13 +251,46 @@ export async function POST(request: NextRequest) {
             console.log("Subscription created for user:", userId);
           }
 
+          if (appSubscriptionStatus === "active") {
+            try {
+              const openSessionsForIdentity =
+                await listOpenCheckoutSessionsForIdentity(stripe, {
+                  userId,
+                  deviceId,
+                  customerId: stripeCustomerId,
+                  customerEmail,
+                });
+
+              if (openSessionsForIdentity.length > 0) {
+                const expiredSessionIds = await expireOpenCheckoutSessions(
+                  stripe,
+                  openSessionsForIdentity,
+                  session.id
+                );
+
+                if (expiredSessionIds.length > 0) {
+                  console.log(
+                    `Expired stale open checkout sessions after webhook completion: ${expiredSessionIds.join(
+                      ", "
+                    )}`
+                  );
+                }
+              }
+            } catch (openSessionError) {
+              console.error(
+                "Error expiring stale open checkout sessions after webhook completion:",
+                openSessionError
+              );
+            }
+          }
+
           // --- Affiliate referral tracking ---
           const affiliateRef = session.metadata?.affiliate_ref;
           if (affiliateRef && subscriptionId) {
             try {
               await supabase.from("affiliate_referrals").upsert({
                 stripe_subscription_id: subscriptionId,
-                stripe_customer_id: session.customer as string,
+                stripe_customer_id: stripeCustomerId,
                 affiliate_ref: affiliateRef,
                 user_id: userId,
                 commission_rate: 0.30,
@@ -164,12 +315,17 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // --- Server-side Meta CAPI: Purchase + StartTrial ---
+          // --- Server-side Meta CAPI: Purchase ---
           try {
             const amount = session.amount_total ? session.amount_total / 100 : getCheckoutValue(plan);
             const currency = (session.currency || 'usd').toUpperCase();
             // Deterministic event_id: same as what /api/stripe/session returns to the browser
             const capiEventId = `pur_${session.id.replace('cs_', '').substring(0, 16)}`;
+            const metaFbp = getMetadataValue(session.metadata, "meta_fbp");
+            const metaFbc = getMetadataValue(session.metadata, "meta_fbc");
+            const metaSourceUrl =
+              getMetadataValue(session.metadata, "meta_source_url") ||
+              session.success_url?.split('?')[0];
 
             await sendPurchaseEvent({
               eventId: capiEventId,
@@ -178,85 +334,16 @@ export async function POST(request: NextRequest) {
               currency,
               transactionId: session.id,
               plan,
-              sourceUrl: session.success_url?.split('?')[0],
+              sourceUrl: metaSourceUrl,
               externalId: userId || deviceId,
+              fbc: metaFbc,
+              fbp: metaFbp,
             });
 
-            if (plan === "yearly" || plan === "free_trial") {
-              await sendStartTrialEvent({
-                eventId: generateEventId('st_srv'),
-                email: customerEmail || '',
-                value: amount,
-                currency,
-                plan,
-                sourceUrl: session.success_url?.split('?')[0],
-                externalId: userId || deviceId,
-              });
-            }
           } catch (capiErr) {
             console.error("CAPI tracking error (non-fatal):", capiErr);
           }
 
-          // Safety net for abandoned_trial: if the subscription uses the legacy intro product,
-          // schedule the upgrade to the configured weekly product after the first period.
-          if (plan === "abandoned_trial" && subscriptionId) {
-            try {
-              const sub = await stripe.subscriptions.retrieve(subscriptionId);
-              const lineItem = sub.items.data[0];
-              const subProductId = lineItem?.price?.product as string;
-              const abandonedTrialProductId = process.env.STRIPE_ABANDONED_TRIAL_PRODUCT_ID || "prod_TnGdDqDGvyBlhK";
-
-              // Only upgrade if still on the legacy intro product.
-              if (subProductId === abandonedTrialProductId && lineItem) {
-                const weeklyPriceId = resolveCheckoutPriceId(
-                  "weekly",
-                  session.metadata?.platform === "mobile" ? "mobile" : "web"
-                );
-                const weeklyProductId = resolveCheckoutProductId(
-                  "weekly",
-                  session.metadata?.platform === "mobile" ? "mobile" : "web"
-                );
-                if (!weeklyPriceId && !weeklyProductId) {
-                  throw new Error("Missing weekly product ID for abandoned trial migration");
-                }
-                const resolvedWeeklyPriceId = weeklyPriceId
-                  ? weeklyPriceId
-                  : (await stripe.products.retrieve(weeklyProductId!)).default_price as string;
-
-                if (resolvedWeeklyPriceId) {
-                  // Use subscription schedule for reliable automatic upgrade after first period
-                  const schedule = await stripe.subscriptionSchedules.create({
-                    from_subscription: subscriptionId,
-                  });
-
-                  const currentPhase = schedule.phases[0];
-                  await stripe.subscriptionSchedules.update(schedule.id, {
-                    end_behavior: "release",
-                    phases: [
-                      {
-                        items: currentPhase.items.map((item: any) => ({
-                          price: typeof item.price === "string" ? item.price : item.price.id,
-                          quantity: item.quantity || 1,
-                        })),
-                        start_date: currentPhase.start_date,
-                        end_date: currentPhase.end_date,
-                      },
-                      {
-                        items: [{ price: resolvedWeeklyPriceId, quantity: 1 }],
-                      },
-                    ],
-                  });
-
-                  console.log(
-                    `Created subscription schedule for abandoned_trial ${subscriptionId}: intro price → weekly price after first period`
-                  );
-                }
-              }
-            } catch (scheduleError: any) {
-              console.error("Error creating abandoned trial schedule:", scheduleError);
-              // Non-fatal: the customer.subscription.updated handler will also catch this
-            }
-          }
         } else {
           console.log("Webhook: no userId resolved for checkout session. verify-session will handle it when user visits success page.");
         }
@@ -266,11 +353,7 @@ export async function POST(request: NextRequest) {
       case "invoice.payment_succeeded":
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
-        const invoiceSubId = (invoice as any).subscription 
-          ? (typeof (invoice as any).subscription === 'string' 
-              ? (invoice as any).subscription 
-              : (invoice as any).subscription.id)
-          : null;
+        const invoiceSubId = getInvoiceSubscriptionId(invoice);
 
         // --- Affiliate commission tracking (30% recurring for life) ---
         if (invoiceSubId && invoice.amount_paid > 0) {
@@ -372,53 +455,112 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Handle upgrade from intro pricing to the configured weekly product (legacy only)
-        if (event.type === "invoice.payment_succeeded" && invoiceSubId && 
-            (invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create")) {
-          try {
-            const subscription = await stripe.subscriptions.retrieve(invoiceSubId);
-            
-            const lineItem = subscription.items.data[0];
-            const productId = lineItem?.price?.product as string;
-            const abandonedTrialProductId = process.env.STRIPE_ABANDONED_TRIAL_PRODUCT_ID || "prod_TnGdDqDGvyBlhK";
-            
-            if (productId === abandonedTrialProductId) {
-              const hasUpgraded = subscription.metadata?.upgraded_to_weekly === "true";
-              
-              if (!hasUpgraded) {
-                const weeklyPriceId = resolveCheckoutPriceId("weekly");
-                const weeklyProductId = resolveCheckoutProductId("weekly");
-                if (!weeklyPriceId && !weeklyProductId) {
-                  throw new Error("Missing weekly product ID for abandoned trial upgrade");
-                }
-                
-                const resolvedWeeklyPriceId = weeklyPriceId
-                  ? weeklyPriceId
-                  : (await stripe.products.retrieve(weeklyProductId!)).default_price as string;
-                
-                if (resolvedWeeklyPriceId) {
-                  await stripe.subscriptions.update(invoiceSubId, {
-                    items: [{
-                      id: lineItem.id,
-                      price: resolvedWeeklyPriceId,
-                    }],
-                    proration_behavior: "none",
-                    metadata: {
-                      ...subscription.metadata,
-                      upgraded_to_weekly: "true",
-                    },
-                  });
-                  
-                  console.log(
-                    `Scheduled upgrade for subscription ${invoiceSubId} from intro price to weekly price (effective next billing cycle)`
-                  );
-                }
-              }
-            }
-          } catch (error: any) {
-            console.error("Error upgrading abandoned_trial subscription:", error);
-          }
+        break;
+      }
+
+      case "invoice.payment_failed":
+      case "invoice.payment_action_required": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const invoiceSubId = getInvoiceSubscriptionId(invoice);
+        const stripeCustomerId =
+          typeof invoice.customer === "string"
+            ? invoice.customer
+            : invoice.customer?.id || null;
+
+        if (!invoiceSubId) {
+          console.log(
+            `Skipping ${event.type} because invoice ${invoice.id} has no subscription`
+          );
+          break;
         }
+
+        let invoiceSubscription: Stripe.Subscription | null = null;
+        let nextStatus: TrackedSubscriptionStatus = "past_due";
+        let nextTier: "weekly" | "yearly" | null = null;
+        let nextPeriodEnd: string | null = null;
+
+        try {
+          invoiceSubscription = await stripe.subscriptions.retrieve(invoiceSubId);
+          nextStatus = mapStripeSubscriptionStatus(invoiceSubscription.status);
+          nextTier =
+            inferTierFromProductId(
+              invoiceSubscription.items.data[0]?.price?.product as
+                | string
+                | undefined
+            ) ?? null;
+
+          if ((invoiceSubscription as any).current_period_end) {
+            nextPeriodEnd = new Date(
+              (invoiceSubscription as any).current_period_end * 1000
+            ).toISOString();
+          }
+        } catch (subscriptionError) {
+          console.error(
+            `Failed to retrieve subscription ${invoiceSubId} after ${event.type}:`,
+            subscriptionError
+          );
+        }
+
+        const initialLookup = await supabase
+          .from("subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", invoiceSubId)
+          .maybeSingle();
+
+        let resolvedSubscriptionRow = initialLookup.data;
+        let resolvedLookupError = initialLookup.error;
+
+        if (!resolvedSubscriptionRow && !resolvedLookupError && stripeCustomerId) {
+          const fallbackLookup = await supabase
+            .from("subscriptions")
+            .select("user_id")
+            .eq("stripe_customer_id", stripeCustomerId)
+            .maybeSingle();
+
+          resolvedSubscriptionRow = fallbackLookup.data;
+          resolvedLookupError = fallbackLookup.error;
+        }
+
+        if (resolvedLookupError) {
+          console.error(
+            `Error locating tracked subscription for invoice ${invoice.id}:`,
+            resolvedLookupError
+          );
+          break;
+        }
+
+        if (!resolvedSubscriptionRow) {
+          console.log(
+            `No tracked subscription found for invoice ${invoice.id} / subscription ${invoiceSubId}`
+          );
+          break;
+        }
+
+        const updatePayload: Record<string, string | null> = {
+          billing_provider: "stripe",
+          whop_user_id: null,
+          whop_membership_id: null,
+          billing_manage_url: null,
+          status: nextStatus,
+          updated_at: new Date().toISOString(),
+        };
+
+        if (nextTier) {
+          updatePayload.tier = nextTier;
+        }
+
+        if (nextPeriodEnd) {
+          updatePayload.current_period_end = nextPeriodEnd;
+        }
+
+        await supabase
+          .from("subscriptions")
+          .update(updatePayload)
+          .eq("user_id", resolvedSubscriptionRow.user_id);
+
+        console.log(
+          `Marked subscription ${invoiceSubId} as ${nextStatus} after ${event.type}`
+        );
         break;
       }
 
@@ -427,70 +569,36 @@ export async function POST(request: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
         const subscriptionStatus = subscription.status;
+        const trackedStatus = mapStripeSubscriptionStatus(subscriptionStatus);
         const currentProductId = subscription.items.data[0]?.price?.product as
           | string
           | undefined;
         const currentTier = inferTierFromProductId(currentProductId) ?? "yearly";
 
-        // --- Abandoned trial auto-upgrade ---
-        // Check if this is an active legacy intro subscription that needs upgrading to weekly pricing.
-        // This fires on every renewal (current_period_end changes), so it catches existing subscribers
-        // who were stuck on intro pricing because the invoice.payment_succeeded webhook wasn't configured.
-        if (subscriptionStatus === "active" && event.type === "customer.subscription.updated") {
-          try {
-            const lineItem = subscription.items.data[0];
-            const subProductId = lineItem?.price?.product as string;
-            const abandonedTrialProductId = process.env.STRIPE_ABANDONED_TRIAL_PRODUCT_ID || "prod_TnGdDqDGvyBlhK";
-
-            if (subProductId === abandonedTrialProductId) {
-              const hasUpgraded = subscription.metadata?.upgraded_to_weekly === "true";
-              if (!hasUpgraded) {
-                const weeklyPriceId = resolveCheckoutPriceId("weekly");
-                const weeklyProductId = resolveCheckoutProductId("weekly");
-                if (!weeklyPriceId && !weeklyProductId) {
-                  throw new Error("Missing weekly product ID for abandoned trial auto-upgrade");
-                }
-                const resolvedWeeklyPriceId = weeklyPriceId
-                  ? weeklyPriceId
-                  : (await stripe.products.retrieve(weeklyProductId!)).default_price as string;
-
-                if (resolvedWeeklyPriceId && lineItem) {
-                  await stripe.subscriptions.update(subscription.id, {
-                    items: [{
-                      id: lineItem.id,
-                      price: resolvedWeeklyPriceId,
-                    }],
-                    proration_behavior: "none",
-                    metadata: {
-                      ...subscription.metadata,
-                      upgraded_to_weekly: "true",
-                    },
-                  });
-                  console.log(
-                    `Auto-upgraded abandoned trial subscription ${subscription.id} from intro price to weekly price`
-                  );
-                }
-              }
-            }
-          } catch (upgradeError: any) {
-            console.error("Error auto-upgrading abandoned trial:", upgradeError);
-            // Don't fail the whole handler — continue with normal subscription update logic
-          }
-        }
-
-        const { data: subData } = await supabase
+        const { data: subData, error: subscriptionLookupError } = await supabase
           .from("subscriptions")
           .select("user_id, stripe_subscription_id")
           .eq("stripe_customer_id", customerId)
-          .single();
+          .maybeSingle();
+
+        if (subscriptionLookupError) {
+          console.error(
+            "Error finding subscription record by customer id:",
+            subscriptionLookupError
+          );
+        }
 
         if (subData) {
-          if (subscriptionStatus === "active") {
-            // Subscription became active — update to track it (use the most recently active one)
+          if (trackedStatus === "active") {
+            // Trialing and active both preserve access in our app.
             await supabase
               .from("subscriptions")
               .update({
                 stripe_subscription_id: subscription.id,
+                billing_provider: "stripe",
+                whop_user_id: null,
+                whop_membership_id: null,
+                billing_manage_url: null,
                 tier: currentTier,
                 status: "active",
                 current_period_end: new Date(
@@ -499,40 +607,88 @@ export async function POST(request: NextRequest) {
                 updated_at: new Date().toISOString(),
               })
               .eq("user_id", subData.user_id);
-            console.log("Subscription activated/updated for user:", subData.user_id, "sub:", subscription.id);
+            console.log(
+              "Subscription activated/updated for user:",
+              subData.user_id,
+              "sub:",
+              subscription.id,
+              "status:",
+              subscriptionStatus
+            );
+          } else if (trackedStatus === "past_due" || trackedStatus === "unpaid") {
+            await supabase
+              .from("subscriptions")
+              .update({
+                stripe_subscription_id: subscription.id,
+                billing_provider: "stripe",
+                whop_user_id: null,
+                whop_membership_id: null,
+                billing_manage_url: null,
+                tier: currentTier,
+                status: trackedStatus,
+                current_period_end: new Date(
+                  (subscription as any).current_period_end * 1000
+                ).toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("user_id", subData.user_id);
+            console.log(
+              "Subscription requires payment update for user:",
+              subData.user_id,
+              "sub:",
+              subscription.id,
+              "status:",
+              subscriptionStatus
+            );
           } else {
-            // Subscription is being canceled/paused — check if customer has OTHER active subscriptions
-            // This handles duplicate subscriptions: if one is canceled, the other keeps access alive
+            // Subscription no longer grants access — check if the customer has any
+            // other active or trialing subscriptions before downgrading access.
             try {
-              const activeSubscriptions = await stripe.subscriptions.list({
+              const customerSubscriptions = await stripe.subscriptions.list({
                 customer: customerId,
-                status: "active",
+                status: "all",
                 limit: 10,
               });
 
-              if (activeSubscriptions.data.length > 0) {
-                // Customer still has active subscriptions — switch to the most recent one
-                const latestActive = activeSubscriptions.data[0];
+              const remainingAccessSubscription =
+                customerSubscriptions.data.find(
+                  (candidate) =>
+                    candidate.id !== subscription.id &&
+                    isAccessGrantingStripeSubscriptionStatus(candidate.status)
+                );
+
+              if (remainingAccessSubscription) {
                 await supabase
                   .from("subscriptions")
                   .update({
-                    stripe_subscription_id: latestActive.id,
+                    stripe_subscription_id: remainingAccessSubscription.id,
+                    billing_provider: "stripe",
+                    whop_user_id: null,
+                    whop_membership_id: null,
+                    billing_manage_url: null,
                     tier:
                       inferTierFromProductId(
-                        latestActive.items.data[0]?.price?.product as
+                        remainingAccessSubscription.items.data[0]?.price
+                          ?.product as
                           | string
                           | undefined
                       ) ?? currentTier,
                     status: "active",
                     current_period_end: new Date(
-                      (latestActive as any).current_period_end * 1000
+                      (remainingAccessSubscription as any).current_period_end *
+                        1000
                     ).toISOString(),
                     updated_at: new Date().toISOString(),
                   })
                   .eq("user_id", subData.user_id);
-                console.log("Switched to remaining active subscription:", latestActive.id, "for user:", subData.user_id);
+                console.log(
+                  "Switched to remaining access-granting subscription:",
+                  remainingAccessSubscription.id,
+                  "for user:",
+                  subData.user_id
+                );
               } else {
-                // No other active subscriptions — actually cancel
+                // No other trialing/active subscriptions — actually cancel access.
                 await supabase
                   .from("subscriptions")
                   .update({
@@ -546,7 +702,10 @@ export async function POST(request: NextRequest) {
                 console.log("All subscriptions canceled for user:", subData.user_id);
               }
             } catch (e) {
-              console.error("Error checking for other active subscriptions:", e);
+              console.error(
+                "Error checking for other access-granting subscriptions:",
+                e
+              );
               // Fallback: only cancel if this is the tracked subscription
               if (subData.stripe_subscription_id === subscription.id) {
                 await supabase

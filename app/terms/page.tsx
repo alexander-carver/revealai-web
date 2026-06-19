@@ -42,10 +42,11 @@ export default function TermsOfServicePage() {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Subscriptions & Payments</h2>
             <ul className="list-disc pl-6 space-y-2 text-gray-600">
               <li>Reveal AI offers <strong>weekly and yearly subscription plans</strong> ({formatUsd(PUBLIC_PRICING.weekly)}/week and {formatUsd(PUBLIC_PRICING.yearly)}/year).</li>
-              <li>Subscriptions are billed through <strong>Stripe</strong> and Apple's App Store and managed via your account settings.</li>
-              <li><strong>Annual plans may include a {PUBLIC_PRICING.freeTrialDays}-day free trial</strong>, and eligible users may receive promotional annual pricing such as {formatUsd(PUBLIC_PRICING.annualTrialPrice)}/year.</li>
-              <li><strong>Free trials and promotional offers</strong> automatically convert to paid subscriptions unless canceled at least 24 hours before the trial period ends.</li>
-              <li><strong>Refunds and cancellations</strong> are handled according to Stripe and Apple policies. We do not provide separate refunds.</li>
+              <li>Subscriptions may be billed through <strong>Stripe</strong>, <strong>Whop</strong>, or Apple&apos;s App Store and managed via your account settings.</li>
+              <li><strong>The standard yearly plan starts immediately</strong> at {formatUsd(PUBLIC_PRICING.yearly)}/year and renews automatically unless canceled before renewal.</li>
+              <li><strong>Select promotional annual offers</strong> may be billed immediately at the promotional yearly rate shown at checkout and renew automatically unless canceled before renewal.</li>
+              <li><strong>Promotional offers</strong> renew as paid subscriptions unless canceled before the renewal date.</li>
+              <li><strong>Refunds and cancellations</strong> are handled according to the policies of the payment provider used for your purchase, including Stripe, Whop, or Apple. We do not provide separate refunds outside those policies.</li>
             </ul>
           </section>
 

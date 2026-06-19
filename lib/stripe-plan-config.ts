@@ -1,6 +1,12 @@
+import {
+  getDebugCheckoutPriceId,
+  getDebugCheckoutProductId,
+} from "@/lib/stripe-env";
+
 export type CheckoutPlan =
   | "weekly"
   | "yearly"
+  | "annual_offer"
   | "free_trial"
   | "abandoned_trial"
   | "test";
@@ -18,8 +24,9 @@ function compact(values: Array<string | undefined | null>): string[] {
 export function normalizeTierForPlan(plan?: string | null): SubscriptionTier {
   switch (plan) {
     case "weekly":
-    case "abandoned_trial":
       return "weekly";
+    case "annual_offer":
+    case "abandoned_trial":
     case "free_trial":
     case "yearly":
       return "yearly";
@@ -80,10 +87,14 @@ export function getAbandonedTrialPriceIds(): string[] {
 
 export function inferTierFromProductId(productId?: string | null): SubscriptionTier | null {
   if (!productId) return null;
-  if (getWeeklyProductIds().includes(productId) || getAbandonedTrialProductIds().includes(productId)) {
+  if (getWeeklyProductIds().includes(productId)) {
     return "weekly";
   }
-  if (getYearlyProductIds().includes(productId) || getFreeTrialProductIds().includes(productId)) {
+  if (
+    getYearlyProductIds().includes(productId) ||
+    getFreeTrialProductIds().includes(productId) ||
+    getAbandonedTrialProductIds().includes(productId)
+  ) {
     return "yearly";
   }
   return null;
@@ -93,6 +104,11 @@ export function resolveCheckoutProductId(
   plan: CheckoutPlan,
   platform: CheckoutPlatform = "web"
 ): string | undefined {
+  const debugProductId = getDebugCheckoutProductId(plan, platform);
+  if (debugProductId) {
+    return debugProductId;
+  }
+
   const weeklyProductId =
     platform === "mobile"
       ? process.env.STRIPE_MOBILE_WEEKLY_PRODUCT_ID || process.env.STRIPE_WEEKLY_PRODUCT_ID
@@ -115,10 +131,11 @@ export function resolveCheckoutProductId(
       return weeklyProductId;
     case "yearly":
       return yearlyProductId;
+    case "annual_offer":
     case "free_trial":
       return freeTrialProductId || yearlyProductId;
     case "abandoned_trial":
-      return abandonedTrialProductId || weeklyProductId;
+      return abandonedTrialProductId || freeTrialProductId || yearlyProductId;
     case "test":
       return process.env.STRIPE_TEST_PRODUCT_ID || weeklyProductId;
     default:
@@ -130,6 +147,11 @@ export function resolveCheckoutPriceId(
   plan: CheckoutPlan,
   platform: CheckoutPlatform = "web"
 ): string | undefined {
+  const debugPriceId = getDebugCheckoutPriceId(plan, platform);
+  if (debugPriceId) {
+    return debugPriceId;
+  }
+
   const weeklyPriceId =
     platform === "mobile"
       ? process.env.STRIPE_MOBILE_WEEKLY_PRICE_ID || process.env.STRIPE_WEEKLY_PRICE_ID
@@ -152,17 +174,12 @@ export function resolveCheckoutPriceId(
       return weeklyPriceId;
     case "yearly":
       return yearlyPriceId;
+    case "annual_offer":
     case "free_trial":
       return freeTrialPriceId || yearlyPriceId;
     case "abandoned_trial":
-      return abandonedTrialPriceId || weeklyPriceId;
+      return abandonedTrialPriceId || freeTrialPriceId || yearlyPriceId;
     default:
       return undefined;
   }
-}
-
-export function introCouponIdForPlatform(platform: CheckoutPlatform): string {
-  return platform === "mobile"
-    ? "revealai_mobile_weekly_intro_500_off"
-    : "revealai_abandoned_trial_intro";
 }

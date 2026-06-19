@@ -15,7 +15,7 @@ Run these commands to set live mode secrets:
 supabase secrets set STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX
 supabase secrets set STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
-supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
+supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_UGRAUVMsp9toeI
 ```
 
 ### 2. Set Vercel Environment Variables (LIVE MODE)
@@ -29,7 +29,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=YOUR_LIVE_PUBLISHABLE_KEY
 STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET=whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX
 STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
-STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
+STRIPE_YEARLY_PRODUCT_ID=prod_UGRAUVMsp9toeI
 ```
 
 ### 3. Verify Stripe Live Webhook
@@ -38,7 +38,7 @@ STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
 2. Developers → Webhooks
 3. Verify webhook exists:
    - URL: `https://ddoginuyioiatbpfemxr.supabase.co/functions/v1/stripe-webhook`
-   - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+   - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, `invoice.payment_action_required`
    - Signing secret should be: `whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX`
 
 ### 4. Update Local .env.local (Required - for local testing)
@@ -49,7 +49,7 @@ Update your `.env.local` file with these live keys:
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=YOUR_LIVE_PUBLISHABLE_KEY
 STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
-STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
+STRIPE_YEARLY_PRODUCT_ID=prod_UGRAUVMsp9toeI
 ```
 
 **Important:** After updating `.env.local`, restart your dev server!
@@ -62,7 +62,7 @@ STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
 
 2. **Test Regular Plans**: Use the "Upgrade to Pro" button
    - Weekly: `prod_TXnLmsWmubVfIh`
-   - Yearly: `prod_TXnMRenhMBjfBM`
+   - Yearly: `prod_UGRAUVMsp9toeI`
 
 ## ⚠️ Important Notes
 

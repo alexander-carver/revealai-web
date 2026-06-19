@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { randomBytes } from "crypto";
+import {
+  ensureDeviceAuthUser,
+  ensureEmailAuthUser,
+  findAuthUserByEmail,
+} from "@/lib/auth-admin";
+import { getBillingCustomerEmail } from "@/lib/customer-email";
+import {
+  expireOpenCheckoutSessions,
+  listOpenCheckoutSessionsForIdentity,
+} from "@/lib/stripe-checkout-sessions";
 import { normalizeTierForPlan } from "@/lib/stripe-plan-config";
 import { getStripe } from "@/lib/stripe-server";
+import { isAccessGrantingStripeSubscriptionStatus } from "@/lib/stripe-subscription-status";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -33,10 +43,48 @@ export async function POST(request: NextRequest) {
     console.log("Session status:", session.status, session.payment_status);
     console.log("Session customer email:", session.customer_email);
     console.log("Session metadata:", session.metadata);
+    const stripeCustomerId =
+      typeof session.customer === "string"
+        ? session.customer
+        : session.customer?.id || null;
 
-    if (session.payment_status !== "paid") {
+    let stripeSubscription: Stripe.Subscription | null = null;
+    if (session.subscription) {
+      stripeSubscription =
+        typeof session.subscription === "string"
+          ? await stripe.subscriptions.retrieve(session.subscription)
+          : (session.subscription as Stripe.Subscription);
+    }
+
+    if (session.status !== "complete") {
+      return NextResponse.json(
+        {
+          error: "Checkout session is not complete yet",
+          status: session.status,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      session.payment_status !== "paid" &&
+      session.payment_status !== "no_payment_required"
+    ) {
       return NextResponse.json(
         { error: "Payment not completed", status: session.payment_status },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !stripeSubscription ||
+      !isAccessGrantingStripeSubscriptionStatus(stripeSubscription.status)
+    ) {
+      return NextResponse.json(
+        {
+          error: "Subscription is not active yet",
+          status: stripeSubscription?.status || "missing",
+        },
         { status: 400 }
       );
     }
@@ -47,10 +95,12 @@ export async function POST(request: NextRequest) {
     const deviceId = session.metadata?.deviceId;
     
     // Get customer email from multiple possible sources
-    let customerEmail = email || 
-                        session.customer_email || 
-                        session.customer_details?.email || 
-                        session.metadata?.email;
+    let customerEmail =
+      email ||
+      session.customer_email ||
+      session.customer_details?.email ||
+      session.metadata?.email;
+    const billingEmail = getBillingCustomerEmail(customerEmail);
     
     console.log("Email sources:", {
       fromParam: email,
@@ -60,162 +110,59 @@ export async function POST(request: NextRequest) {
       finalEmail: customerEmail
     });
     
+    if (billingEmail) {
+      try {
+        await ensureEmailAuthUser(supabase, billingEmail);
+      } catch (billingEmailEnsureError) {
+        console.error("Error ensuring billing email user:", billingEmailEnsureError);
+      }
+    }
+
     // If we still don't have a userId, try to find or create the user by device ID first (like mobile apps)
     // Device ID creates a consistent user per device, not per email
     if (!finalUserId && deviceId) {
       console.log("Looking up user by device ID:", deviceId);
-      
-      // Create device-based email format (consistent per device)
-      const deviceEmail = `device_${deviceId}@revealai.device`;
-      
-      // Use admin API to find user by device email
-      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
-      
-      if (!userError && userData?.users) {
-        const matchingUser = userData.users.find(
-          u => u.email?.toLowerCase() === deviceEmail.toLowerCase()
-        );
-        if (matchingUser) {
-          finalUserId = matchingUser.id;
-          console.log("Found existing user by device ID:", finalUserId);
-          customerEmail = customerEmail || deviceEmail; // Use device email if no customer email
-        }
-      }
-      
-      // If no user found, create one with device ID
-      if (!finalUserId) {
-        console.log("No user found, creating device-based user for:", deviceId);
-        
-        try {
-          const randomPassword = randomBytes(32).toString('hex');
-          
-          const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-            email: deviceEmail,
-            password: randomPassword,
-            email_confirm: true,
-            user_metadata: {
-              device_id: deviceId,
-              is_device_user: true,
-            },
-          });
-          
-          if (createError) {
-            // If user already exists, try to find them again
-            if (createError.message?.toLowerCase().includes('already exists') || 
-                createError.message?.toLowerCase().includes('already registered')) {
-              console.log("User already exists, searching again...");
-              const { data: retryUserData } = await supabase.auth.admin.listUsers();
-              if (retryUserData?.users) {
-                const existingUser = retryUserData.users.find(
-                  u => u.email?.toLowerCase() === deviceEmail.toLowerCase()
-                );
-                if (existingUser) {
-                  finalUserId = existingUser.id;
-                  console.log("Found existing device user after create error:", finalUserId);
-                }
-              }
-            }
-            
-            if (!finalUserId) {
-              console.error("Error creating device user:", createError);
-            }
-          } else if (newUser?.user) {
-            finalUserId = newUser.user.id;
-            console.log("Created device-based user:", finalUserId);
-            customerEmail = customerEmail || deviceEmail;
-          }
-        } catch (err: any) {
-          console.error("Error creating device user:", err);
-        }
+      try {
+        const ensuredDeviceUser = await ensureDeviceAuthUser(supabase, deviceId);
+        finalUserId = ensuredDeviceUser.userId;
+        customerEmail = customerEmail || ensuredDeviceUser.deviceEmail;
+        console.log("Resolved device-based user:", finalUserId);
+      } catch (err: any) {
+        console.error("Error ensuring device user:", err);
       }
     }
     
     // If we still don't have a userId, try to find or create the user by email (fallback)
     if (!finalUserId && customerEmail) {
       console.log("Looking up user by email:", customerEmail);
-      
-      // Use admin API to find user by email (case-insensitive search)
-      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
-      
-      if (!userError && userData?.users) {
-        const matchingUser = userData.users.find(
-          u => u.email?.toLowerCase() === customerEmail.toLowerCase()
-        );
+
+      try {
+        const matchingUser = await findAuthUserByEmail(supabase, customerEmail);
         if (matchingUser) {
           finalUserId = matchingUser.id;
           console.log("Found existing user by email:", finalUserId);
         }
+      } catch (userLookupError) {
+        console.error("Error looking up user by email:", userLookupError);
       }
-      
-      // If no user found, create one automatically
+
       if (!finalUserId) {
-        console.log("No user found, creating new account automatically for:", customerEmail);
-        
+        console.log(
+          "No user found, creating new account automatically for:",
+          customerEmail
+        );
+
         try {
-          // Generate a random secure password (user won't need it since we'll use magic link)
-          const randomPassword = randomBytes(32).toString('hex');
-          
-          // Create user with admin API (email confirmation disabled for instant access)
-          const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-            email: customerEmail,
-            password: randomPassword,
-            email_confirm: true, // Skip email confirmation for instant access
-          });
-          
-          if (createError) {
-            console.error("Error creating user:", createError);
-            
-            // If user already exists, try to find them again (race condition)
-            if (createError.message?.toLowerCase().includes('already exists') || 
-                createError.message?.toLowerCase().includes('already registered')) {
-              console.log("User already exists, searching again...");
-              const { data: retryUserData } = await supabase.auth.admin.listUsers();
-              if (retryUserData?.users) {
-                const existingUser = retryUserData.users.find(
-                  u => u.email?.toLowerCase() === customerEmail.toLowerCase()
-                );
-                if (existingUser) {
-                  finalUserId = existingUser.id;
-                  console.log("Found existing user after create error:", finalUserId);
-                }
-              }
-            }
-            
-            // If we still don't have a user ID, return error
-            if (!finalUserId) {
-              return NextResponse.json(
-                { error: "Failed to create account. Please contact support." },
-                { status: 500 }
-              );
-            }
-          } else if (newUser?.user) {
-            finalUserId = newUser.user.id;
-            console.log("Created new user account automatically:", finalUserId);
-          } else {
-            return NextResponse.json(
-              { error: "Failed to create account. Please contact support." },
-              { status: 500 }
-            );
-          }
+          const ensuredEmailUser = await ensureEmailAuthUser(
+            supabase,
+            customerEmail
+          );
+          finalUserId = ensuredEmailUser.userId;
+          customerEmail = ensuredEmailUser.email;
+          console.log("Created or found email-based user:", finalUserId);
         } catch (err: any) {
           console.error("Error in user creation:", err);
-          
-          // If user already exists, try to find them
-          if (err.message?.toLowerCase().includes('already exists') || 
-              err.message?.toLowerCase().includes('already registered')) {
-            console.log("User already exists (exception), searching again...");
-            const { data: retryUserData } = await supabase.auth.admin.listUsers();
-            if (retryUserData?.users) {
-              const existingUser = retryUserData.users.find(
-                u => u.email?.toLowerCase() === customerEmail.toLowerCase()
-              );
-              if (existingUser) {
-                finalUserId = existingUser.id;
-                console.log("Found existing user after exception:", finalUserId);
-              }
-            }
-          }
-          
+
           if (!finalUserId) {
             return NextResponse.json(
               { error: "Failed to create account. Please contact support." },
@@ -233,38 +180,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get subscription details - handle both expanded and non-expanded cases
-    let subscriptionId: string | null = null;
-    let currentPeriodEnd: Date;
-
-    // Check if subscription is expanded (object) or just an ID (string)
-    if (session.subscription) {
-      if (typeof session.subscription === 'string') {
-        subscriptionId = session.subscription;
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        const periodEnd = (subscription as any).current_period_end;
-        if (periodEnd) {
-          currentPeriodEnd = new Date(periodEnd * 1000);
-        } else {
-          // Fallback if no period_end
-          currentPeriodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-        }
-      } else {
-        // Subscription is already expanded
-        const expandedSub = session.subscription as Stripe.Subscription;
-        subscriptionId = expandedSub.id;
-        const periodEnd = (expandedSub as any).current_period_end;
-        if (periodEnd) {
-          currentPeriodEnd = new Date(periodEnd * 1000);
-        } else {
-          // Fallback if no period_end
-          currentPeriodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-        }
-      }
-    } else {
-      // Default to 1 year if no subscription (one-time payment)
-      currentPeriodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-    }
+    const subscriptionId = stripeSubscription.id;
+    const currentPeriodEnd = (stripeSubscription as any).current_period_end
+      ? new Date((stripeSubscription as any).current_period_end * 1000)
+      : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
 
     // Determine plan from metadata or default
     const plan = session.metadata?.plan || "yearly";
@@ -277,12 +196,17 @@ export async function POST(request: NextRequest) {
       .from("subscriptions")
       .upsert({
         user_id: finalUserId,
-        stripe_customer_id: session.customer as string,
-        stripe_subscription_id: subscriptionId || null,
+        stripe_customer_id: stripeCustomerId,
+        stripe_subscription_id: subscriptionId,
+        billing_provider: "stripe",
+        whop_user_id: null,
+        whop_membership_id: null,
+        billing_manage_url: null,
         tier,
         status: "active",
-        current_period_end: currentPeriodEnd.toISOString(),
-        updated_at: new Date().toISOString(),
+              current_period_end: currentPeriodEnd.toISOString(),
+              customer_email: billingEmail,
+              updated_at: new Date().toISOString(),
       }, {
         onConflict: "user_id",
       })
@@ -299,11 +223,44 @@ export async function POST(request: NextRequest) {
 
     console.log("Subscription created/updated:", data);
 
+    try {
+      const openSessionsForIdentity = await listOpenCheckoutSessionsForIdentity(
+        stripe,
+        {
+          userId: finalUserId,
+          deviceId,
+          customerId: stripeCustomerId,
+          customerEmail,
+        }
+      );
+
+      if (openSessionsForIdentity.length > 0) {
+        const expiredSessionIds = await expireOpenCheckoutSessions(
+          stripe,
+          openSessionsForIdentity,
+          session.id
+        );
+
+        if (expiredSessionIds.length > 0) {
+          console.log(
+            `Expired stale open checkout sessions after verify-session: ${expiredSessionIds.join(
+              ", "
+            )}`
+          );
+        }
+      }
+    } catch (openSessionError) {
+      console.error(
+        "Failed to expire stale open checkout sessions after verify-session:",
+        openSessionError
+      );
+    }
+
     return NextResponse.json({
       success: true,
       subscription: data,
       userId: finalUserId,
-      email: customerEmail,
+      email: billingEmail || customerEmail,
       accountCreated: !hadUserIdFromStripe, // True when user was resolved via device/email (not from Stripe metadata)
     });
   } catch (error: any) {

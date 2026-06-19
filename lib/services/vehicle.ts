@@ -10,6 +10,43 @@ class VehicleServiceError extends Error {
 
 const VIN_API_BASE = "https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues";
 
+export type VehicleLookupMode = "vin" | "plate";
+
+export function normalizeLicensePlate(plate: string): string {
+  return plate.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+export function getVehicleLookupMode(
+  query: string
+): VehicleLookupMode | null {
+  const sanitizedVin = sanitizeVin(query);
+
+  if (isValidVin(sanitizedVin)) {
+    return "vin";
+  }
+
+  const normalizedPlate = normalizeLicensePlate(query);
+  if (/^[A-Z0-9]{4,8}$/.test(normalizedPlate)) {
+    return "plate";
+  }
+
+  return null;
+}
+
+export function normalizeVehicleLookupQuery(query: string): string | null {
+  const mode = getVehicleLookupMode(query);
+
+  if (mode === "vin") {
+    return sanitizeVin(query);
+  }
+
+  if (mode === "plate") {
+    return normalizeLicensePlate(query);
+  }
+
+  return null;
+}
+
 export async function decodeVin(vin: string): Promise<VinDecodedVehicle> {
   try {
   const sanitized = sanitizeVin(vin);
@@ -135,4 +172,3 @@ export function getEngineSummary(vehicle: VinDecodedVehicle): string | null {
 
   return pieces.length > 0 ? pieces.join(" • ") : null;
 }
-

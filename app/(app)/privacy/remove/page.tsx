@@ -23,7 +23,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 
 export default function RemoveFromSearchPage() {
   const { user } = useAuth();
-  const { isPro, showFreeTrialPaywall, tier } = useSubscription();
+  const { isPro, showFreeTrialPaywall, tier, accessSource } = useSubscription();
   const [isOptedOut, setIsOptedOut] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -41,7 +41,7 @@ export default function RemoveFromSearchPage() {
   });
 
   const handleOptOut = () => {
-    // Show free trial paywall if not pro
+    // Show annual offer paywall if not pro
     if (!isPro) {
       showFreeTrialPaywall();
       return;
@@ -211,20 +211,26 @@ export default function RemoveFromSearchPage() {
                   <div className="flex items-center gap-3">
                     <Crown className="w-8 h-8 text-amber-500" />
                     <div>
-                      <p className="font-semibold">RevealAI Pro</p>
+                      <p className="font-semibold">
+                        {accessSource === "affiliate" ? "Affiliate Access" : "RevealAI Pro"}
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        {tier === "weekly" ? "Weekly" : "Yearly"} plan
+                        {accessSource === "affiliate"
+                          ? "Included with your affiliate account"
+                          : `${tier === "weekly" ? "Weekly" : "Yearly"} plan`}
                       </p>
                     </div>
                   </div>
-                  <Link href="/settings/cancel">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                    >
-                      Cancel Subscription
-                    </Button>
-                  </Link>
+                  {accessSource === "subscription" && (
+                    <Link href="/settings/cancel">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                      >
+                        Cancel Subscription
+                      </Button>
+                    </Link>
+                  )}
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   {[
@@ -253,7 +259,7 @@ export default function RemoveFromSearchPage() {
                     </p>
                   </div>
                   <Button
-                    onClick={showFreeTrialPaywall}
+                    onClick={() => showFreeTrialPaywall()}
                     className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
                   >
                     <Crown className="w-4 h-4 mr-2" />
@@ -268,4 +274,3 @@ export default function RemoveFromSearchPage() {
     </div>
   );
 }
-

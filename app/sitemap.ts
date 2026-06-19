@@ -19,31 +19,37 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: `${baseUrl}/search`,
+      url: `${baseUrl}/people-search`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/phone`,
+      url: `${baseUrl}/dating-app-search`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/records`,
+      url: `${baseUrl}/follower-search`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/reverse-phone-lookup`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/public-records-search`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/username`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/vehicle`,
+      url: `${baseUrl}/vehicle-lookup`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.8,
@@ -74,22 +80,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     ...blogUrls,
     {
-      url: `${baseUrl}/reverse-phone-lookup`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
       url: `${baseUrl}/background-check`,
       lastModified: new Date(),
       changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/dating-app-search`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8,
+      priority: 0.7,
     },
     {
       url: `${baseUrl}/login`,
@@ -99,4 +93,3 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 }
-

@@ -1,46 +1,31 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Check, Lock, Star, Loader2 } from "lucide-react";
 import Image from "next/image";
+import {
+  getProductThemeStyle,
+  getSearchProduct,
+  type SearchProductId,
+} from "@/lib/search-products";
 
-// Progress steps configuration with detailed sub-descriptions
-const PROGRESS_STEPS = [
-  { id: 1, text: "Scanning 500M+ public records…", detail: "Court records, property filings, registrations", completionTime: 3000 },
-  { id: 2, text: "Cross-referencing databases…", detail: "Matching across 100+ data sources", completionTime: 6000 },
-  { id: 3, text: "Analyzing social footprint…", detail: "Social media, dating apps, forums", completionTime: 9000 },
-  { id: 4, text: "Compiling verified report…", detail: "Verifying data accuracy & recency", completionTime: 12000 },
-  { id: 5, text: "Finalizing deep analysis…", detail: "Almost ready", completionTime: Infinity },
+const LOADING_PORTRAIT_PATHS = [
+  "/loading-portraits/portrait-1.png",
+  "/loading-portraits/portrait-2.png",
+  "/loading-portraits/portrait-3.png",
+  "/loading-portraits/portrait-4.png",
+  "/loading-portraits/portrait-5.png",
+  "/loading-portraits/portrait-6.png",
 ];
 
-// Testimonials configuration
-const TESTIMONIALS = [
-  {
-    title: "Pocket Detective",
-    quote:
-      "Checking a new match? Reveal AI digs up mutual friends and recent posts fast. Feels like having my own mini investigator.",
-  },
-  {
-    title: "Perfect for a Quick Peek",
-    quote:
-      "Wanted to see what my crush is doing. Reveal AI found their hidden accounts right away. Now I know the latest.",
-  },
-  {
-    title: "Crazy Fast",
-    quote:
-      "I typed a name and all their links popped up in seconds. No waiting.",
-  },
-];
-
-// Avatar paths for orbiting and center avatars
-const AVATAR_PATHS = [
-  "/avatars/orbit-1.png",
-  "/avatars/orbit-2.png",
-  "/avatars/orbit-3.png",
-  "/avatars/orbit-4.png",
-  "/avatars/orbit-5.png",
-  "/avatars/orbit-6.png",
-];
+const PORTRAIT_SLOTS = [
+  { angle: "0deg", tilt: "-6deg", delay: "0ms" },
+  { angle: "60deg", tilt: "7deg", delay: "220ms" },
+  { angle: "120deg", tilt: "-8deg", delay: "440ms" },
+  { angle: "180deg", tilt: "6deg", delay: "660ms" },
+  { angle: "240deg", tilt: "-7deg", delay: "880ms" },
+  { angle: "300deg", tilt: "5deg", delay: "1100ms" },
+] as const;
 
 // Source logo paths
 const SOURCE_LOGO_PATHS = [
@@ -57,6 +42,8 @@ interface SearchLoadingScreenProps {
   searchQuery: string;
   onComplete: () => void;
   onCancel: () => void;
+  productId?: SearchProductId;
+  showLongSearchNote?: boolean;
 }
 
 export function SearchLoadingScreen({
@@ -64,7 +51,14 @@ export function SearchLoadingScreen({
   searchQuery,
   onComplete,
   onCancel,
+  productId = "people",
+  showLongSearchNote = false,
 }: SearchLoadingScreenProps) {
+  const product = getSearchProduct(productId);
+  const progressSteps = product.loading.steps;
+  const testimonials = product.loading.testimonials;
+  const productThemeStyle = getProductThemeStyle(productId);
+
   // NOTE: Paywall is now handled by the parent component (people-search.tsx)
   // This loading screen just shows the animation
   const [currentStep, setCurrentStep] = useState(0);
@@ -120,7 +114,7 @@ export function SearchLoadingScreen({
       setProgress(Math.min(newProgress, 100));
 
       // Update current step based on elapsed time
-      const newStep = PROGRESS_STEPS.findIndex(
+      const newStep = progressSteps.findIndex(
         (step) => elapsed < step.completionTime
       );
       if (newStep !== -1) {
@@ -136,26 +130,26 @@ export function SearchLoadingScreen({
     }, interval);
 
     return () => clearInterval(timer);
-  }, [isVisible, startTime]);
+  }, [isVisible, startTime, progressSteps]);
 
   // Testimonial rotation timer (every 10 seconds)
   useEffect(() => {
     if (!isVisible) return;
 
     const timer = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % TESTIMONIALS.length);
+      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
     }, 10000);
 
     return () => clearInterval(timer);
-  }, [isVisible]);
+  }, [isVisible, testimonials.length]);
 
   // Center avatar rotation timer (every 0.7 seconds)
   useEffect(() => {
     if (!isVisible) return;
 
     const timer = setInterval(() => {
-      setCurrentCenterAvatar((prev) => (prev + 1) % AVATAR_PATHS.length);
-    }, 700);
+      setCurrentCenterAvatar((prev) => (prev + 1) % LOADING_PORTRAIT_PATHS.length);
+    }, 1400);
 
     return () => clearInterval(timer);
   }, [isVisible]);
@@ -174,61 +168,109 @@ export function SearchLoadingScreen({
 
   if (!isVisible) return null;
 
-  // Calculate orbit positions for 6 avatars evenly distributed
-  const orbitRadius = { mobile: 100, desktop: 130 };
-
   return (
-    <div className="fixed inset-0 z-40 bg-white flex flex-col items-center justify-center px-4 overflow-hidden">
+    <div
+      className="fixed inset-0 z-40 bg-white flex flex-col items-center justify-center px-4 overflow-hidden"
+      style={{
+        ...productThemeStyle,
+        background:
+          "linear-gradient(180deg, var(--product-gradient-from) 0%, #ffffff 100%)",
+      }}
+    >
       {/* Background subtle pattern */}
       <div className="absolute inset-0 pattern-dots opacity-30 pointer-events-none" />
       
-      {/* Center Ring Animation Container - with extra padding to contain orbiting avatars */}
-      <div className="relative w-[260px] h-[260px] md:w-[320px] md:h-[320px] mb-6 flex-shrink-0">
-        {/* Outer ring glow */}
-        <div className="absolute inset-[30px] md:inset-[25px] rounded-full bg-[#0087FF]/5 animate-pulse" />
-        
-        {/* Outer rotating ring */}
-        <div className="absolute inset-[30px] md:inset-[25px] rounded-full border-2 border-[#0087FF]/20 animate-orbit-ring" />
-        
-        {/* Secondary ring */}
-        <div 
-          className="absolute inset-[40px] md:inset-[35px] rounded-full border border-[#0087FF]/10 animate-orbit-ring"
-          style={{ animationDirection: "reverse", animationDuration: "15s" }}
+      {/* Portrait loading orbit */}
+      <div className="relative mb-7 flex h-[270px] w-[270px] flex-shrink-0 items-center justify-center md:h-[330px] md:w-[330px]">
+        {/* Ambient glow */}
+        <div
+          className="absolute inset-[34px] rounded-full blur-2xl md:inset-[42px]"
+          style={{
+            background:
+              "radial-gradient(circle, color-mix(in srgb, var(--product-primary) 20%, transparent) 0%, color-mix(in srgb, var(--product-primary) 8%, transparent) 42%, transparent 74%)",
+          }}
         />
-        
-        {/* Orbiting avatars - using inline styles for reliable positioning */}
-        {AVATAR_PATHS.map((avatar, index) => {
-          const angle = (index * 60) * (Math.PI / 180); // Convert to radians, 60 degrees apart
+
+        {/* Primary outer shell */}
+        <div
+          className="absolute inset-[28px] rounded-full border md:inset-[34px]"
+          style={{
+            borderColor: "color-mix(in srgb, var(--product-primary) 16%, transparent)",
+            background:
+              "radial-gradient(circle at center, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 52%, color-mix(in srgb, var(--product-primary) 4%, white) 100%)",
+            boxShadow:
+              "0 32px 70px -40px var(--product-shadow), inset 0 1px 0 rgba(255,255,255,0.85)",
+          }}
+        />
+
+        {/* Inner portrait band */}
+        <div
+          className="absolute inset-[54px] rounded-full border md:inset-[68px]"
+          style={{
+            borderColor: "color-mix(in srgb, var(--product-primary) 20%, transparent)",
+            background:
+              "radial-gradient(circle, color-mix(in srgb, var(--product-primary) 7%, white) 0%, rgba(255,255,255,0.9) 62%, rgba(255,255,255,0.78) 100%)",
+          }}
+        />
+
+        {/* Portrait chips */}
+        {LOADING_PORTRAIT_PATHS.map((avatar, index) => {
+          const slot = PORTRAIT_SLOTS[index];
+
           return (
             <div
               key={index}
-              className="absolute w-[36px] h-[36px] md:w-[42px] md:h-[42px] rounded-full overflow-hidden shadow-lg ring-2 ring-white z-10"
+              className="orbit-item absolute left-1/2 top-1/2 z-20"
               style={{
-                left: "50%",
-                top: "50%",
-                marginLeft: "-18px",
-                marginTop: "-18px",
-                animation: `orbit-path-${index} 12s linear infinite`,
+                ["--start-angle" as string]: slot.angle,
               }}
             >
-              <Image
-                src={avatar}
-                alt={`Avatar ${index + 1}`}
-                width={42}
-                height={42}
-                className="w-full h-full object-cover blur-[3px]"
-                loading="lazy"
-                quality={75}
-              />
+              <div
+                className="loading-portrait-card relative flex h-[46px] w-[46px] items-center justify-center rounded-full md:h-[54px] md:w-[54px]"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.76)",
+                  boxShadow:
+                    "0 18px 38px -22px rgba(15, 23, 42, 0.38), inset 0 1px 0 rgba(255,255,255,0.92)",
+                  animation: "loading-portrait-float 4.6s ease-in-out infinite",
+                  animationDelay: slot.delay,
+                  transform: `rotate(${slot.tilt})`,
+                }}
+              >
+                <div
+                  className="relative h-[38px] w-[38px] overflow-hidden rounded-full ring-2 ring-white md:h-[44px] md:w-[44px]"
+                  style={{
+                    boxShadow:
+                      "0 12px 24px -16px rgba(15, 23, 42, 0.42), 0 0 0 1px color-mix(in srgb, var(--product-primary) 12%, transparent)",
+                  }}
+                >
+                  <Image
+                    src={avatar}
+                    alt={`Portrait ${index + 1}`}
+                    width={44}
+                    height={44}
+                    className="h-full w-full scale-110 object-cover blur-[2.5px] saturate-[0.92] brightness-[0.94]"
+                    loading="lazy"
+                    quality={78}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/18 via-transparent to-black/8" />
+                </div>
+              </div>
             </div>
           );
         })}
 
-        {/* Center blurred avatar with lock */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[100px] h-[100px] md:w-[120px] md:h-[120px] rounded-full overflow-hidden shadow-2xl ring-4 ring-white z-20">
-          {/* Crossfade container */}
-          <div className="relative w-full h-full">
-            {AVATAR_PATHS.map((avatar, index) => (
+        {/* Center locked result */}
+        <div
+          className="absolute left-1/2 top-1/2 z-30 h-[118px] w-[118px] -translate-x-1/2 -translate-y-1/2 rounded-full p-[10px] md:h-[144px] md:w-[144px] md:p-[12px]"
+          style={{
+            background:
+              "linear-gradient(145deg, rgba(255,255,255,0.98), color-mix(in srgb, var(--product-primary) 8%, white))",
+            boxShadow:
+              "0 34px 80px -34px var(--product-shadow), inset 0 1px 0 rgba(255,255,255,0.92)",
+          }}
+        >
+          <div className="relative h-full w-full overflow-hidden rounded-full ring-4 ring-white/90">
+            {LOADING_PORTRAIT_PATHS.map((avatar, index) => (
               <div
                 key={index}
                 className={`absolute inset-0 transition-opacity duration-300 ${
@@ -238,90 +280,60 @@ export function SearchLoadingScreen({
                 <Image
                   src={avatar}
                   alt="Center Avatar"
-                  width={120}
-                  height={120}
-                  className="w-full h-full object-cover blur-[8px] scale-110"
-                  loading="lazy"
-                  quality={75}
+                  width={144}
+                  height={144}
+                  className="h-full w-full scale-[1.16] object-cover blur-[10px] saturate-[0.88] brightness-[0.84]"
+                  priority={index === 0}
+                  quality={82}
                 />
               </div>
             ))}
-          </div>
-          {/* Lock overlay */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-            <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/95 flex items-center justify-center shadow-xl">
-              <Lock className="w-6 h-6 md:w-7 md:h-7 text-gray-600" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.14),transparent_44%)]" />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.12) 100%)",
+              }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/26 backdrop-blur-[5px]">
+              <div
+                className="flex h-12 w-12 items-center justify-center rounded-full md:h-14 md:w-14"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.94)",
+                  boxShadow:
+                    "0 16px 35px -20px rgba(15, 23, 42, 0.6), inset 0 1px 0 rgba(255,255,255,0.95)",
+                }}
+              >
+                <Lock className="h-6 w-6 text-gray-700 md:h-7 md:w-7" />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Inline keyframes for each orbiting avatar */}
-      <style jsx>{`
-        @keyframes orbit-path-0 {
-          from { transform: rotate(0deg) translateX(85px) rotate(0deg); }
-          to { transform: rotate(360deg) translateX(85px) rotate(-360deg); }
-        }
-        @keyframes orbit-path-1 {
-          from { transform: rotate(60deg) translateX(85px) rotate(-60deg); }
-          to { transform: rotate(420deg) translateX(85px) rotate(-420deg); }
-        }
-        @keyframes orbit-path-2 {
-          from { transform: rotate(120deg) translateX(85px) rotate(-120deg); }
-          to { transform: rotate(480deg) translateX(85px) rotate(-480deg); }
-        }
-        @keyframes orbit-path-3 {
-          from { transform: rotate(180deg) translateX(85px) rotate(-180deg); }
-          to { transform: rotate(540deg) translateX(85px) rotate(-540deg); }
-        }
-        @keyframes orbit-path-4 {
-          from { transform: rotate(240deg) translateX(85px) rotate(-240deg); }
-          to { transform: rotate(600deg) translateX(85px) rotate(-600deg); }
-        }
-        @keyframes orbit-path-5 {
-          from { transform: rotate(300deg) translateX(85px) rotate(-300deg); }
-          to { transform: rotate(660deg) translateX(85px) rotate(-660deg); }
-        }
-        @media (min-width: 768px) {
-          @keyframes orbit-path-0 {
-            from { transform: rotate(0deg) translateX(110px) rotate(0deg); }
-            to { transform: rotate(360deg) translateX(110px) rotate(-360deg); }
-          }
-          @keyframes orbit-path-1 {
-            from { transform: rotate(60deg) translateX(110px) rotate(-60deg); }
-            to { transform: rotate(420deg) translateX(110px) rotate(-420deg); }
-          }
-          @keyframes orbit-path-2 {
-            from { transform: rotate(120deg) translateX(110px) rotate(-120deg); }
-            to { transform: rotate(480deg) translateX(110px) rotate(-480deg); }
-          }
-          @keyframes orbit-path-3 {
-            from { transform: rotate(180deg) translateX(110px) rotate(-180deg); }
-            to { transform: rotate(540deg) translateX(110px) rotate(-540deg); }
-          }
-          @keyframes orbit-path-4 {
-            from { transform: rotate(240deg) translateX(110px) rotate(-240deg); }
-            to { transform: rotate(600deg) translateX(110px) rotate(-600deg); }
-          }
-          @keyframes orbit-path-5 {
-            from { transform: rotate(300deg) translateX(110px) rotate(-300deg); }
-            to { transform: rotate(660deg) translateX(110px) rotate(-660deg); }
-          }
-        }
-      `}</style>
-
       {/* Title - with z-index to stay above orbit */}
       <h2 className="text-lg md:text-2xl font-bold text-gray-900 mb-3 md:mb-4 text-center search-title relative z-30 px-2">
-        Deep search on{" "}
-        <span className="text-[#0087FF]">{searchQuery || "..."}</span>
+        {product.loading.queryLabel}{" "}
+        <span style={{ color: "var(--product-primary)" }}>{searchQuery || "..."}</span>
       </h2>
+
+      {showLongSearchNote ? (
+        <p className="mb-4 max-w-sm px-6 text-center text-xs text-gray-500 md:mb-5 md:text-sm relative z-30">
+          Pro searches can take up to 2 to 5 minutes. Keep this tab open while we gather sources, images, and report details.
+        </p>
+      ) : null}
 
       {/* Source Logos */}
       <div className="flex items-center justify-center gap-1.5 md:gap-2 mb-6 md:mb-8 flex-wrap relative z-30 px-4">
         {SOURCE_LOGO_PATHS.map((logo, index) => (
           <div
             key={index}
-            className="w-[22px] h-[22px] md:w-[26px] md:h-[26px] rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm"
+            className="w-[24px] h-[24px] md:w-[28px] md:h-[28px] rounded-full flex items-center justify-center overflow-hidden shadow-sm border"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.86)",
+              borderColor: "color-mix(in srgb, var(--product-primary) 12%, transparent)",
+            }}
           >
             <Image
               src={logo}
@@ -334,7 +346,13 @@ export function SearchLoadingScreen({
             />
           </div>
         ))}
-        <span className="text-[10px] md:text-xs text-gray-500 bg-gray-100 px-2 py-0.5 md:py-1 rounded-full ml-1">
+        <span
+          className="text-[10px] md:text-xs text-gray-500 px-2 py-0.5 md:py-1 rounded-full ml-1 border"
+          style={{
+            backgroundColor: "rgba(255,255,255,0.86)",
+            borderColor: "color-mix(in srgb, var(--product-primary) 12%, transparent)",
+          }}
+        >
           +5 more
         </span>
       </div>
@@ -343,18 +361,22 @@ export function SearchLoadingScreen({
       <div className="w-full max-w-xs md:max-w-sm mb-4 md:mb-6 px-4 relative z-30">
         <div className="h-1.5 md:h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner">
           <div
-            className="h-full bg-gradient-to-r from-[#0087FF] to-[#00B4FF] rounded-full transition-all duration-100 ease-linear"
-            style={{ width: `${Math.min(progress * 0.95, 95)}%` }} // Never reaches 100%
+            className="h-full rounded-full transition-all duration-100 ease-linear"
+            style={{
+              width: `${Math.min(progress * 0.95, 95)}%`,
+              backgroundImage:
+                "linear-gradient(90deg, var(--product-primary), var(--product-primary-hover))",
+            }}
           />
         </div>
       </div>
 
       {/* Progress Steps */}
       <div className="w-full max-w-xs md:max-w-sm space-y-2 md:space-y-3 mb-6 md:mb-8 px-4 relative z-30">
-        {PROGRESS_STEPS.map((step, index) => {
+        {progressSteps.map((step, index) => {
           const isCompleted = index < currentStep;
           const isCurrent = index === currentStep;
-          const isLastStep = index === PROGRESS_STEPS.length - 1;
+          const isLastStep = index === progressSteps.length - 1;
 
           return (
             <div 
@@ -366,15 +388,25 @@ export function SearchLoadingScreen({
               {/* Icon */}
               <div className="flex-shrink-0">
                 {isCompleted ? (
-                  <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-[#0087FF] flex items-center justify-center shadow-sm">
+                  <div
+                    className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center shadow-sm"
+                    style={{ backgroundColor: "var(--product-primary)" }}
+                  >
                     <Check className="w-3 h-3 md:w-3.5 md:h-3.5 text-white" strokeWidth={3} />
                   </div>
                 ) : isCurrent && isLastStep ? (
                   <div className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center">
-                    <Loader2 className="w-4 h-4 md:w-5 md:h-5 text-[#0087FF] animate-spin" />
+                    <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" style={{ color: "var(--product-primary)" }} />
                   </div>
                 ) : isCurrent ? (
-                  <div className="w-5 h-5 md:w-6 md:h-6 rounded-full border-2 border-[#0087FF] bg-[#0087FF]/10" />
+                  <div
+                    className="w-5 h-5 md:w-6 md:h-6 rounded-full border-2"
+                    style={{
+                      borderColor: "var(--product-primary)",
+                      backgroundColor:
+                        "color-mix(in srgb, var(--product-primary) 12%, transparent)",
+                    }}
+                  />
                 ) : (
                   <div className="w-5 h-5 md:w-6 md:h-6 rounded-full border-2 border-gray-200" />
                 )}
@@ -386,9 +418,10 @@ export function SearchLoadingScreen({
                     isCompleted
                       ? "text-gray-700"
                       : isCurrent
-                      ? "text-[#0087FF] font-medium"
+                      ? "font-medium"
                       : "text-gray-400"
                   }`}
+                  style={isCurrent ? { color: "var(--product-primary)" } : undefined}
                 >
                   {step.text}
                 </span>
@@ -404,9 +437,17 @@ export function SearchLoadingScreen({
       </div>
 
       {/* Testimonial Card */}
-      <div className="w-full max-w-xs md:max-w-sm bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 relative min-h-[120px] md:min-h-[140px] mx-4 z-30">
+      <div
+        className="w-full max-w-xs md:max-w-sm rounded-2xl p-4 md:p-5 shadow-sm border relative min-h-[120px] md:min-h-[140px] mx-4 z-30"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, color-mix(in srgb, var(--product-primary) 4%, white) 100%)",
+          borderColor: "color-mix(in srgb, var(--product-primary) 12%, rgba(229, 231, 235, 1))",
+          boxShadow: "0 22px 50px -34px rgba(15, 23, 42, 0.24)",
+        }}
+      >
         {/* Crossfade testimonials */}
-        {TESTIMONIALS.map((testimonial, index) => (
+        {testimonials.map((testimonial, index) => (
           <div
             key={index}
             className={`transition-all duration-500 ${
@@ -420,7 +461,11 @@ export function SearchLoadingScreen({
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
                   key={star}
-                  className="w-3.5 h-3.5 md:w-4 md:h-4 fill-[#0087FF] text-[#0087FF]"
+                  className="w-3.5 h-3.5 md:w-4 md:h-4"
+                  style={{
+                    fill: "var(--product-primary)",
+                    color: "var(--product-primary)",
+                  }}
                 />
               ))}
             </div>
@@ -438,14 +483,15 @@ export function SearchLoadingScreen({
 
       {/* Testimonial dots indicator */}
       <div className="flex gap-1.5 mt-3 md:mt-4 relative z-30">
-        {TESTIMONIALS.map((_, index) => (
+        {testimonials.map((_, index) => (
           <div
             key={index}
             className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
               index === currentTestimonial
-                ? "bg-[#0087FF] w-4"
+                ? "w-4"
                 : "bg-gray-300"
             }`}
+            style={index === currentTestimonial ? { backgroundColor: "var(--product-primary)" } : undefined}
           />
         ))}
       </div>

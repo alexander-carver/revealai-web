@@ -17,7 +17,7 @@ supabase link --project-ref ddoginuyioiatbpfemxr
 ```bash
 supabase secrets set STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 supabase secrets set STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
-supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
+supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_UGRAUVMsp9toeI
 ```
 
 **Note:** You'll need to set `STRIPE_WEBHOOK_SECRET` after creating the webhook in Stripe.
@@ -41,6 +41,8 @@ https://ddoginuyioiatbpfemxr.supabase.co/functions/v1/stripe-webhook
    - ✅ `checkout.session.completed`
    - ✅ `customer.subscription.updated`
    - ✅ `customer.subscription.deleted`
+   - ✅ `invoice.payment_failed`
+   - ✅ `invoice.payment_action_required`
 5. Click **Add endpoint**
 6. Copy the **Signing secret** (starts with `whsec_`)
 7. Set it as a secret:
@@ -91,4 +93,3 @@ stripe trigger checkout.session.completed
 - **Signature verification fails**: Make sure `STRIPE_WEBHOOK_SECRET` is set correctly
 - **Database errors**: Ensure the `subscriptions` table exists (run SQL migration first)
 - **View logs**: `supabase functions logs stripe-webhook`
-

@@ -24,7 +24,7 @@ supabase link --project-ref ddoginuyioiatbpfemxr
 supabase secrets set STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET
 supabase secrets set STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
-supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
+supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_UGRAUVMsp9toeI
 ```
 
 ### 5. Deploy the Function
@@ -45,6 +45,8 @@ https://ddoginuyioiatbpfemxr.supabase.co/functions/v1/stripe-webhook
    - `checkout.session.completed`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
+   - `invoice.payment_failed`
+   - `invoice.payment_action_required`
 4. Copy the webhook signing secret
 5. Update the secret:
    ```bash
@@ -73,4 +75,3 @@ The function needs these secrets set in Supabase:
 - `STRIPE_YEARLY_PRODUCT_ID` - Yearly product ID
 
 Note: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are automatically available in Edge Functions.
-

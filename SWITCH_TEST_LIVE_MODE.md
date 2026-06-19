@@ -18,7 +18,7 @@ Edge Functions can only have ONE set of secrets at a time. To switch modes, you 
 - `STRIPE_SECRET_KEY` = `YOUR_LIVE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET` = `whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX`
 - `STRIPE_WEEKLY_PRODUCT_ID` = `prod_TexubYU0K47p6u` (Updated: $9.99/week)
-- `STRIPE_YEARLY_PRODUCT_ID` = `prod_TXnMRenhMBjfBM`
+- `STRIPE_YEARLY_PRODUCT_ID` = `prod_UGRAUVMsp9toeI`
 - `STRIPE_FREE_TRIAL_PRODUCT_ID` = `prod_TexsO0iCT5ep5s` (NEW: 7-day free trial, then $9.99/week)
 
 ## How to Switch Modes
@@ -43,7 +43,7 @@ supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_TXqZyyl5sHmNtZ
 supabase secrets set STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_5aeysXN5ZOMabuLrUPqhwvibyNBgRwLX
 supabase secrets set STRIPE_WEEKLY_PRODUCT_ID=prod_TexubYU0K47p6u
-supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
+supabase secrets set STRIPE_YEARLY_PRODUCT_ID=prod_UGRAUVMsp9toeI
 supabase secrets set STRIPE_FREE_TRIAL_PRODUCT_ID=prod_TexsO0iCT5ep5s
 ```
 
@@ -64,7 +64,7 @@ STRIPE_YEARLY_PRODUCT_ID=prod_TXqZyyl5sHmNtZ
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=YOUR_LIVE_PUBLISHABLE_KEY
 STRIPE_SECRET_KEY=YOUR_LIVE_SECRET_KEY
 STRIPE_WEEKLY_PRODUCT_ID=prod_TexubYU0K47p6u
-STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
+STRIPE_YEARLY_PRODUCT_ID=prod_UGRAUVMsp9toeI
 STRIPE_FREE_TRIAL_PRODUCT_ID=prod_TexsO0iCT5ep5s
 ```
 
@@ -103,4 +103,3 @@ You created a new live secret key (`YOUR_LIVE_SECRET_KEY`).
 - [ ] Test payment with card `4242 4242 4242 4242`
 - [ ] Check Supabase Edge Function logs
 - [ ] Check Supabase `subscriptions` table
-

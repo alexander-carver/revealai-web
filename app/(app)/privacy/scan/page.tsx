@@ -25,6 +25,7 @@ import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
 import { FullReportResult } from "@/components/shared/full-report-result";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+import { requestRevealSearch, type SearchReport } from "@/lib/reveal-search";
 
 export default function PrivacyScanPage() {
   const { user } = useAuth();
@@ -34,38 +35,40 @@ export default function PrivacyScanPage() {
     city: "",
     state: "",
   });
-  const [searchResult, setSearchResult] = useState<string | null>(null);
+  const [searchResult, setSearchResult] = useState<{
+    content: string;
+    report: SearchReport;
+  } | null>(null);
   const [searchCount, setSearchCount] = useState(0);
 
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
 
   const searchMutation = useMutation({
-    mutationFn: async (query: string) => {
-      const response = await fetch("/api/perplexity/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query,
-          userId: user?.id,
-          usePro: true,
-          isPro: isPro || false,
-        }),
+    mutationFn: async ({
+      query,
+      subjectName,
+      location,
+    }: {
+      query: string;
+      subjectName: string;
+      location?: string;
+    }) => {
+      return requestRevealSearch({
+        query,
+        userId: user?.id ?? "guest",
+        usePro: true,
+        isPro: isPro || false,
+        searchType: "privacy",
+        subjectName,
+        location,
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        if (response.status === 429) {
-          throw new Error(error.message || "Rate limit exceeded. Please try again later.");
-        }
-        throw new Error(error.error || "Search failed");
-      }
-
-      const data = await response.json();
-      return data.content;
     },
     onSuccess: (data) => {
-      setSearchResult(data);
+      setSearchResult({
+        content: data.content,
+        report: data.report,
+      });
       setSearchCount((prev) => prev + 1);
     },
   });
@@ -112,7 +115,11 @@ Format the results clearly with sections for each category. Be thorough and spec
 
     setLoadingSearchQuery(formData.fullName.trim());
     setShowLoadingScreen(true);
-    searchMutation.mutate(query);
+    searchMutation.mutate({
+      query,
+      subjectName: formData.fullName.trim(),
+      location,
+    });
   }, [formData, isPro, showFreeTrialPaywall, searchMutation]);
 
   const handleLoadingComplete = useCallback(() => {
@@ -221,9 +228,11 @@ Format the results clearly with sections for each category. Be thorough and spec
       {searchResult && !showLoadingScreen && (
         <div className="mt-6">
           <FullReportResult
-            content={searchResult}
+            content={searchResult.content}
+            report={searchResult.report}
             searchCount={searchCount}
             personName={formData.fullName.trim()}
+            searchType="privacy"
           />
         </div>
       )}

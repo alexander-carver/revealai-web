@@ -28,6 +28,7 @@ import {
   getTypeColor,
   type SearchHistoryItem,
 } from "@/lib/search-history";
+import { getSearchExperiencePath } from "@/lib/search-products";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 
@@ -40,11 +41,11 @@ const typeIcons: Record<SearchHistoryItem["type"], React.ElementType> = {
 };
 
 const typeRoutes: Record<SearchHistoryItem["type"], string> = {
-  people: "/search",
-  phone: "/phone",
-  records: "/records",
-  username: "/username",
-  vehicle: "/vehicle",
+  people: getSearchExperiencePath("people"),
+  phone: getSearchExperiencePath("phone"),
+  records: getSearchExperiencePath("records"),
+  username: "/?product=social&mode=username#search",
+  vehicle: getSearchExperiencePath("vehicle"),
 };
 
 function formatTimeAgo(timestamp: number): string {
@@ -111,7 +112,7 @@ export default function HistoryPage() {
             <p className="text-muted-foreground text-sm mb-6">
               Your searches will appear here as you use RevealAI
             </p>
-            <Link href="/search">
+            <Link href={getSearchExperiencePath("people")}>
               <Button className="gap-2">
                 <Search className="w-4 h-4" />
                 Start Searching

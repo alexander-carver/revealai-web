@@ -1,15 +1,13 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   Search,
   User,
   MapPin,
   ArrowRight,
-  FileText,
 } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { FullReportResult } from "@/components/shared/full-report-result";
 import { addSearchHistoryItem } from "@/lib/search-history";
+import { requestRevealSearch, type SearchReport } from "@/lib/reveal-search";
 
 // Lazy load SearchLoadingScreen to reduce initial bundle size
 const SearchLoadingScreen = dynamic(
@@ -39,55 +38,47 @@ export default function PeopleSearchPage() {
   });
 
   // Results state
-  const [searchResult, setSearchResult] = useState<string | null>(null);
+  const [searchResult, setSearchResult] = useState<{
+    content: string;
+    report: SearchReport;
+  } | null>(null);
   const [searchCount, setSearchCount] = useState(0);
 
   // Loading screen state
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
 
-  // Auto-populate form fields into search query
-  useEffect(() => {
-    // This effect is just for demonstration - actual population happens in handleSearch
-  }, [formData]);
-
   // Perplexity search mutation
   const searchMutation = useMutation({
-    mutationFn: async (query: string) => {
-      const usePro = searchCount < 3; // First 3 searches use Pro
-      
-      const response = await fetch("/api/perplexity/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query,
-          userId: user?.id,
-          usePro,
-          isPro: isPro || false,
-        }),
+    mutationFn: async ({
+      query,
+      subjectName,
+      location,
+    }: {
+      query: string;
+      subjectName: string;
+      location?: string;
+    }) => {
+      return requestRevealSearch({
+        query,
+        userId: user?.id ?? "guest",
+        usePro: searchCount < 3,
+        isPro: isPro || false,
+        searchType: "fullreport",
+        subjectName,
+        location,
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        
-        // Handle rate limit error
-        if (response.status === 429) {
-          throw new Error(error.message || "Rate limit exceeded. Please try again later.");
-        }
-        
-        throw new Error(error.error || "Search failed");
-      }
-
-      const data = await response.json();
-      return data.content;
     },
     onSuccess: (data) => {
-      setSearchResult(data);
+      setSearchResult({
+        content: data.content,
+        report: data.report,
+      });
       setSearchCount((prev) => prev + 1);
       addSearchHistoryItem({
         query: `${formData.firstName} ${formData.lastName}`,
         type: "people",
-        preview: data.substring(0, 80),
+        preview: data.content.substring(0, 80),
       });
     },
   });
@@ -98,7 +89,7 @@ export default function PeopleSearchPage() {
       return;
     }
 
-    // Show free trial paywall immediately if not pro
+    // Show annual offer paywall immediately if not pro
     if (!isPro) {
       showFreeTrialPaywall();
       return;
@@ -114,7 +105,11 @@ export default function PeopleSearchPage() {
     // Show loading screen
     setLoadingSearchQuery(name);
     setShowLoadingScreen(true);
-    searchMutation.mutate(query);
+    searchMutation.mutate({
+      query,
+      subjectName: name,
+      location,
+    });
   }, [formData, isPro, showFreeTrialPaywall, searchMutation]);
 
   // Handle follow-up search
@@ -131,7 +126,11 @@ export default function PeopleSearchPage() {
 
     setLoadingSearchQuery(suggestion);
     setShowLoadingScreen(true);
-    searchMutation.mutate(query);
+    searchMutation.mutate({
+      query,
+      subjectName: name,
+      location,
+    });
   }, [formData, isPro, showFreeTrialPaywall, searchMutation]);
 
   // Loading screen callbacks
@@ -152,16 +151,9 @@ export default function PeopleSearchPage() {
       <SearchLoadingScreen
         isVisible={showLoadingScreen}
         searchQuery={loadingSearchQuery}
+        productId="people"
         onComplete={handleLoadingComplete}
         onCancel={handleLoadingCancel}
-      />
-
-      <PageHeader
-        title="Full Report"
-        description="Get comprehensive people intelligence powered by AI"
-        icon={FileText}
-        iconColor="text-primary"
-        iconBgColor="bg-primary/10"
       />
 
       {/* Search Form */}
@@ -250,9 +242,12 @@ export default function PeopleSearchPage() {
       {searchResult && !showLoadingScreen && (
         <div className="mt-6">
           <FullReportResult
-            content={searchResult}
+            content={searchResult.content}
+            report={searchResult.report}
             onFollowUpSearch={searchCount < 3 ? handleFollowUpSearch : undefined}
             searchCount={searchCount}
+            personName={`${formData.firstName} ${formData.lastName}`.trim()}
+            searchType="fullreport"
           />
         </div>
       )}

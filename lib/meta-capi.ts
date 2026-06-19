@@ -125,6 +125,14 @@ export async function sendPurchaseEvent(opts: {
   externalId?: string;
   fbc?: string;
   fbp?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
+  mc_flow?: string;
+  mc_subscriber_id?: string;
+  fbclid?: string;
 }) {
   return sendCAPIEvent({
     eventName: "Purchase",
@@ -147,37 +155,14 @@ export async function sendPurchaseEvent(opts: {
       contents: [{ id: opts.transactionId, quantity: 1, item_price: opts.value }],
       num_items: 1,
       content_category: "subscription",
-    },
-  });
-}
-
-export async function sendStartTrialEvent(opts: {
-  eventId: string;
-  email: string;
-  value: number;
-  currency: string;
-  plan: string;
-  sourceUrl?: string;
-  clientIp?: string;
-  userAgent?: string;
-  externalId?: string;
-}) {
-  return sendCAPIEvent({
-    eventName: "StartTrial",
-    eventId: opts.eventId,
-    eventSourceUrl: opts.sourceUrl,
-    userData: {
-      email: opts.email,
-      externalId: opts.externalId,
-      clientIpAddress: opts.clientIp,
-      clientUserAgent: opts.userAgent,
-    },
-    customData: {
-      value: opts.value,
-      currency: opts.currency,
-      content_name: `Reveal AI ${opts.plan}`,
-      content_category: "subscription",
-      predicted_ltv: opts.value,
+      utm_source: opts.utm_source,
+      utm_medium: opts.utm_medium,
+      utm_campaign: opts.utm_campaign,
+      utm_term: opts.utm_term,
+      utm_content: opts.utm_content,
+      mc_flow: opts.mc_flow,
+      mc_subscriber_id: opts.mc_subscriber_id,
+      fbclid: opts.fbclid,
     },
   });
 }
@@ -192,6 +177,16 @@ export async function sendInitiateCheckoutEvent(opts: {
   clientIp?: string;
   userAgent?: string;
   externalId?: string;
+  fbc?: string;
+  fbp?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
+  mc_flow?: string;
+  mc_subscriber_id?: string;
+  fbclid?: string;
 }) {
   return sendCAPIEvent({
     eventName: "InitiateCheckout",
@@ -202,12 +197,22 @@ export async function sendInitiateCheckoutEvent(opts: {
       externalId: opts.externalId,
       clientIpAddress: opts.clientIp,
       clientUserAgent: opts.userAgent,
+      fbc: opts.fbc,
+      fbp: opts.fbp,
     },
     customData: {
       value: opts.value,
       currency: opts.currency,
       content_name: `Reveal AI ${opts.plan}`,
       content_category: "subscription",
+      utm_source: opts.utm_source,
+      utm_medium: opts.utm_medium,
+      utm_campaign: opts.utm_campaign,
+      utm_term: opts.utm_term,
+      utm_content: opts.utm_content,
+      mc_flow: opts.mc_flow,
+      mc_subscriber_id: opts.mc_subscriber_id,
+      fbclid: opts.fbclid,
     },
   });
 }

@@ -57,6 +57,8 @@
    - `checkout.session.completed`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
+   - `invoice.payment_failed`
+   - `invoice.payment_action_required`
 5. Copy the **Webhook Signing Secret** (starts with `whsec_...`)
 6. Add to `.env.local`:
    ```
@@ -117,7 +119,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGc... (ADD THIS)
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_51RIJzr...
 STRIPE_SECRET_KEY=sk_live_51RIJzr...
 STRIPE_WEEKLY_PRODUCT_ID=prod_TXnLmsWmubVfIh
-STRIPE_YEARLY_PRODUCT_ID=prod_TXnMRenhMBjfBM
+STRIPE_YEARLY_PRODUCT_ID=prod_UGRAUVMsp9toeI
 STRIPE_WEBHOOK_SECRET=whsec_... (ADD THIS)
 
 # Superwall (Optional)
@@ -136,4 +138,3 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 # Restart dev server after adding env vars
 npm run dev
 ```
-

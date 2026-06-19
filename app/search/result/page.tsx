@@ -1,1125 +1,527 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useRef, Suspense } from "react";
-import Image from "next/image";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Loader2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  ArrowLeft,
-  ArrowRight,
-  ExternalLink,
-  Globe,
-  Share2,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
-  Search,
-  Lock,
-  Loader2,
-  RefreshCw,
-} from "lucide-react";
+import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
+import { FullReportResult } from "@/components/shared/full-report-result";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
-import { SearchLoadingScreen } from "@/components/shared/search-loading-screen";
-import { lookupMockProfileByDetails, emmaSmithProfile, kyleAndersonProfile } from "@/lib/mock-data";
-const VIRAL_SOCIAL_LOGOS = [
-  { src: "/sources/source-1.png", alt: "LinkedIn" },
-  { src: "/sources/source-2.png", alt: "Instagram" },
-  { src: "/sources/source-3.png", alt: "Facebook" },
-  { src: "/sources/source-4.png", alt: "Forum" },
-  { src: "/sources/source-5.png", alt: "Dating app" },
-  { src: "/sources/source-6.png", alt: "Snapchat" },
-];
+import { lookupMockProfileByDetails } from "@/lib/mock-data";
+import { getSearchProductBySearchType } from "@/lib/search-products";
+import {
+  buildFallbackReportFromContent,
+  normalizeReportSearchType,
+  requestRevealSearch,
+  type SearchReport,
+} from "@/lib/reveal-search";
+import {
+  buildSearchIntakePromptContext,
+  getSearchIntakeAnswersFromParams,
+  getSearchIntakeStorageKey,
+  hasSearchIntakeAnswers,
+  normalizeSearchIntakeAnswers,
+  SEARCH_INTAKE_TOKEN_PARAM,
+  type SearchIntakeAnswers,
+} from "@/lib/search-intake";
 
-// Parse Perplexity response to extract structured data
-function parsePerplexityResponse(content: string, personName: string) {
-  const images: string[] = [];
-  const sources: Array<{ label: string; url: string }> = [];
-
-  // Extract Perplexity's proxied images (st.perplexity.ai/estatic/)
-  const perplexityImageRegex = /(https?:\/\/st\.perplexity\.ai\/estatic\/[^\s<>\[\]"'\)]+)/gi;
-  let match;
-  while ((match = perplexityImageRegex.exec(content)) !== null) {
-    if (match[1] && !images.includes(match[1])) {
-      images.push(match[1]);
-    }
+function formatPhoneDisplay(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
-
-  // Extract image URLs from markdown image syntax ![alt](url)
-  const markdownImageRegex = /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
-  while ((match = markdownImageRegex.exec(content)) !== null) {
-    if (match[2] && !images.includes(match[2])) {
-      images.push(match[2]);
-    }
+  if (digits.length === 11 && digits[0] === "1") {
+    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
   }
-
-  // Also try to find standalone image URLs with common extensions
-  const imageExtRegex = /(https?:\/\/[^\s<>\[\]"'\)]+\.(?:jpg|jpeg|png|gif|webp|svg))/gi;
-  while ((match = imageExtRegex.exec(content)) !== null) {
-    if (match[1] && !images.includes(match[1])) {
-      images.push(match[1]);
-    }
-  }
-
-  // Extract source links from markdown [label](url)
-  const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
-  while ((match = linkRegex.exec(content)) !== null) {
-    // Skip if it's an image link (preceded by !)
-    const beforeMatch = content.substring(Math.max(0, match.index - 1), match.index);
-    if (beforeMatch !== "!") {
-      const url = match[2];
-      const label = match[1];
-      // Don't add duplicate URLs and don't add image URLs as sources
-      if (!sources.some(s => s.url === url) && !url.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
-        sources.push({ label, url });
-      }
-    }
-  }
-
-  // Look for any URLs in the text and add as sources
-  const anyUrlRegex = /https?:\/\/[^\s<>\[\]"'\)]+/g;
-  while ((match = anyUrlRegex.exec(content)) !== null) {
-    const url = match[0].replace(/[.,;:!?]$/, ''); // Clean trailing punctuation
-    if (!sources.some(s => s.url === url) && 
-        !images.includes(url) &&
-        !url.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) && 
-        !url.includes('st.perplexity.ai')) {
-      try {
-        const domain = new URL(url).hostname.replace('www.', '');
-        sources.push({ label: domain, url });
-      } catch {
-        // Invalid URL, skip
-      }
-    }
-  }
-
-  return { images, sources, answer: content };
+  return phone;
 }
 
-// Format answer text - clean up markdown and format nicely
-function formatAnswer(text: string): string {
-  // First, remove image markdown and image URLs
-  let cleaned = text
-    .replace(/!\[[^\]]*\]\([^)]+\)/g, '') // Remove ![alt](url)
-    .replace(/https?:\/\/st\.perplexity\.ai\/estatic\/[^\s<>\[\]"'\)]+/gi, '') // Remove Perplexity image URLs
-    .replace(/https?:\/\/[^\s<>\[\]"'\)]+\.(?:jpg|jpeg|png|gif|webp|svg)/gi, '') // Remove other image URLs
-    
-  // Convert markdown to clean HTML
-  let html = cleaned
-    // Convert **bold** to <strong>
-    .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-foreground">$1</strong>')
-    // Remove # headers but keep the text as bold headings
-    .replace(/^#{1,3}\s*(.+)$/gm, '<h3 class="text-lg font-semibold text-foreground mt-5 mb-2">$1</h3>')
-    // Convert bullet points (- or •)
-    .replace(/^[-•]\s*(.+)$/gm, '<li class="ml-4 mb-1">$1</li>')
-    // Convert numbered lists
-    .replace(/^\d+\.\s*(.+)$/gm, '<li class="ml-4 mb-1 list-decimal">$1</li>')
-    // Convert markdown links to HTML links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>')
-    // Clean up citation numbers like [1], [2] etc
-    .replace(/\[(\d+)\]/g, '<sup class="text-xs text-primary">[$1]</sup>')
-    // Remove empty lines and normalize spacing
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+const SEARCH_INTAKE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
-  // Wrap in paragraphs
-  const paragraphs = html.split('\n\n').filter(p => p.trim());
-  html = paragraphs.map(p => {
-    const trimmed = p.trim();
-    // Don't wrap if it's already an h3 or list item
-    if (trimmed.startsWith('<h3') || trimmed.startsWith('<li')) {
-      return trimmed;
-    }
-    // Wrap lists in ul
-    if (trimmed.includes('<li')) {
-      return `<ul class="list-disc mb-4">${trimmed}</ul>`;
-    }
-    return `<p class="mb-4 leading-relaxed">${trimmed.replace(/\n/g, '<br/>')}</p>`;
-  }).join('');
+function readStoredSearchIntakeAnswers(
+  token: string | null | undefined,
+): SearchIntakeAnswers {
+  if (typeof window === "undefined") return {};
 
-  return html;
+  const storageKey = getSearchIntakeStorageKey(token);
+  if (!storageKey) return {};
+
+  try {
+    const rawValue = window.sessionStorage.getItem(storageKey);
+    if (!rawValue) return {};
+
+    const parsedValue = JSON.parse(rawValue) as {
+      answers?: unknown;
+      savedAt?: unknown;
+    };
+    const savedAt =
+      typeof parsedValue.savedAt === "number" ? parsedValue.savedAt : 0;
+
+    if (!savedAt || Date.now() - savedAt > SEARCH_INTAKE_MAX_AGE_MS) {
+      window.sessionStorage.removeItem(storageKey);
+      return {};
+    }
+
+    return normalizeSearchIntakeAnswers(parsedValue.answers);
+  } catch {
+    return {};
+  }
+}
+
+function buildSearchQuery({
+  fullName,
+  location,
+  searchType,
+  username,
+  phoneNumber,
+  vin,
+  plate,
+  intakeContext,
+}: {
+  fullName: string;
+  location: string;
+  searchType: string;
+  username?: string;
+  phoneNumber?: string;
+  vin?: string;
+  plate?: string;
+  intakeContext?: string;
+}) {
+  const withIntakeContext = (baseQuery: string) =>
+    intakeContext ? `${baseQuery}\n\n${intakeContext}` : baseQuery;
+
+  if (searchType === "followers") {
+    return withIntakeContext(location
+      ? `Analyze the public social media footprint for ${fullName} from ${location} with a focus on follower red flags. Look for public Instagram, TikTok, X, Facebook, and other social accounts tied to this person. Identify, when publicly visible, one-sided follows, people who do not follow them back, suspicious burner or bait-style account clusters, and any audience or following signals that feel inconsistent with the profile story.`
+      : `Analyze the public social media footprint for ${fullName} with a focus on follower red flags. Look for public Instagram, TikTok, X, Facebook, and other social accounts tied to this person. Identify, when publicly visible, one-sided follows, people who do not follow them back, suspicious burner or bait-style account clusters, and any audience or following signals that feel inconsistent with the profile story.`);
+  }
+
+  if (searchType === "social") {
+    return withIntakeContext(location
+      ? `Search across all major social platforms, dating apps, public profiles, and open-web mentions for ${fullName} from ${location}. Highlight the strongest social accounts, dating-platform clues, usernames, tagged photos, public comments, replies, mentions, likes or engagement traces, and anything that helps with a dating-safety or identity-verification check. Look for public activity such as "commented on", "replied to", tagged interactions, forum posts, and other visible engagement signals tied to this person.`
+      : `Search across all major social platforms, dating apps, public profiles, and open-web mentions for ${fullName}. Highlight the strongest social accounts, dating-platform clues, usernames, tagged photos, public comments, replies, mentions, likes or engagement traces, and anything that helps with a dating-safety or identity-verification check. Look for public activity such as "commented on", "replied to", tagged interactions, forum posts, and other visible engagement signals tied to this person.`);
+  }
+
+  if (searchType === "username" && username) {
+    return withIntakeContext(`Search for the username "${username}" across all major social media platforms, forums, dating apps, and websites. Find the strongest direct profile matches, then look deeper for public comments, replies, mentions, tagged posts, forum activity, GitHub or Reddit activity, Facebook comment traces, YouTube comments, TikTok/X replies, and any other visible interaction trail tied to this handle. Explain which matches are strongest, what links the accounts together, and what public identity signals or red flags stand out.`);
+  }
+
+  if (searchType === "phone" && phoneNumber) {
+    return withIntakeContext(`Run a reverse phone lookup for ${phoneNumber}. Start with who most likely owns or uses this number now, then explain what the number is tied to: person, household, business, carrier, line type, geography, directory footprint, spam or scam complaints, public listings, and any public social or web traces linked to it. If no direct owner is fully corroborated, state the strongest current association and the evidence behind it.`);
+  }
+
+  if (searchType === "vehicle") {
+    if (vin) {
+      return withIntakeContext(`Run a vehicle lookup for VIN ${vin}. Start with exactly what vehicle this VIN resolves to now, then explain the strongest identifier-backed details: year, make, model, trim, body style, engine, manufacturer, plant details, recall or safety context, and any marketplace or resale signals that help verify this vehicle.`);
+    }
+
+    if (plate) {
+      return withIntakeContext(`Run a vehicle lookup starting from license plate ${plate}. Start with what this plate is most strongly tied to now, then explain any public vehicle-identification clues, listing traces, jurisdiction hints, marketplace signals, and supporting open-web evidence linked to the plate. Make clear what the plate does establish and what remains open.`);
+    }
+  }
+
+  return withIntakeContext(location
+    ? `Build a full public-web report for ${fullName} from ${location}. Start with the best-supported identity match, then cover biography, work history, education, affiliations, locations, public records, social profiles, media coverage, related people, organizations, timeline details, and anything else meaningfully tied to this person. Make the answer detailed, source-backed, and substantive.`
+    : `Build a full public-web report for ${fullName}. Start with the best-supported identity match, then cover biography, work history, education, affiliations, locations, public records, social profiles, media coverage, related people, organizations, timeline details, and anything else meaningfully tied to this person. Make the answer detailed, source-backed, and substantive.`);
+}
+
+function buildMockResult({
+  fullName,
+  searchType,
+  mockProfile,
+}: {
+  fullName: string;
+  searchType: string;
+  mockProfile: {
+    answer: string;
+    images: string[];
+    sources: Array<{ label: string; url: string }>;
+  };
+}) {
+  const report = buildFallbackReportFromContent({
+    content: mockProfile.answer,
+    subjectName: fullName,
+    searchType,
+  });
+
+  report.images = mockProfile.images.map((url) => ({
+    url,
+    sourcePageUrl: url,
+    sourceTitle: "Mock profile image",
+    caption: `Image associated with ${fullName}`,
+    confidence: "medium" as const,
+  }));
+
+  report.sources = mockProfile.sources.map((source) => ({
+    title: source.label,
+    url: source.url,
+    domain: (() => {
+      try {
+        return new URL(source.url).hostname.replace(/^www\./, "");
+      } catch {
+        return "source";
+      }
+    })(),
+    type: "source",
+    note: "Mock profile source",
+  }));
+
+  return {
+    content: mockProfile.answer,
+    report,
+  };
 }
 
 function SearchResultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isPro, showFreeTrialPaywall, isFreeTrialPaywallVisible } = useSubscription();
+  const { isPro, showFreeTrialPaywall, isFreeTrialPaywallVisible } =
+    useSubscription();
   const { user } = useAuth();
 
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
-  const [result, setResult] = useState<string | null>(null);
-  const [apiImages, setApiImages] = useState<string[]>([]);
-  const [apiCitations, setApiCitations] = useState<string[]>([]);
-  const [parsedData, setParsedData] = useState<{
-    images: string[];
-    sources: Array<{ label: string; url: string }>;
-    answer: string;
+  const [searchResult, setSearchResult] = useState<{
+    content: string;
+    report: SearchReport;
   } | null>(null);
   const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
-  const [showOpenEndedSearch, setShowOpenEndedSearch] = useState(false);
-  const [openEndedQuery, setOpenEndedQuery] = useState("");
-  const [isSearchingOpenEnded, setIsSearchingOpenEnded] = useState(false);
-
-  // Check if this is a mock profile (like Emma Smith) - allow non-pro users to view mock profiles
   const [isMockResult, setIsMockResult] = useState(false);
-  
-  // Redirect non-Pro users back to home UNLESS they're viewing a mock profile
-  useEffect(() => {
-    const searchFirstName = searchParams.get("firstName") || "";
-    const searchLastName = searchParams.get("lastName") || "";
-    const searchCity = searchParams.get("city") || "";
-    const searchState = searchParams.get("state") || "";
-    
-    const mockProfile = lookupMockProfileByDetails(searchFirstName, searchLastName, searchCity, searchState);
-    if (mockProfile) {
-      setIsMockResult(true);
-      return; // Allow viewing mock profiles without pro
-    }
-    
-    if (!isPro) {
-      router.push("/");
-    }
-  }, [isPro, router, searchParams]);
 
-  const [imageError, setImageError] = useState<Record<string, boolean>>({});
-  const [showMoreSources, setShowMoreSources] = useState(false);
-  const [followUpQuery, setFollowUpQuery] = useState("");
-  const galleryRef = useRef<HTMLDivElement>(null);
-
-  // Get search params
   const firstName = searchParams.get("firstName") || "";
   const lastName = searchParams.get("lastName") || "";
   const city = searchParams.get("city") || "";
   const state = searchParams.get("state") || "";
-  const searchType = searchParams.get("type") || "fullreport";
+  const username = (searchParams.get("username") || "")
+    .trim()
+    .replace(/^@+/, "");
+  const phoneNumber = searchParams.get("number") || searchParams.get("phone") || "";
+  const vin = searchParams.get("vin") || "";
+  const plate = searchParams.get("plate") || "";
+  const searchType = normalizeReportSearchType(
+    searchParams.get("type") ?? searchParams.get("searchType"),
+  );
+  const intakeToken = searchParams.get(SEARCH_INTAKE_TOKEN_PARAM);
+  const [storedIntakeAnswers, setStoredIntakeAnswers] =
+    useState<SearchIntakeAnswers>(() =>
+      readStoredSearchIntakeAnswers(intakeToken),
+    );
+  const urlIntakeAnswers = useMemo(
+    () => getSearchIntakeAnswersFromParams(searchParams),
+    [searchParams],
+  );
+  const intakeAnswers = useMemo(
+    () =>
+      hasSearchIntakeAnswers(urlIntakeAnswers)
+        ? urlIntakeAnswers
+        : storedIntakeAnswers,
+    [storedIntakeAnswers, urlIntakeAnswers],
+  );
+  const intakeContext = useMemo(
+    () => buildSearchIntakePromptContext(intakeAnswers),
+    [intakeAnswers],
+  );
 
   const fullName = `${firstName} ${lastName}`.trim();
   const location = [city, state].filter(Boolean).join(", ");
-  const normalizedFullName = fullName.toLowerCase().trim();
-  const isViralMockProfile =
-    isMockResult &&
-    (normalizedFullName === "emma smith" || normalizedFullName === "kyle anderson");
+  const loadingProductId = getSearchProductBySearchType(searchType);
+  const subjectLabel =
+    searchType === "username"
+      ? username
+        ? `@${username}`
+        : ""
+      : searchType === "phone"
+        ? formatPhoneDisplay(phoneNumber)
+        : searchType === "vehicle"
+          ? vin || plate
+          : fullName;
+  const supportsMockProfile =
+    searchType === "fullreport" ||
+    searchType === "social" ||
+    searchType === "followers";
+  const hasRequiredInput =
+    searchType === "username"
+      ? username.length >= 2
+      : searchType === "phone"
+        ? phoneNumber.replace(/\D/g, "").length >= 10
+        : searchType === "vehicle"
+          ? Boolean(vin || plate)
+          : Boolean(firstName && lastName);
 
-  // Follow-up questions based on person name
-  const followUpSuggestions = [
-    `What professional experience does ${fullName} have?`,
-    `What investments or business ventures is ${fullName} involved in?`,
-    `What education background does ${fullName} have?`,
-    `What controversies or legal issues involve ${fullName}?`,
-    `What social media presence does ${fullName} have?`,
-  ];
+  const mockProfile = useMemo(
+    () => lookupMockProfileByDetails(firstName, lastName, city, state),
+    [city, firstName, lastName, state],
+  );
 
-  // Search function - can be called on mount or retry
-  const performSearch = async () => {
-    if (!firstName || !lastName) {
+  useEffect(() => {
+    setStoredIntakeAnswers(readStoredSearchIntakeAnswers(intakeToken));
+  }, [intakeToken]);
+
+  useEffect(() => {
+    setIsMockResult(Boolean(mockProfile) && supportsMockProfile);
+
+    if (mockProfile && supportsMockProfile) {
+      return;
+    }
+
+    if (!isPro) {
+      router.push("/");
+    }
+  }, [isPro, mockProfile, router, supportsMockProfile]);
+
+  const performSearch = async (overrideQuery?: string) => {
+    if (!hasRequiredInput) {
       router.push("/");
       return;
     }
 
-    // Reset error state and start loading screen
     setHasError(false);
-    const searchStartTime = Date.now();
-    const MIN_LOADING_TIME_MS = 8000; // 8 seconds minimum
+    setErrorMessage(null);
 
-    // Check for mock profile first - available to everyone (pro or not)
-    const mockProfile = lookupMockProfileByDetails(firstName, lastName, city, state);
-    if (mockProfile) {
-      setIsMockResult(true);
-      
-      // Simulate loading time for better UX
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      setParsedData({
-        images: mockProfile.images,
-        sources: mockProfile.sources,
-        answer: mockProfile.answer,
-      });
+    if (mockProfile && supportsMockProfile) {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      setSearchResult(
+        buildMockResult({
+          fullName: subjectLabel,
+          searchType,
+          mockProfile,
+        }),
+      );
       setShowLoadingScreen(false);
       return;
     }
 
-    // Non-Pro users should never reach here for non-mock searches
     if (!isPro) {
       router.push("/");
       return;
     }
-    
-    // Build query based on search type
-    let query;
-    if (searchType === "datingapps") {
-      query = location
-        ? `Tell me everything about ${fullName} from ${location}, who are they dating, do they have any relationships with anyone else`
-        : `Tell me everything about ${fullName}, who are they dating, do they have any relationships with anyone else`;
-    } else {
-      query = location
-        ? `Tell me everything about ${fullName} from ${location}`
-        : `Tell me everything about ${fullName}`;
-    }
+
+    const query =
+      overrideQuery ||
+      buildSearchQuery({
+        fullName,
+        location,
+        searchType,
+        username,
+        phoneNumber: formatPhoneDisplay(phoneNumber),
+        vin,
+        plate,
+        intakeContext,
+      });
 
     try {
-      const response = await fetch("/api/perplexity/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query,
-          userId: user?.id || "guest",
-          usePro: true,
-          isPro: isPro || false,
-        }),
+      const result = await requestRevealSearch({
+        query,
+        userId: user?.id ?? "guest",
+        usePro: true,
+        isPro: true,
+        searchType,
+        subjectName: subjectLabel,
+        location:
+          searchType === "fullreport" ||
+          searchType === "social" ||
+          searchType === "followers" ||
+          searchType === "records"
+            ? location
+            : undefined,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        
-        // Handle rate limit error specifically
-        if (response.status === 429) {
-          throw new Error(errorData.message || "Rate limit exceeded. Please try again later.");
-        }
-        
-        throw new Error(errorData.error || "Search failed");
-      }
-
-      const data = await response.json();
-      console.log("=== PERPLEXITY API RESPONSE ===");
-      console.log("Full response:", data);
-      console.log("Images from API:", data.images);
-      console.log("Citations from API:", data.citations);
-      console.log("Debug info:", data._debug);
-      
-      setResult(data.content);
-      
-      // Extract image URLs from API response
-      // Images come as objects with image_url property
-      const apiImageUrls: string[] = (data.images || []).map((img: any) => {
-        if (typeof img === 'string') return img;
-        if (img.image_url) return img.image_url;
-        return null;
-      }).filter(Boolean);
-      
-      console.log("Extracted image URLs:", apiImageUrls);
-      
-      // Store API-provided images and citations
-      if (apiImageUrls.length > 0) {
-        setApiImages(apiImageUrls);
-      }
-      if (data.citations && data.citations.length > 0) {
-        setApiCitations(data.citations);
-      }
-      
-      // Parse the content and merge with API data
-      const parsed = parsePerplexityResponse(data.content, fullName);
-      
-      // Merge API images with parsed images (API images first - they're better quality)
-      const allImages = [...apiImageUrls, ...parsed.images];
-      const uniqueImages = Array.from(new Set(allImages));
-      
-      // Convert citations to sources format
-      const citationSources = (data.citations || []).map((url: string) => {
-        try {
-          const domain = new URL(url).hostname.replace('www.', '');
-          return { label: domain, url };
-        } catch {
-          return { label: url, url };
-        }
+      setSearchResult({
+        content: result.content,
+        report: result.report,
       });
-      
-      // Merge with parsed sources
-      const allSources = [...citationSources, ...parsed.sources];
-      const uniqueSources = allSources.filter((source, index, self) => 
-        index === self.findIndex(s => s.url === source.url)
+    } catch (error: any) {
+      console.warn("Search request did not complete:", error);
+      setHasError(true);
+      setSearchResult(null);
+      setErrorMessage(
+        error?.message ||
+          "Unable to complete this search right now. Please try again.",
       );
-      
-      setParsedData({
-        images: uniqueImages.length > 0 ? uniqueImages : [`https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=600&background=6366f1&color=fff&bold=true`],
-        sources: uniqueSources,
-        answer: parsed.answer,
-      });
-      
-      // Hide loading screen after data is successfully parsed
-      setShowLoadingScreen(false);
-      } catch (error: any) {
-        console.error("Search error:", error);
-        setHasError(true);
-        
-        // Check if it's a rate limit error
-        const isRateLimit = error?.message?.includes("Rate limit") || error?.message?.includes("daily limit");
-        
-        // Still set some default data so page renders
-        setParsedData({
-          images: [`https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=600&background=6366f1&color=fff&bold=true`],
-          sources: [],
-          answer: isRateLimit 
-            ? error.message || "You've reached your daily search limit. Please try again tomorrow or upgrade to Pro for more searches."
-            : "Unable to find information. Please try again.",
-        });
-        
-        // Hide loading screen even on error so error message can be shown
-        setShowLoadingScreen(false);
     } finally {
       setIsRetrying(false);
+      setShowLoadingScreen(false);
     }
   };
 
-  // Retry handler
-  const handleRetry = () => {
-    setIsRetrying(true);
-    setShowLoadingScreen(true);
-    setParsedData(null);
-    performSearch();
-  };
-
-  // Perform search on mount
   useEffect(() => {
     performSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firstName, lastName, city, state, searchType]);
+  }, [firstName, lastName, city, state, username, phoneNumber, vin, plate, searchType, intakeContext]);
 
-  const handleImageError = (imageSrc: string) => {
-    setImageError((prev) => ({ ...prev, [imageSrc]: true }));
-  };
-
-
-  // Handle loading screen completion
-  const handleLoadingComplete = () => {
-    setShowLoadingScreen(false);
-  };
-
-  // Handle loading screen cancel
-  const handleLoadingCancel = () => {
-    setShowLoadingScreen(false);
-    router.push("/");
-  };
-
-  // Handle locked source/follow-up click
-  const handleLockedClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!isPro) {
-      showFreeTrialPaywall();
-    }
-  };
-
-  // Handle Full Background Check button - open open-ended search
-  const handleFullBackgroundCheck = () => {
-    if (!isPro) {
-      showFreeTrialPaywall();
-      return;
-    }
-    setShowOpenEndedSearch(true);
-  };
-
-  // Handle open-ended search submission
-  const handleOpenEndedSearch = async () => {
-    if (!openEndedQuery.trim() || !isPro) return;
-
-    setIsSearchingOpenEnded(true);
+  const handleRetry = () => {
+    setIsRetrying(true);
     setShowLoadingScreen(true);
-
-    try {
-      const response = await fetch("/api/perplexity/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: openEndedQuery,
-          userId: user?.id || "guest",
-          usePro: true,
-          isPro: isPro || false,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        
-        if (response.status === 403) {
-          showFreeTrialPaywall();
-          setIsSearchingOpenEnded(false);
-          setShowLoadingScreen(false);
-          return;
-        }
-        
-        if (response.status === 429) {
-          throw new Error(errorData.message || "Rate limit exceeded. Please try again later.");
-        }
-        
-        throw new Error(errorData.error || "Search failed");
-      }
-
-      const data = await response.json();
-      
-      // Navigate to results page with the new query
-      const params = new URLSearchParams({
-        firstName: openEndedQuery,
-        lastName: "",
-        city: "",
-        state: "",
-        searchType: "fullreport",
-      });
-      
-      router.push(`/search/result?${params.toString()}`);
-    } catch (error: any) {
-      console.error("Open-ended search error:", error);
-      setIsSearchingOpenEnded(false);
-      setShowLoadingScreen(false);
-      alert(error.message || "Search failed. Please try again.");
-    }
+    setSearchResult(null);
+    performSearch();
   };
 
-  // Handle follow-up search (Pro users can run follow-up; non-Pro see paywall)
   const handleFollowUpSearch = async (query: string) => {
     if (!isPro) {
       showFreeTrialPaywall();
       return;
     }
 
-    setIsSearchingOpenEnded(true);
-    try {
-      const contextQuery = `Regarding ${fullName}${location ? ` from ${location}` : ""}: ${query}`;
-      
-      const response = await fetch("/api/perplexity/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: contextQuery,
-          userId: user?.id || "guest",
-          usePro: true,
-          isPro: true,
-        }),
-      });
+    setShowLoadingScreen(true);
+    setSearchResult(null);
+    await performSearch(
+      `Regarding ${subjectLabel}${
+        location &&
+        (searchType === "fullreport" ||
+          searchType === "social" ||
+          searchType === "followers" ||
+          searchType === "records")
+          ? ` from ${location}`
+          : ""
+      }: ${query}`,
+    );
+  };
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Follow-up search failed");
-      }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || data.content;
-      
-      if (content && parsedData) {
-        setParsedData({
-          ...parsedData,
-          answer: parsedData.answer + "\n\n---\n\n**Follow-up: " + query + "**\n\n" + content,
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${subjectLabel} - RevealAI`,
+          url: window.location.href,
         });
+        return;
+      } catch {
+        // fall through to clipboard
       }
-      setFollowUpQuery("");
-    } catch (error: any) {
-      console.error("Follow-up search error:", error);
-    } finally {
-      setIsSearchingOpenEnded(false);
     }
+
+    await navigator.clipboard.writeText(window.location.href);
   };
 
-  const handleFollowUpSubmit = () => {
-    if (!followUpQuery.trim()) return;
-    handleFollowUpSearch(followUpQuery);
-  };
-
-  // Get working images (filter out errored ones)
-  const getDisplayImages = () => {
-    if (!parsedData) return [];
-    const working = parsedData.images.filter(img => !imageError[img]);
-    if (working.length === 0) {
-      return [`https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=600&background=6366f1&color=fff&bold=true`];
-    }
-    return working;
-  };
-
-  const displayImages = getDisplayImages();
-
-  // Show loading screen overlay
   if (showLoadingScreen) {
     return (
       <SearchLoadingScreen
-        isVisible={true}
-        searchQuery={fullName}
-        onComplete={handleLoadingComplete}
-        onCancel={handleLoadingCancel}
+        isVisible
+        searchQuery={subjectLabel}
+        productId={loadingProductId}
+        showLongSearchNote={isPro}
+        onComplete={() => setShowLoadingScreen(false)}
+        onCancel={() => {
+          setShowLoadingScreen(false);
+          router.push("/");
+        }}
       />
     );
   }
 
-  // For non-Pro users waiting for paywall or with paywall visible, show nothing (mock profiles like Emma Smith & Kyle Anderson are always viewable)
-  if (!isPro && !isMockResult && (isFreeTrialPaywallVisible || !parsedData)) {
-    return (
-      <div className="min-h-screen bg-background">
-        {/* Empty page - paywall will overlay */}
-      </div>
-    );
+  if (!isPro && !isMockResult && (isFreeTrialPaywallVisible || !searchResult)) {
+    return <div className="min-h-screen bg-background" />;
   }
 
-  // No results state - only show for Pro users who actually got no results
-  // Non-Pro users see loading until paywall; mock profile viewers (Emma/Kyle) always get content so skip this
-  if (!parsedData) {
-    if (!isPro && !isMockResult) {
+  if (!searchResult) {
+    if (errorMessage) {
+      const isDelayMessage = /too many requests|still running|try again/i.test(
+        errorMessage,
+      );
+
       return (
-        <>
-          <SearchLoadingScreen
-            isVisible={true}
-            searchQuery={fullName}
-            onComplete={() => {}}
-            onCancel={() => router.push("/")}
-          />
-        </>
+        <div className="min-h-screen bg-background">
+          <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-xl">
+            <div className="container mx-auto flex h-16 max-w-4xl items-center justify-between px-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/")}
+              >
+                <ArrowLeft className="mr-2 w-4 h-4" />
+                Back
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isRetrying}
+                onClick={handleRetry}
+              >
+                {isRetrying ? "Retrying..." : "Try Again"}
+              </Button>
+            </div>
+          </header>
+
+          <main className="container mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl items-center justify-center px-4 py-10">
+            <div className="w-full rounded-3xl border border-amber-200 bg-white p-8 text-center shadow-sm">
+              <h1 className="text-2xl font-semibold text-slate-900">
+                {isDelayMessage
+                  ? "Search Taking Longer Than Usual"
+                  : "Search Unavailable"}
+              </h1>
+              <p className="mt-3 text-sm leading-7 text-slate-600">
+                {errorMessage}
+              </p>
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <Button onClick={handleRetry} disabled={isRetrying}>
+                  {isRetrying ? "Retrying..." : "Try Again"}
+                </Button>
+                <Button variant="outline" onClick={() => router.push("/")}>
+                  Back Home
+                </Button>
+              </div>
+            </div>
+          </main>
+        </div>
       );
     }
-    
-    // Pro users who got no results
+
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">No Results Found</h1>
-          <p className="text-muted-foreground mb-4">
-            We couldn&apos;t find information for {fullName}
-          </p>
-          <Button onClick={() => router.push("/")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back Home
-          </Button>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-xl">
+        <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="mr-2 w-4 h-4" />
             Back
           </Button>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="gap-1">
-              <CheckCircle2 className="w-3 h-3 text-green-500" />
-              Verified Profile
-            </Badge>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={handleShare}>
               <Share2 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isRetrying}
+              onClick={handleRetry}
+            >
+              {isRetrying ? "Retrying..." : "Try Again"}
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Name and Location */}
-        <div className="mb-6">
-          <div className="mb-2">
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-4xl font-bold">{fullName}</h1>
-                {isViralMockProfile && (
-                  <div className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                    <span className="text-xl leading-none" aria-label="Attractive rating">
-                      🥵
-                    </span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black leading-none text-rose-600">8.8</span>
-                      <span className="text-sm font-semibold leading-none text-rose-300">/10</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              {location && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge variant="outline" className="text-sm">
-                    {location}
-                  </Badge>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+      <main className="container mx-auto max-w-4xl px-4 py-6 sm:py-8">
+        <FullReportResult
+          content={searchResult.content}
+          report={searchResult.report}
+          onFollowUpSearch={handleFollowUpSearch}
+          searchCount={0}
+          personName={subjectLabel}
+          searchType={searchType}
+        />
 
-        {/* Image Gallery - Full Width */}
-        <div className="relative mb-8">
-          <Card className="overflow-hidden">
-            <div className="relative">
-              {/* Navigation Arrows - Desktop Only */}
-              {displayImages.length > 1 && (
-                <>
-                  <button
-                    onClick={() => {
-                      if (galleryRef.current) {
-                        galleryRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-                      }
-                    }}
-                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg"
-                    aria-label="Previous images"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (galleryRef.current) {
-                        galleryRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-                      }
-                    }}
-                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg"
-                    aria-label="Next images"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </>
-              )}
-              
-              {/* Horizontal Image Gallery */}
-              <div 
-                ref={galleryRef}
-                className="flex gap-3 p-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
-              >
-                {displayImages.map((img, idx) => (
-                  <div
-                    key={idx}
-                    className="relative w-40 h-52 sm:w-48 sm:h-64 md:w-56 md:h-72 flex-shrink-0 rounded-lg overflow-hidden bg-muted snap-center"
-                  >
-                    <Image
-                      src={
-                        imageError[img]
-                          ? `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=600&background=6366f1&color=fff&bold=true`
-                          : img
-                      }
-                      alt={`${fullName} - Photo ${idx + 1}`}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 640px) 160px, (max-width: 768px) 192px, 224px"
-                      onError={() => handleImageError(img)}
-                      unoptimized
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {isViralMockProfile && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold tracking-tight text-black">Socials</h2>
-            <div className="mt-4 flex flex-wrap items-center gap-3 sm:gap-4">
-              {VIRAL_SOCIAL_LOGOS.map((logo) => (
-                <div
-                  key={logo.src}
-                  className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition-transform duration-200 hover:-translate-y-0.5"
-                  aria-label={logo.alt}
-                  title={logo.alt}
-                >
-                  <Image
-                    src={logo.src}
-                    alt={logo.alt}
-                    width={28}
-                    height={28}
-                    className="h-7 w-7 object-contain"
-                  />
-                </div>
-              ))}
-              <div className="flex h-14 items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-600 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
-                +5 more
-              </div>
-            </div>
+        {hasError && (
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Some live search coverage was limited on this run, so this result
+            may be thinner than usual.
           </div>
         )}
 
-        {/* Profile Info Section */}
-        <div className="space-y-6 mb-8">
-          <div>
-            <p className="text-xl text-muted-foreground">
-              {(() => {
-                // Get first sentence and clean it up
-                const firstSentence = parsedData.answer
-                  .replace(/!\[[^\]]*\]\([^)]+\)/g, '') // Remove image markdown
-                  .replace(/\*\*/g, '') // Remove bold markers
-                  .replace(/#{1,3}\s*/g, '') // Remove header markers
-                  .replace(/\[[^\]]+\]\([^)]+\)/g, (m) => m.match(/\[([^\]]+)\]/)?.[1] || '') // Keep link text only
-                  .split(/[.!?]/)[0]?.trim();
-                return firstSentence ? `${firstSentence}.` : `Profile for ${fullName}`;
-              })()}
-            </p>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="p-4 text-center">
-              <div className="text-3xl font-bold text-primary">
-                {parsedData.sources.length}
-              </div>
-              <div className="text-sm text-muted-foreground">Sources</div>
-            </Card>
-            <Card className="p-4 text-center">
-              <div className="text-3xl font-bold text-primary">
-                {displayImages.length}
-              </div>
-              <div className="text-sm text-muted-foreground">Images</div>
-            </Card>
-            <Card className="p-4 text-center">
-              <div className="text-3xl font-bold text-green-500">✓</div>
-              <div className="text-sm text-muted-foreground">Verified</div>
-            </Card>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3">
-            <Button className="gap-2" onClick={handleFullBackgroundCheck}>
-              <Search className="w-4 h-4" />
-              Full Background Check
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Share2 className="w-4 h-4" />
-              Share Profile
-            </Button>
-            <Button 
-              variant="outline" 
-              className="gap-2"
-              onClick={handleRetry}
-              disabled={isRetrying}
-            >
-              {isRetrying ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-              Try Again
-            </Button>
-          </div>
-
-          {/* Open-Ended Search Input */}
-          {showOpenEndedSearch && (
-            <Card className="mt-6">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Ask anything about {fullName}
-                    </label>
-                    <Input
-                      placeholder="e.g., What is their criminal record? Where do they work? What's their net worth?"
-                      value={openEndedQuery}
-                      onChange={(e) => setOpenEndedQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleOpenEndedSearch();
-                        }
-                      }}
-                      className="w-full"
-                      disabled={isSearchingOpenEnded}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleOpenEndedSearch}
-                      disabled={!openEndedQuery.trim() || isSearchingOpenEnded}
-                      className="gap-2"
-                    >
-                      {isSearchingOpenEnded ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Searching...
-                        </>
-                      ) : (
-                        <>
-                          <Search className="w-4 h-4" />
-                          Search
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setShowOpenEndedSearch(false);
-                        setOpenEndedQuery("");
-                      }}
-                      disabled={isSearchingOpenEnded}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Sources Section */}
-        {parsedData.sources.length > 0 && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5 text-primary" />
-                Sources ({parsedData.sources.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                {/* Show first 4 sources */}
-                {parsedData.sources.slice(0, 4).map((source, idx) => {
-                  const isLocked = !isPro && idx >= 2;
-                  if (isLocked) {
-                    return (
-                      <div
-                        key={idx}
-                        onClick={handleLockedClick}
-                        className="flex items-center gap-3 p-3 rounded-lg border border-border transition-all cursor-pointer opacity-70 hover:opacity-90 group"
-                      >
-                        <div className="p-2 rounded-lg bg-muted/50 transition-colors relative w-10 h-10 flex items-center justify-center flex-shrink-0">
-                          {(source as any).image ? (
-                            <Image
-                              src={(source as any).image}
-                              alt={source.label}
-                              width={40}
-                              height={40}
-                              className="rounded object-cover opacity-50"
-                            />
-                          ) : (
-                            <Globe className="w-4 h-4 text-muted-foreground" />
-                          )}
-                          <div className="absolute -top-1 -right-1 p-0.5 bg-blue-500 rounded-full">
-                            <Lock className="w-3 h-3 text-white" />
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate transition-colors">
-                            Source
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            Hidden
-                          </div>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className="text-xs flex-shrink-0 bg-blue-50 text-blue-600 border-blue-200"
-                        >
-                          Pro
-                        </Badge>
-                      </div>
-                    );
-                  }
-                  return (
-                    <a
-                      key={idx}
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
-                    >
-                      <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors relative w-10 h-10 flex items-center justify-center flex-shrink-0">
-                        {(source as any).image ? (
-                          <Image
-                            src={(source as any).image}
-                            alt={source.label}
-                            width={40}
-                            height={40}
-                            className="rounded object-cover"
-                          />
-                        ) : (
-                          <Globe className="w-4 h-4 text-primary" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-                          {source.label}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {source.url.replace(/^https?:\/\//, "").split("/")[0]}
-                        </div>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="text-xs flex-shrink-0 bg-blue-50 text-blue-600 border-blue-200"
-                      >
-                        Source
-                      </Badge>
-                    </a>
-                  );
-                })}
-              </div>
-
-              {/* Dropdown for additional sources */}
-              {parsedData.sources.length > 4 && (
-                <div className="relative">
-                  <div
-                    onClick={
-                      !isPro
-                        ? handleLockedClick
-                        : () => setShowMoreSources(!showMoreSources)
-                    }
-                    className={`w-full flex items-center justify-between p-3 rounded-lg border border-border transition-colors cursor-pointer ${
-                      !isPro ? "opacity-70 hover:opacity-90" : "hover:bg-muted/50"
-                    }`}
-                  >
-                    <span className="text-sm font-medium">
-                      +{parsedData.sources.length - 4} More sources
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {!isPro && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-blue-50 text-blue-600 border-blue-200 flex items-center gap-1"
-                        >
-                          <Lock className="w-3 h-3" />
-                          Pro
-                        </Badge>
-                      )}
-                      {isPro && (
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform ${showMoreSources ? "rotate-180" : ""}`}
-                        />
-                      )}
-                    </div>
-                  </div>
-                  {showMoreSources && isPro && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                      {parsedData.sources.slice(4).map((source, idx) => (
-                        <a
-                          key={idx + 4}
-                          href={source.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
-                        >
-                          <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors relative w-10 h-10 flex items-center justify-center flex-shrink-0">
-                            {(source as any).image ? (
-                              <Image
-                                src={(source as any).image}
-                                alt={source.label}
-                                width={40}
-                                height={40}
-                                className="rounded object-cover"
-                              />
-                            ) : (
-                              <Globe className="w-4 h-4 text-primary" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-                              {source.label}
-                            </div>
-                            <div className="text-xs text-muted-foreground truncate">
-                              {source.url.replace(/^https?:\/\//, "").split("/")[0]}
-                            </div>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className="text-xs flex-shrink-0 bg-blue-50 text-blue-600 border-blue-200"
-                          >
-                            Source
-                          </Badge>
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Detailed Answer */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              Detailed Profile
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div 
-              className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: formatAnswer(parsedData.answer) }}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Related Questions Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="w-5 h-5 text-primary" />
-              Related
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Recommended Follow-up Questions */}
-            <div className="space-y-3">
-              {followUpSuggestions.map((suggestion, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleFollowUpSearch(suggestion)}
-                  className="w-full flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-all group text-left"
-                >
-                  <span className="text-sm font-medium">{suggestion}</span>
-                  <div className="flex items-center gap-2">
-                    {!isPro && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs bg-blue-50 text-blue-600 border-blue-200 flex items-center gap-1"
-                      >
-                        <Lock className="w-3 h-3" />
-                        Pro
-                      </Badge>
-                    )}
-                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary flex-shrink-0" />
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Open-ended Search Input */}
-            <div className="pt-4 border-t">
-              <div className="flex items-center gap-2 mb-3">
-                <Search className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Ask follow up</span>
-                {!isPro && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs bg-blue-50 text-blue-600 border-blue-200 flex items-center gap-1"
-                  >
-                    <Lock className="w-3 h-3" />
-                    Pro
-                  </Badge>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ask anything about this person..."
-                  value={followUpQuery}
-                  onChange={(e) => setFollowUpQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleFollowUpSubmit()}
-                  className="flex-1"
-                />
-                <Button
-                  onClick={handleFollowUpSubmit}
-                  size="icon"
-                  className="bg-red-600 hover:bg-red-700"
-                >
-                  <ArrowRight className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Disclaimer */}
-        <div className="mt-8 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-semibold text-amber-600 dark:text-amber-400 mb-1">
-                Important Notice
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                This profile is compiled from publicly available sources for
-                informational purposes only. It is not intended for employment,
-                tenant screening, or credit decisions. Always verify information
-                through official channels before making important decisions.
-              </p>
-            </div>
-          </div>
+        <div className="mt-6 rounded-[24px] bg-[#f3efe8] p-4">
+          <p className="text-sm leading-7 text-slate-600">
+            This report is compiled from publicly available information for
+            informational purposes only. It is not intended for employment,
+            tenant screening, credit, or other FCRA-regulated decisions.
+          </p>
         </div>
       </main>
     </div>

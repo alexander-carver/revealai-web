@@ -2,6 +2,7 @@
 // All Meta Pixel events include an event_id for deduplication with Conversions API (CAPI)
 
 import { getCheckoutValue } from "@/lib/pricing";
+import { getAttributionData } from "@/lib/attribution";
 
 declare global {
   interface Window {
@@ -12,6 +13,12 @@ declare global {
 }
 
 const isDev = process.env.NODE_ENV === 'development';
+
+export interface MetaAttributionData {
+  fbp?: string;
+  fbc?: string;
+  sourceUrl?: string;
+}
 
 /** Generate a unique event ID for deduplication between browser pixel and CAPI. */
 export function generateEventId(prefix: string = 'evt'): string {
@@ -48,6 +55,39 @@ function trackMetaPixel(eventName: string, params?: Record<string, any>, eventId
       window.fbq('track', eventName, params);
     }
   }
+}
+
+function getCookieValue(name: string) {
+  if (typeof document === 'undefined') return undefined;
+
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = document.cookie.match(new RegExp(`(?:^|; )${escapedName}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+export interface MetaAttributionData {
+  fbp?: string;
+  fbc?: string;
+  sourceUrl?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
+  mc_flow?: string;
+  mc_subscriber_id?: string;
+  fbclid?: string;
+}
+
+export function getMetaAttributionData(): MetaAttributionData {
+  if (typeof window === 'undefined') return {};
+
+  const data = getAttributionData();
+
+  return {
+    ...data,
+    sourceUrl: window.location.href,
+  };
 }
 
 // Track landing page view
@@ -115,12 +155,14 @@ export function trackPurchase({
   transaction_id,
   plan = 'subscription',
   eventId,
+  sendMetaPixel = true,
 }: {
   value: number;
   currency?: string;
   transaction_id: string;
   plan?: string;
   eventId?: string;
+  sendMetaPixel?: boolean;
 }) {
   const eid = eventId || generateEventId('pur');
 
@@ -135,21 +177,23 @@ export function trackPurchase({
       quantity: 1,
     }],
   });
-  
-  trackMetaPixel('Purchase', {
-    value,
-    currency,
-    content_name: `Reveal AI ${plan}`,
-    content_type: 'product',
-    content_ids: [transaction_id],
-    contents: [{
-      id: transaction_id,
-      quantity: 1,
-      item_price: value,
-    }],
-    num_items: 1,
-    content_category: 'subscription',
-  }, eid);
+
+  if (sendMetaPixel) {
+    trackMetaPixel('Purchase', {
+      value,
+      currency,
+      content_name: `Reveal AI ${plan}`,
+      content_type: 'product',
+      content_ids: [transaction_id],
+      contents: [{
+        id: transaction_id,
+        quantity: 1,
+        item_price: value,
+      }],
+      num_items: 1,
+      content_category: 'subscription',
+    }, eid);
+  }
   
   if (isDev) {
     console.log('✅ Purchase tracked:', { transaction_id, value, currency, eventId: eid });

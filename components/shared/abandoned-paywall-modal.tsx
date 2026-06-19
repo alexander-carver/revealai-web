@@ -5,74 +5,108 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useRouter, usePathname } from "next/navigation";
-import { trackCTAClick, trackInitiateCheckout } from "@/lib/analytics";
+import { useRouter } from "next/navigation";
+import {
+  getMetaAttributionData,
+  trackCTAClick,
+  trackInitiateCheckout,
+} from "@/lib/analytics";
 import { getDeviceId } from "@/lib/device-id";
 import { getAffiliateRef } from "@/lib/affiliate";
 import { formatUsd, PUBLIC_PRICING } from "@/lib/pricing";
-
-// Benefits with styled text
-const benefits = [
-  <>Find <span className="text-red-600 font-semibold">Social Profiles</span> & Online Presence</>,
-  <>People Search: <span className="font-bold">Vehicle</span>, Reverse Phone, Address</>,
-  <>Look into <span className="italic">Criminal</span> History</>,
-  <>Remove <span className="underline">Yourself</span> from Reveal AI Search</>,
-  <>Find Unclaimed <span className="font-bold">Money</span> for Free</>,
-];
+import { getPaywallBenefits } from "@/lib/paywall-theme";
+import { getProductThemeStyle } from "@/lib/search-products";
 
 export function AbandonedPaywallModal() {
-  const { isAbandonedPaywallVisible, hideAbandonedPaywall } = useSubscription();
+  const {
+    isAbandonedPaywallVisible,
+    hideAbandonedPaywall,
+    paywallProductId,
+  } = useSubscription();
   const { user } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
+  const [hasMounted, setHasMounted] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<"yearly" | "weekly">("yearly");
   const [isLoading, setIsLoading] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
+  const paywallThemeStyle = getProductThemeStyle(paywallProductId);
+  const benefits = getPaywallBenefits(paywallProductId);
+  const abandonedYearlyPrice = PUBLIC_PRICING.abandonedTrialIntro;
+  const abandonedCompareAtPrice = PUBLIC_PRICING.abandonedYearlyCompareAtPrice;
+  const abandonedMonthlyEquivalent = (abandonedYearlyPrice / 12).toFixed(2);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   // Show close button instantly
   useEffect(() => {
     if (isAbandonedPaywallVisible) {
       setShowCloseButton(true);
+      setSelectedPlan("yearly");
     } else {
       setShowCloseButton(false);
     }
   }, [isAbandonedPaywallVisible]);
 
-  if (!isAbandonedPaywallVisible) return null;
+  useEffect(() => {
+    const resetLoadingState = () => setIsLoading(false);
 
-  // When user closes $1.99 paywall via X: hide it and return to main home page
+    window.addEventListener("pageshow", resetLoadingState);
+    window.addEventListener("focus", resetLoadingState);
+
+    return () => {
+      window.removeEventListener("pageshow", resetLoadingState);
+      window.removeEventListener("focus", resetLoadingState);
+    };
+  }, []);
+
+  if (!hasMounted || !isAbandonedPaywallVisible) return null;
+
+  // When user closes the rescue paywall via X: hide it and return to home.
   const handleClose = () => {
     hideAbandonedPaywall();
-    if (pathname !== "/") {
-      router.push("/");
-    }
+    router.push("/");
   };
 
   const handleSubscribe = async () => {
+    const checkoutPlan = selectedPlan === "yearly" ? "abandoned_trial" : "weekly";
+
     // Track CTA click
-    trackCTAClick("Abandoned Paywall - Continue");
+    trackCTAClick(
+      `Abandoned Paywall - ${
+        selectedPlan === "yearly" ? "Discounted Yearly" : "Weekly"
+      }`
+    );
     
     setIsLoading(true);
     try {
       // Track initiate checkout
-      trackInitiateCheckout("abandoned_trial");
+      const initiateCheckoutEventId = trackInitiateCheckout(checkoutPlan);
       
-      const response = await fetch("/api/stripe/checkout", {
+      const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          plan: "abandoned_trial",
+          plan: checkoutPlan,
           userId: user?.id || undefined,
           email: user?.email || undefined,
           deviceId: getDeviceId(),
           affiliateRef: getAffiliateRef() || undefined,
+          metaAttribution: {
+            ...getMetaAttributionData(),
+            initiateCheckoutEventId,
+          },
         }),
       });
 
       const data = await response.json();
 
       if (data.url) {
+        localStorage.setItem("revealai_checkout_initiated", "true");
+        localStorage.setItem("revealai_checkout_timestamp", Date.now().toString());
         window.location.href = data.url;
       } else {
         throw new Error(data.error || "Failed to create checkout session");
@@ -85,10 +119,13 @@ export function AbandonedPaywallModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2.5 sm:p-4"
+      style={paywallThemeStyle}
+    >
       {/* Paywall Card */}
-      <div className="relative z-10 w-full max-w-[460px] mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="relative rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+      <div className="relative z-10 w-full max-w-[420px] sm:max-w-[460px] max-[420px]:scale-[0.96] max-[420px]:transform-gpu">
+        <div className="relative max-h-[96dvh] overflow-hidden rounded-[24px] border border-gray-100 shadow-2xl sm:max-h-[90vh] sm:rounded-2xl">
           {/* Card Background Image */}
           <div className="absolute inset-0">
             <Image
@@ -100,106 +137,210 @@ export function AbandonedPaywallModal() {
               unoptimized
             />
             {/* White overlay for readability */}
-            <div className="absolute inset-0 bg-white/85" />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, color-mix(in srgb, var(--product-primary) 9%, white) 0%, rgba(255, 255, 255, 0.9) 34%, rgba(255, 255, 255, 0.96) 100%)",
+              }}
+            />
           </div>
           
           {/* Close Button - Inside card, top left */}
           <button
             onClick={handleClose}
-            className={`absolute left-3 top-3 p-2 z-20 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-500 ${
+            className={`absolute left-2.5 top-2.5 z-20 rounded-full bg-gray-100 p-1.5 transition-all duration-300 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[var(--product-primary)] sm:left-3 sm:top-3 sm:p-2 ${
               showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
             aria-label="Close"
           >
-            <X className="h-5 w-5 text-gray-600" />
+            <X className="h-4 w-4 text-gray-600 sm:h-5 sm:w-5" />
           </button>
           
           {/* Card Content */}
-          <div className="relative z-10 px-6 sm:px-8 py-8 sm:py-10">
+          <div className="relative z-10 px-4 pb-3 pt-4 min-[390px]:px-5 min-[390px]:pb-4 min-[390px]:pt-5 sm:px-8 sm:py-10">
             {/* Header */}
-            <div className="text-center mb-6">
-              {/* 72% OFF Badge */}
-              <div className="mb-4">
-                <div className="inline-block bg-red-600 text-white text-base font-bold px-6 py-2.5 rounded-full shadow-lg">
-                  72% OFF
-                </div>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                GET <span className="text-red-600">PRO</span> ACCESS
+            <div className="mb-4 text-center sm:mb-6">
+              <p
+                className="text-[12px] font-semibold uppercase tracking-[0.12em] sm:text-[13px]"
+                style={{ color: "var(--product-primary)" }}
+              >
+                Limited time offer
+              </p>
+              <h2
+                className="text-[2.8rem] font-black leading-[0.86] tracking-[-0.08em] min-[390px]:text-[3rem] sm:text-[3.5rem]"
+                style={{ color: "var(--product-primary)" }}
+              >
+                80% OFF
               </h2>
+              <div className="mt-1 flex items-center justify-center gap-2 text-[13px] sm:text-[14px]">
+                <span className="font-semibold text-gray-400 line-through">
+                  {formatUsd(abandonedCompareAtPrice)}
+                </span>
+                <span className="font-semibold text-gray-500">
+                  ${abandonedMonthlyEquivalent}/mo
+                </span>
+              </div>
+              <h3 className="mt-4 text-[1.8rem] font-black leading-[0.98] tracking-[-0.04em] text-gray-900 sm:text-[2.1rem]">
+                UNLOCK{" "}
+                <span style={{ color: "var(--product-primary)" }}>FULL RESULTS</span>
+              </h3>
+              <p className="mt-2 text-[12px] text-gray-500 sm:text-sm">
+                Choose {formatUsd(abandonedYearlyPrice)}/year billed annually or{" "}
+                {formatUsd(PUBLIC_PRICING.weekly)}/week. Cancel anytime.
+              </p>
             </div>
 
             {/* Benefits List */}
-            <div className="space-y-3 mb-8">
+            <div className="mb-5 space-y-2 sm:mb-8 sm:space-y-3">
               {benefits.map((benefit, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
-                    <Check className="w-3 h-3 text-red-600" />
+                <div key={index} className="flex items-start gap-2.5 sm:gap-3">
+                  <div
+                    className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full sm:h-5 sm:w-5"
+                    style={{
+                      backgroundColor:
+                        "color-mix(in srgb, var(--product-primary) 12%, white)",
+                    }}
+                  >
+                    <Check
+                      className="h-2.5 w-2.5 sm:h-3 sm:w-3"
+                      style={{ color: "var(--product-primary)" }}
+                    />
                   </div>
-                  <span className="text-gray-700 text-sm leading-relaxed">{benefit}</span>
+                  <span className="text-[13px] leading-snug text-gray-700 sm:text-sm sm:leading-relaxed">{benefit}</span>
                 </div>
               ))}
             </div>
 
-            {/* Special Offer - Single Plan */}
-            <div className="mb-6">
+            {/* Plan Selection */}
+            <div className="mb-4 space-y-2 sm:mb-6 sm:space-y-2.5">
               <button
-                onClick={handleSubscribe}
-                disabled={isLoading}
-                className="relative w-full p-[18px] rounded-xl border-2 border-red-500 bg-red-50 transition-all"
+                onClick={() => setSelectedPlan("yearly")}
+                className={`relative w-full rounded-xl border-2 p-3.5 text-left transition-all sm:p-[18px] ${
+                  selectedPlan === "yearly"
+                    ? ""
+                    : "border-black bg-white hover:border-gray-700"
+                }`}
+                style={
+                  selectedPlan === "yearly"
+                    ? {
+                        borderColor: "var(--product-primary)",
+                        backgroundColor:
+                          "color-mix(in srgb, var(--product-primary) 8%, white)",
+                      }
+                    : undefined
+                }
               >
-                {/* SAVE 72% Badge - positioned on top right */}
-                <div className="absolute -top-2.5 right-3">
-                  <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
-                    SAVE 72%
+                <div className="absolute -top-2.5 right-2.5 sm:right-3">
+                  <div
+                    className="rounded-full px-2.5 py-1 text-[10px] font-bold text-white"
+                    style={{ backgroundColor: "var(--product-primary)" }}
+                  >
+                    BEST VALUE
                   </div>
                 </div>
-                <div className="flex justify-between items-start">
+                <div className="flex items-start justify-between gap-3">
                   <div className="text-left">
-                    <div className="font-bold text-gray-900 text-base mb-0.5">WEEKLY ACCESS</div>
-                    <div className="text-gray-500 text-xs">Then {formatUsd(PUBLIC_PRICING.weekly)} per week</div>
+                    <div className="mb-0.5 text-[15px] font-bold text-gray-900 sm:text-base">
+                      YEARLY ACCESS
+                    </div>
+                    <div className="text-[11px] text-gray-500 sm:text-xs">
+                      Billed today at {formatUsd(abandonedYearlyPrice)}/year
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-gray-900 font-semibold text-sm">ONLY $1.99</div>
-                    <div className="text-gray-900 text-xs font-bold">First Week</div>
+                    <div
+                      className="text-[18px] font-semibold sm:text-xl"
+                      style={{ color: "var(--product-primary)" }}
+                    >
+                      {formatUsd(abandonedYearlyPrice)}
+                    </div>
+                    <div className="text-[11px] font-medium text-gray-500 sm:text-xs">
+                      per year
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setSelectedPlan("weekly")}
+                className={`w-full rounded-xl border-2 p-3.5 text-left transition-all sm:p-[18px] ${
+                  selectedPlan === "weekly"
+                    ? ""
+                    : "border-black bg-white hover:border-gray-700"
+                }`}
+                style={
+                  selectedPlan === "weekly"
+                    ? {
+                        borderColor: "var(--product-primary)",
+                        backgroundColor:
+                          "color-mix(in srgb, var(--product-primary) 8%, white)",
+                      }
+                    : undefined
+                }
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-left">
+                    <div className="mb-0.5 text-[15px] font-bold text-gray-900 sm:text-base">
+                      WEEKLY ACCESS
+                    </div>
+                    <div className="text-[11px] text-gray-500 sm:text-xs">
+                      Flexible access at {formatUsd(PUBLIC_PRICING.weekly)}/week
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div
+                      className="text-[18px] font-semibold text-gray-900 sm:text-xl"
+                    >
+                      {formatUsd(PUBLIC_PRICING.weekly)}
+                    </div>
+                    <div className="text-[11px] font-medium text-gray-500 sm:text-xs">
+                      per week
+                    </div>
                   </div>
                 </div>
               </button>
             </div>
 
             {/* Social proof */}
-            <div className="flex items-center justify-center gap-1.5 mb-3">
+            <div className="mb-2 flex items-center justify-center gap-1.5 sm:mb-3">
               <div className="flex -space-x-1">
                 {[...Array(5)].map((_, i) => (
-                  <span key={i} className="text-yellow-400 text-sm">★</span>
+                  <span key={i} className="text-xs text-yellow-400 sm:text-sm">★</span>
                 ))}
               </div>
-              <span className="text-gray-500 text-xs font-medium">Trusted by 10,000+ users</span>
+              <span className="text-[11px] font-medium text-gray-500 sm:text-xs">Trusted by 10,000+ users</span>
             </div>
 
             {/* CTA Button */}
             <button
               onClick={handleSubscribe}
               disabled={isLoading}
-              className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-600/25 hover:shadow-xl hover:shadow-red-600/30 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-bold text-white transition-all hover:opacity-95 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[var(--product-primary)] focus:ring-offset-2 sm:py-4 sm:text-lg"
+              style={{
+                backgroundColor: "var(--product-primary)",
+                boxShadow: "0 18px 45px -24px var(--product-shadow)",
+              }}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  CONTINUE
+                  {selectedPlan === "yearly"
+                    ? "Unlock Yearly Access"
+                    : "Start Weekly Access"}
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
             </button>
 
             {/* Trust / cancel assurance */}
-            <p className="text-center text-gray-400 text-xs mt-3">
+            <p className="mt-2.5 text-center text-[10px] text-gray-400 sm:mt-3 sm:text-xs">
               No commitment · Cancel anytime · Secure checkout
             </p>
 
             {/* Footer Links */}
-            <div className="flex items-center justify-center gap-3 mt-6 text-xs text-gray-400">
+            <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-gray-400 sm:mt-6 sm:gap-3 sm:text-xs">
               <a href="/terms" className="hover:text-gray-600 transition-colors focus:outline-none focus:underline">Terms</a>
               <span>·</span>
               <a href="/privacy-policy" className="hover:text-gray-600 transition-colors focus:outline-none focus:underline">Privacy Policy</a>

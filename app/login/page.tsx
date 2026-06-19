@@ -21,6 +21,7 @@ import { Logo } from "@/components/shared/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { getAuthHeaders } from "@/lib/supabase/client";
+import { getDeviceId } from "@/lib/device-id";
 
 function LoginContent() {
   const router = useRouter();
@@ -54,8 +55,8 @@ function LoginContent() {
                 method: "POST",
                 headers: { ...headers, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  email: user.email,
                   sessionId,
+                  deviceId: getDeviceId(),
                 }),
               })
             ).then(() => {
@@ -274,4 +275,3 @@ export default function LoginPage() {
     </Suspense>
   );
 }
-
