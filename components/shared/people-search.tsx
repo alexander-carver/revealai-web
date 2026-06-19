@@ -251,13 +251,7 @@ export function PeopleSearch({
       );
 
       if (mockProfile) {
-        executeSearch({
-          productId: currentProduct.id,
-          analyticsKey: currentProduct.analyticsKey,
-          queryLabel: fullName,
-          destination: "result",
-          params: params.toString(),
-        });
+        router.push(`/search/${mockProfile.id}?${params.toString()}`);
         return;
       }
     }
