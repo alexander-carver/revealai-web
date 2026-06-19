@@ -1,63 +1,161 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import {
-  Search,
-  User,
-  MapPin,
+  AtSign,
   ArrowRight,
+  Car,
+  ChevronDown,
+  FileText,
+  MapPin,
+  Phone,
+  Search,
+  Shield,
   Sparkles,
   Star,
-  Shield,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Modal,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
 import { useSubscription } from "@/hooks/use-subscription";
 import { MostSearched } from "./most-searched";
 import { trackSearchButtonClick } from "@/lib/analytics";
 import { SearchLoadingScreen } from "./search-loading-screen";
 import { lookupMockProfileByDetails } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
+import { triggerHapticFeedback } from "@/lib/haptics";
+import {
+  getVehicleLookupMode,
+  normalizeVehicleLookupQuery,
+} from "@/lib/services/vehicle";
+import {
+  SEARCH_PRODUCT_IDS,
+  getProductThemeStyle,
+  getSearchProduct,
+  type SearchProductId,
+} from "@/lib/search-products";
 
-const SOCIAL_SOURCE_LOGO_PATHS = [
-  "/sources/source-1.png",
-  "/sources/source-2.png",
-  "/sources/source-3.png",
-  "/sources/source-4.png",
-  "/sources/source-5.png",
-  "/sources/source-6.png",
-];
+function formatPhoneDisplay(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 11 && digits[0] === "1") {
+    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  return phone;
+}
 
-export function PeopleSearch() {
+interface PeopleSearchProps {
+  selectedProduct?: SearchProductId;
+  onProductChange?: (productId: SearchProductId) => void;
+  initialSocialSearchMode?: "name" | "username";
+}
+
+type SocialSearchMode = "name" | "username";
+
+type PendingSearchDestination = "loading" | "records" | "result";
+
+interface PendingSearch {
+  productId: SearchProductId;
+  analyticsKey: string;
+  queryLabel: string;
+  destination: PendingSearchDestination;
+  params?: string;
+}
+
+export function PeopleSearch({
+  selectedProduct,
+  onProductChange,
+  initialSocialSearchMode = "name",
+}: PeopleSearchProps) {
   const router = useRouter();
-  const { isPro, showFreeTrialPaywall, isPaywallVisible, isAbandonedPaywallVisible } = useSubscription();
-  const [searchType, setSearchType] = useState<"fullreport" | "social">("fullreport");
-  const [formData, setFormData] = useState({
+  const {
+    isPro,
+    showFreeTrialPaywall,
+    isPaywallVisible,
+    isAbandonedPaywallVisible,
+  } = useSubscription();
+  const [internalProduct, setInternalProduct] = useState<SearchProductId>("people");
+  const [personFormData, setPersonFormData] = useState({
     firstName: "",
     lastName: "",
     city: "",
     state: "",
   });
-
-  // Loading screen state for non-Pro users
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [vin, setVin] = useState("");
+  const [username, setUsername] = useState("");
+  const [socialSearchMode, setSocialSearchMode] =
+    useState<SocialSearchMode>(initialSocialSearchMode);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loadingProduct, setLoadingProduct] = useState<SearchProductId>("people");
+  const [isProductMenuOpen, setIsProductMenuOpen] = useState(false);
+  const [searchValidationMessage, setSearchValidationMessage] = useState<string | null>(null);
   const paywallSequenceStarted = useRef(false);
+  const productMenuRef = useRef<HTMLDivElement>(null);
 
-  // Mobile sticky CTA visibility
-  const [showMobileCTA, setShowMobileCTA] = useState(true);
+  const activeProduct = selectedProduct ?? internalProduct;
+  const currentProduct = getSearchProduct(activeProduct);
+  const supportsUsernameMode =
+    currentProduct.id === "social" || currentProduct.id === "followers";
+  const isUsernameMode =
+    supportsUsernameMode && socialSearchMode === "username";
+  const CurrentProductIcon = currentProduct.icon;
+  const themeStyle = getProductThemeStyle(activeProduct);
 
-  // Track when main paywall becomes visible during loading (paywall sequence has started)
+  const setActiveProduct = (productId: SearchProductId) => {
+    if (selectedProduct === undefined) {
+      setInternalProduct(productId);
+    }
+    onProductChange?.(productId);
+  };
+
+  const openValidationPopup = useCallback((message: string) => {
+    triggerHapticFeedback("warning");
+    setSearchValidationMessage(message);
+  }, []);
+
   useEffect(() => {
     if (isPaywallVisible && showLoadingScreen) {
       paywallSequenceStarted.current = true;
     }
   }, [isPaywallVisible, showLoadingScreen]);
 
-  // Close loading screen only when ALL paywalls are closed (both main and $1.99 abandoned)
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        productMenuRef.current &&
+        !productMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsProductMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsProductMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
   useEffect(() => {
     if (
       paywallSequenceStarted.current &&
@@ -70,381 +168,578 @@ export function PeopleSearch() {
     }
   }, [isPaywallVisible, isAbandonedPaywallVisible, showLoadingScreen]);
 
-  // Hide mobile CTA when search section is in view
   useEffect(() => {
-    const searchSection = document.getElementById("search");
-    if (!searchSection) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setShowMobileCTA(!entry.isIntersecting);
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(searchSection);
-    return () => observer.disconnect();
-  }, []);
-
-  // Handle main search
-  const handleSearch = useCallback(() => {
-    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+    if (supportsUsernameMode) {
+      setSocialSearchMode(initialSocialSearchMode);
       return;
     }
 
-    // Track search button click
-    trackSearchButtonClick(searchType === 'fullreport' ? 'full_report' : 'social_profiles');
+    setSocialSearchMode("name");
+  }, [initialSocialSearchMode, supportsUsernameMode]);
 
-    const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
-
-    // Check if this is a mock profile (like Emma Smith) - allow everyone to search
-    const mockProfile = lookupMockProfileByDetails(
-      formData.firstName.trim(),
-      formData.lastName.trim(),
-      formData.city.trim() || undefined,
-      formData.state.trim() || undefined
-    );
-
-    // If mock profile found, navigate directly to results (available to everyone)
-    if (mockProfile) {
-      const params = new URLSearchParams({
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        type: searchType,
-      });
-
-      if (formData.city.trim()) {
-        params.set("city", formData.city.trim());
-      }
-      if (formData.state.trim()) {
-        params.set("state", formData.state.trim());
-      }
-
-      router.push(`/search/result?${params.toString()}`);
-      return;
-    }
-
-    // NON-PRO USERS: Show loading screen on homepage, then paywall after 8 seconds
-    if (!isPro) {
-      setSearchQuery(fullName);
+  const startLoadingFlow = useCallback(
+    (query: string, productId: SearchProductId) => {
+      setSearchQuery(query);
+      setLoadingProduct(productId);
       setShowLoadingScreen(true);
-      
-      // After 8 seconds, show paywall (loading screen stays visible until paywall closes)
-      setTimeout(() => {
-        showFreeTrialPaywall();
+
+      window.setTimeout(() => {
+        showFreeTrialPaywall(productId);
       }, 8000);
+    },
+    [showFreeTrialPaywall]
+  );
+
+  const executeSearch = useCallback(
+    (search: PendingSearch) => {
+      triggerHapticFeedback("impact");
+      trackSearchButtonClick(search.analyticsKey);
+
+      if (search.destination === "loading") {
+        startLoadingFlow(search.queryLabel, search.productId);
+        return;
+      }
+
+      const params = new URLSearchParams(search.params ?? "");
+      const path =
+        search.destination === "records" ? "/records" : "/search/result";
+      router.push(`${path}?${params.toString()}`);
+    },
+    [router, startLoadingFlow],
+  );
+
+  const handlePersonSearch = useCallback(() => {
+    if (!personFormData.firstName.trim() || !personFormData.lastName.trim()) {
+      openValidationPopup(
+        `Enter both a first and last name before starting ${currentProduct.menuLabel.toLowerCase()}.`
+      );
       return;
     }
 
-    // PRO USERS: Navigate to search results page
+    const fullName = `${personFormData.firstName.trim()} ${personFormData.lastName.trim()}`;
+
     const params = new URLSearchParams({
-      firstName: formData.firstName.trim(),
-      lastName: formData.lastName.trim(),
-      type: searchType,
+      firstName: personFormData.firstName.trim(),
+      lastName: personFormData.lastName.trim(),
+      type: currentProduct.searchType,
     });
 
-    if (formData.city.trim()) {
-      params.set("city", formData.city.trim());
+    if (personFormData.city.trim()) {
+      params.set("city", personFormData.city.trim());
     }
-    if (formData.state.trim()) {
-      params.set("state", formData.state.trim());
+    if (personFormData.state.trim()) {
+      params.set("state", personFormData.state.trim());
     }
 
-    router.push(`/search/result?${params.toString()}`);
-  }, [formData, searchType, router, isPro, showFreeTrialPaywall]);
+    if (
+      currentProduct.id === "people" ||
+      currentProduct.id === "social" ||
+      currentProduct.id === "followers"
+    ) {
+      const mockProfile = lookupMockProfileByDetails(
+        personFormData.firstName.trim(),
+        personFormData.lastName.trim(),
+        personFormData.city.trim() || undefined,
+        personFormData.state.trim() || undefined
+      );
 
-  // Smooth scroll to search section with header offset
-  const scrollToSearch = () => {
-    const searchSection = document.getElementById("search");
-    if (searchSection) {
-      const headerHeight = 64; // Fixed header height (h-16 = 64px)
-      const elementPosition = searchSection.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerHeight - 16; // 16px extra padding
-      
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth"
+      if (mockProfile) {
+        executeSearch({
+          productId: currentProduct.id,
+          analyticsKey: currentProduct.analyticsKey,
+          queryLabel: fullName,
+          destination: "result",
+          params: params.toString(),
+        });
+        return;
+      }
+    }
+
+    if (!isPro) {
+      executeSearch({
+        productId: currentProduct.id,
+        analyticsKey: currentProduct.analyticsKey,
+        queryLabel: fullName,
+        destination: "loading",
       });
+      return;
     }
+
+    if (currentProduct.id === "records") {
+      executeSearch({
+        productId: currentProduct.id,
+        analyticsKey: currentProduct.analyticsKey,
+        queryLabel: fullName,
+        destination: "records",
+        params: params.toString(),
+      });
+      return;
+    }
+
+    executeSearch({
+      productId: currentProduct.id,
+      analyticsKey: currentProduct.analyticsKey,
+      queryLabel: fullName,
+      destination: "result",
+      params: params.toString(),
+    });
+  }, [currentProduct, isPro, openValidationPopup, personFormData, executeSearch]);
+
+  const handleUsernameSearch = useCallback(() => {
+    const trimmedUsername = username.trim().replace(/^@+/, "");
+
+    if (trimmedUsername.length < 2) {
+      openValidationPopup(
+        "Enter a username or handle before starting this search."
+      );
+      return;
+    }
+
+    if (!isPro) {
+      executeSearch({
+        productId: currentProduct.id,
+        analyticsKey: currentProduct.analyticsKey,
+        queryLabel: `@${trimmedUsername}`,
+        destination: "loading",
+      });
+      return;
+    }
+
+    const params = new URLSearchParams({
+      username: trimmedUsername,
+      type: "username",
+    });
+
+    executeSearch({
+      productId: currentProduct.id,
+      analyticsKey: currentProduct.analyticsKey,
+      queryLabel: `@${trimmedUsername}`,
+      destination: "result",
+      params: params.toString(),
+    });
+  }, [
+    currentProduct.analyticsKey,
+    currentProduct.id,
+    isPro,
+    openValidationPopup,
+    executeSearch,
+    username,
+  ]);
+
+  const handlePhoneSearch = useCallback(() => {
+    const digits = phoneNumber.replace(/\D/g, "");
+    if (digits.length < 10) {
+      openValidationPopup(
+        "Enter a full 10-digit phone number before running a reverse phone lookup."
+      );
+      return;
+    }
+
+    const formatted = formatPhoneDisplay(phoneNumber);
+
+    if (!isPro) {
+      executeSearch({
+        productId: currentProduct.id,
+        analyticsKey: currentProduct.analyticsKey,
+        queryLabel: formatted,
+        destination: "loading",
+      });
+      return;
+    }
+
+    const params = new URLSearchParams({
+      type: "phone",
+      number: formatted,
+    });
+
+    executeSearch({
+      productId: currentProduct.id,
+      analyticsKey: currentProduct.analyticsKey,
+      queryLabel: formatted,
+      destination: "result",
+      params: params.toString(),
+    });
+  }, [currentProduct, isPro, openValidationPopup, phoneNumber, executeSearch]);
+
+  const handleVehicleSearch = useCallback(() => {
+    const lookupMode = getVehicleLookupMode(vin);
+    const normalizedQuery = normalizeVehicleLookupQuery(vin);
+
+    if (!lookupMode || !normalizedQuery) {
+      openValidationPopup(
+        "Enter a full 17-character VIN or a license plate before starting a vehicle lookup."
+      );
+      return;
+    }
+
+    if (!isPro) {
+      executeSearch({
+        productId: currentProduct.id,
+        analyticsKey: currentProduct.analyticsKey,
+        queryLabel: normalizedQuery,
+        destination: "loading",
+      });
+      return;
+    }
+
+    const params = new URLSearchParams({
+      type: "vehicle",
+      [lookupMode === "vin" ? "vin" : "plate"]: normalizedQuery,
+    });
+
+    executeSearch({
+      productId: currentProduct.id,
+      analyticsKey: currentProduct.analyticsKey,
+      queryLabel: normalizedQuery,
+      destination: "result",
+      params: params.toString(),
+    });
+  }, [currentProduct, isPro, openValidationPopup, executeSearch, vin]);
+
+  const handleSearch = useCallback(() => {
+    if (isUsernameMode) {
+      handleUsernameSearch();
+      return;
+    }
+
+    if (currentProduct.inputMode === "phone") {
+      handlePhoneSearch();
+      return;
+    }
+
+    if (currentProduct.inputMode === "vin") {
+      handleVehicleSearch();
+      return;
+    }
+
+    handlePersonSearch();
+  }, [
+    currentProduct.inputMode,
+    handlePersonSearch,
+    handlePhoneSearch,
+    handleUsernameSearch,
+    handleVehicleSearch,
+    isUsernameMode,
+  ]);
+
+  const handleProductSelect = (event: ReactMouseEvent<HTMLButtonElement>, productId: SearchProductId) => {
+    event.preventDefault();
+    triggerHapticFeedback("selection");
+    setActiveProduct(productId);
+    setIsProductMenuOpen(false);
   };
 
-  // Show loading screen for non-Pro users
   if (showLoadingScreen) {
     return (
       <SearchLoadingScreen
         isVisible={showLoadingScreen}
         searchQuery={searchQuery}
-        onComplete={() => {}} // Do nothing on complete - paywall will handle flow
+        productId={loadingProduct}
+        onComplete={() => {}}
         onCancel={() => setShowLoadingScreen(false)}
       />
     );
   }
 
   return (
-    <>
-      {/* ========================================
-          HERO SECTION - TEMPORARILY DISABLED
-          ======================================== */}
-      {/* <section className="relative min-h-[85vh] md:min-h-[80vh] flex items-center overflow-hidden"> */}
-        {/* Background Images - COMMENTED OUT FOR NOW */}
-        {/* <div className="absolute inset-0 pointer-events-none">
-          <div className="md:hidden absolute inset-0">
-            <Image
-              src="/New_Background_RevealAIMobile.png"
-              alt=""
-              fill
-              className="object-cover object-top"
-              priority
-              quality={90}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-white/40" />
-          </div>
-          <div className="hidden md:block absolute inset-0">
-            <Image
-              src="/New_Background_RevealAIWeb.png"
-              alt=""
-              fill
-              className="object-cover object-center"
-              priority
-              quality={90}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/85 to-white/50" />
-          </div>
-        </div> */}
-
-        {/* Hero Content - COMMENTED OUT FOR NOW */}
-        {/* <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-xl md:max-w-2xl mx-auto text-center py-8 md:py-0">
-            <p className="text-sm md:text-base font-medium text-gray-600 tracking-wide mb-3 md:mb-4">
-              Reveal AI — People Search
-            </p>
-
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-red-600 leading-tight mb-3 md:mb-4">
-              Find Everything,
-              <br />
-              about Anyone
-            </h1>
-
-            <p className="text-lg md:text-xl text-gray-700 font-medium mb-6 md:mb-8">
-              Tinder • Bumble • Grindr + more
-            </p>
-
-            <div className="space-y-3 md:space-y-4 mb-8 md:mb-10 max-w-xl mx-auto">
-              <div className="flex items-start gap-3 text-left">
-                <div className="flex-shrink-0 w-6 h-6 rounded bg-red-500 flex items-center justify-center mt-0.5">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <span className="text-base md:text-lg font-bold text-gray-900">People Search: </span>
-                  <span className="text-base md:text-lg text-gray-700">Phone • Vehicle • Address</span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 text-left">
-                <div className="flex-shrink-0 w-6 h-6 rounded bg-red-500 flex items-center justify-center mt-0.5">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <span className="text-base md:text-lg font-bold text-gray-900">Criminal History & Records</span>
-              </div>
-
-              <div className="flex items-start gap-3 text-left">
-                <div className="flex-shrink-0 w-6 h-6 rounded bg-red-500 flex items-center justify-center mt-0.5">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <span className="text-base md:text-lg font-bold text-gray-900">Opt-Out: </span>
-                  <span className="text-base md:text-lg text-gray-700">Remove Yourself From Search</span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 text-left">
-                <div className="flex-shrink-0 w-6 h-6 rounded bg-red-500 flex items-center justify-center mt-0.5">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <span className="text-base md:text-lg font-bold text-gray-900">Find Unclaimed Money <span className="text-gray-700">(Free)</span></span>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-3">
-              <button
-                onClick={scrollToSearch}
-                className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold text-lg rounded-full shadow-lg shadow-red-600/30 hover:shadow-xl hover:shadow-red-600/40 transition-all duration-200 transform hover:-translate-y-0.5"
+    <section
+      id="search"
+      className="min-h-screen flex items-center justify-center py-12 md:py-16 transition-colors duration-300"
+      style={{
+        ...themeStyle,
+        background:
+          "linear-gradient(180deg, var(--product-gradient-from) 0%, var(--product-gradient-to) 60%, #ffffff 100%)",
+      }}
+    >
+      <div className="container mx-auto px-4 max-w-5xl">
+        <Card
+          className="border-0 bg-white"
+          style={{
+            boxShadow: "0 32px 80px -45px var(--product-shadow)",
+          }}
+        >
+          <CardHeader className="pb-3 md:pb-5">
+            <div className="text-center space-y-4">
+              <div
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium"
+                style={{
+                  backgroundColor: "var(--product-soft)",
+                  borderColor: "var(--product-soft-border)",
+                  color: "var(--product-primary)",
+                }}
               >
-                <Search className="w-5 h-5" />
-                Search Them
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section> */}
-
-      {/* ========================================
-          SEARCH SECTION
-          ======================================== */}
-      <section id="search" className="min-h-screen flex items-center justify-center py-12 md:py-16 bg-gray-50">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <Card className="border-0 shadow-2xl bg-white">
-            <CardHeader className="pb-4 md:pb-6">
-              <div className="text-center space-y-3">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-50 border border-red-100 text-sm text-red-600 font-medium">
-                  <Sparkles className="w-4 h-4" />
-                  <span>AI-Powered Search</span>
-                </div>
-                <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
-                  Search <span className="text-red-600">Anyone</span> Instantly
-                  <span className="block text-gray-500/70 text-sm sm:text-base md:text-lg font-normal mt-0.5">People, Phone, Address & More</span>
-                </CardTitle>
+                <Sparkles className="w-4 h-4" />
+                <span>{currentProduct.home.badge}</span>
               </div>
-            </CardHeader>
-            <CardContent>
-              <Tabs value={searchType} onValueChange={(v) => setSearchType(v as "fullreport" | "social")}>
-                <TabsList className="w-full grid grid-cols-2 mb-6 h-auto p-1 bg-gray-100">
-                  <TabsTrigger value="fullreport" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">
-                    <Search className="w-4 h-4 md:w-5 md:h-5" />
-                    <span>Full Report</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="social" className="gap-1 md:gap-2 text-xs md:text-sm py-2.5 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">
-                    <Search className="w-4 h-4 md:w-5 md:h-5" />
-                    <span>Social & Online</span>
-                  </TabsTrigger>
-                </TabsList>
+              <div>
+                <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 leading-tight">
+                  {currentProduct.home.titlePrefix}{" "}
+                  <span style={{ color: "var(--product-primary)" }}>
+                    {currentProduct.home.titleAccent}
+                  </span>
+                  {currentProduct.home.titleSuffix
+                    ? ` ${currentProduct.home.titleSuffix}`
+                    : ""}
+                </CardTitle>
+                <p className="mt-2 mx-auto max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-gray-500 sm:text-sm md:text-base">
+                  {currentProduct.home.subtitle}
+                </p>
+              </div>
+            </div>
+          </CardHeader>
 
-                {/* Full Report Search */}
-                <TabsContent value="fullreport">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      placeholder="First Name *"
-                      value={formData.firstName}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, firstName: e.target.value }))
-                      }
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      icon={<User className="w-4 h-4" />}
-                    />
-                    <Input
-                      placeholder="Last Name *"
-                      value={formData.lastName}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, lastName: e.target.value }))
-                      }
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      icon={<User className="w-4 h-4" />}
-                    />
-                    <Input
-                      placeholder="City (optional)"
-                      value={formData.city}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, city: e.target.value }))
-                      }
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      icon={<MapPin className="w-4 h-4" />}
-                    />
-                    <Input
-                      placeholder="State (optional)"
-                      value={formData.state}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, state: e.target.value }))
-                      }
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      icon={<MapPin className="w-4 h-4" />}
-                    />
-                  </div>
-                </TabsContent>
-
-                {/* Social & Online Search */}
-                <TabsContent value="social">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-xl p-4 mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Search className="w-5 h-5 text-blue-500" />
-                      <h3 className="font-semibold text-lg text-gray-900">Find Following, Social Profiles & Online Presence</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Search across social media platforms, online profiles, and digital footprints.
+          <CardContent>
+            <div className="mx-auto mb-5 flex justify-center">
+              <div
+                ref={productMenuRef}
+                className="relative w-fit"
+              >
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={isProductMenuOpen}
+                  onClick={() => setIsProductMenuOpen((open) => !open)}
+                  className={cn(
+                    "flex h-10 w-auto items-center justify-between gap-2 rounded-2xl border bg-white px-3 transition-all duration-200",
+                    isProductMenuOpen && "shadow-lg"
+                  )}
+                  style={{
+                    borderColor: currentProduct.theme.softBorder,
+                    boxShadow: isProductMenuOpen
+                      ? `0 18px 45px -28px ${currentProduct.theme.shadow}`
+                      : "0 10px 30px -26px rgba(15, 23, 42, 0.18)",
+                  }}
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span
+                      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border"
+                      style={{
+                        backgroundColor:
+                          currentProduct.id === "people"
+                            ? "#ffffff"
+                            : currentProduct.theme.soft,
+                        borderColor: currentProduct.theme.softBorder,
+                      }}
+                    >
+                      <CurrentProductIcon
+                        className="h-3.5 w-3.5"
+                        style={{ color: currentProduct.theme.primary }}
+                      />
+                    </span>
+                    <p className="truncate text-sm font-semibold text-gray-900">
+                      {currentProduct.label}
                     </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2">
-                      {SOCIAL_SOURCE_LOGO_PATHS.map((logo, index) => (
-                        <div
-                          key={logo}
-                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 border border-blue-200 flex items-center justify-center overflow-hidden shadow-sm"
-                        >
-                          <Image
-                            src={logo}
-                            alt={`Social source ${index + 1}`}
-                            width={18}
-                            height={18}
-                            className="w-4 h-4 sm:w-[18px] sm:h-[18px] object-contain"
-                            loading="lazy"
-                          />
-                        </div>
-                      ))}
-                      <span className="text-[11px] sm:text-xs text-blue-700 bg-white/80 border border-blue-200 px-2 py-1 rounded-full">
-                        Social, dating apps, forums + more
-                      </span>
-                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      placeholder="First Name *"
-                      value={formData.firstName}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, firstName: e.target.value }))
-                      }
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      icon={<User className="w-4 h-4" />}
+                  <span className="flex items-center gap-1 text-xs font-medium text-gray-500">
+                    <ChevronDown
+                      className={cn(
+                        "h-3.5 w-3.5 transition-transform duration-200",
+                        isProductMenuOpen && "rotate-180"
+                      )}
                     />
-                    <Input
-                      placeholder="Last Name *"
-                      value={formData.lastName}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, lastName: e.target.value }))
-                      }
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      icon={<User className="w-4 h-4" />}
-                    />
-                    <Input
-                      placeholder="City (optional)"
-                      value={formData.city}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, city: e.target.value }))
-                      }
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      icon={<MapPin className="w-4 h-4" />}
-                    />
-                    <Input
-                      placeholder="State (optional)"
-                      value={formData.state}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, state: e.target.value }))
-                      }
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      icon={<MapPin className="w-4 h-4" />}
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
+                  </span>
+                </button>
 
-              {/* Search Button */}
+                {isProductMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute left-1/2 top-[calc(100%+0.6rem)] z-30 min-w-[260px] -translate-x-1/2 overflow-hidden rounded-2xl border bg-white p-2 shadow-2xl"
+                    style={{
+                      borderColor: currentProduct.theme.softBorder,
+                      boxShadow: "0 28px 70px -36px rgba(15, 23, 42, 0.28)",
+                    }}
+                  >
+                    {SEARCH_PRODUCT_IDS.filter((productId) => productId !== activeProduct).map(
+                      (productId) => {
+                        const product = getSearchProduct(productId);
+                        const Icon = product.icon;
+
+                        return (
+                          <button
+                            key={productId}
+                            type="button"
+                            role="menuitem"
+                            onClick={(event) => handleProductSelect(event, productId)}
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-gray-50"
+                          >
+                            <span
+                              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border"
+                              style={{
+                                backgroundColor: product.theme.soft,
+                                borderColor: product.theme.softBorder,
+                              }}
+                            >
+                              <Icon
+                                className="h-4 w-4"
+                                style={{ color: product.theme.primary }}
+                              />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-gray-900">
+                                {product.label}
+                              </p>
+                              <p className="truncate text-xs text-gray-500">
+                                {product.home.subtitle}
+                              </p>
+                            </div>
+                            <ChevronDown className="h-4 w-4 rotate-[-90deg] text-gray-300" />
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mx-auto max-w-xl">
+              {supportsUsernameMode && (
+                <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-[#f5f5f5] p-1">
+                  {([
+                    { value: "name", label: "Search by name" },
+                    { value: "username", label: "Search by username" },
+                  ] as const).map((option) => {
+                    const isActive = socialSearchMode === option.value;
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setSocialSearchMode(option.value)}
+                        className="rounded-[14px] px-3 py-2 text-sm font-medium transition-all"
+                        style={{
+                          backgroundColor: isActive
+                            ? "white"
+                            : "transparent",
+                          color: isActive
+                            ? "var(--product-primary)"
+                            : "#6b7280",
+                          boxShadow: isActive
+                            ? "0 10px 30px -22px rgba(15, 23, 42, 0.35)"
+                            : "none",
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {currentProduct.inputMode === "person" && !isUsernameMode && (
+                <div className="grid grid-cols-1 gap-3">
+                  <Input
+                    placeholder="First Name *"
+                    value={personFormData.firstName}
+                    onChange={(e) =>
+                      setPersonFormData((prev) => ({
+                        ...prev,
+                        firstName: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    icon={<User className="w-4 h-4" />}
+                  />
+                  <Input
+                    placeholder="Last Name *"
+                    value={personFormData.lastName}
+                    onChange={(e) =>
+                      setPersonFormData((prev) => ({
+                        ...prev,
+                        lastName: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    icon={<User className="w-4 h-4" />}
+                  />
+                  <Input
+                    placeholder="City (optional)"
+                    value={personFormData.city}
+                    onChange={(e) =>
+                      setPersonFormData((prev) => ({
+                        ...prev,
+                        city: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    icon={<MapPin className="w-4 h-4" />}
+                  />
+                  <Input
+                    placeholder="State (optional)"
+                    value={personFormData.state}
+                    onChange={(e) =>
+                      setPersonFormData((prev) => ({
+                        ...prev,
+                        state: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    icon={<MapPin className="w-4 h-4" />}
+                  />
+                </div>
+              )}
+
+              {isUsernameMode && (
+                <Input
+                  placeholder="Username or handle"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  icon={<AtSign className="w-4 h-4" />}
+                  className="font-mono"
+                />
+              )}
+
+              {currentProduct.inputMode === "phone" && (
+                <Input
+                  placeholder="(555) 123-4567"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  icon={<Phone className="w-4 h-4" />}
+                  className="font-mono text-lg"
+                />
+              )}
+
+              {currentProduct.inputMode === "vin" && (
+                <Input
+                  placeholder="VIN or License Plate"
+                  value={vin}
+                  onChange={(e) => setVin(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  icon={<Car className="w-4 h-4" />}
+                  className="font-mono"
+                />
+              )}
+
               <Button
                 onClick={handleSearch}
                 size="lg"
-                className="w-full mt-6 gap-2 bg-red-600 hover:bg-red-700 text-white shadow-lg"
+                className="mt-5 w-full gap-2 text-white"
+                style={{
+                  backgroundColor: "var(--product-primary)",
+                  boxShadow: "0 18px 45px -24px var(--product-shadow)",
+                }}
               >
-                <Search className="w-5 h-5" />
-                Search Records
+                {currentProduct.inputMode === "phone" ? (
+                  <Phone className="w-5 h-5" />
+                ) : isUsernameMode ? (
+                  <AtSign className="w-5 h-5" />
+                ) : currentProduct.inputMode === "vin" ? (
+                  <Car className="w-5 h-5" />
+                ) : currentProduct.id === "records" ? (
+                  <FileText className="w-5 h-5" />
+                ) : currentProduct.id === "social" ||
+                  currentProduct.id === "followers" ? (
+                  <CurrentProductIcon className="w-5 h-5" />
+                ) : (
+                  <Search className="w-5 h-5" />
+                )}
+                {isUsernameMode ? "Search by Username" : currentProduct.home.ctaLabel}
                 <ArrowRight className="w-4 h-4" />
               </Button>
-              
-              {/* Trust Indicators */}
-              <div className="flex items-center justify-center gap-3 text-xs text-gray-600 mt-4">
+
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-gray-600">
                 <div className="flex items-center gap-1">
                   <Shield className="w-3.5 h-3.5 text-green-600" />
                   <span className="font-medium">Trusted</span>
@@ -456,34 +751,70 @@ export function PeopleSearch() {
                 </div>
                 <span className="text-gray-300">•</span>
                 <div className="flex items-center gap-1">
-                  <Search className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="font-medium">500M+ Searches</span>
+                  <CurrentProductIcon
+                    className="w-3.5 h-3.5"
+                    style={{ color: "var(--product-primary)" }}
+                  />
+                  <span className="font-medium">
+                    {isUsernameMode
+                      ? "Handle & Profile Match"
+                      : currentProduct.id === "social"
+                      ? "100+ Platforms"
+                      : currentProduct.id === "followers"
+                      ? "Public Follow-Back Signals"
+                      : currentProduct.id === "phone"
+                      ? "Spam Check Included"
+                      : currentProduct.id === "vehicle"
+                      ? "VIN & Plate Search"
+                      : currentProduct.id === "records"
+                      ? "Court & Filing Focus"
+                      : "500M+ Searches"}
+                  </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Most Searched Section */}
-          <MostSearched />
-        </div>
-      </section>
+        <MostSearched />
+      </div>
 
-      {/* ========================================
-          MOBILE STICKY CTA - TEMPORARILY DISABLED
-          ======================================== */}
-      {/* <div
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg transition-transform duration-300 ${
-          showMobileCTA ? "translate-y-0" : "translate-y-full"
-        }`}
+      <Modal
+        isOpen={Boolean(searchValidationMessage)}
+        onClose={() => setSearchValidationMessage(null)}
+        className="max-w-md"
       >
-        <button
-          onClick={scrollToSearch}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold text-base rounded-full shadow-lg shadow-red-600/30 transition-all"
-        >
-          <Search className="w-5 h-5" />
-          Search Them
-        </button>
-      </div> */}
-    </>
+        <ModalHeader>
+          <div
+            className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]"
+            style={{
+              backgroundColor: "var(--product-soft)",
+              color: "var(--product-primary)",
+            }}
+          >
+            <CurrentProductIcon className="h-4 w-4" />
+            Search Incomplete
+          </div>
+          <h3 className="mt-4 text-2xl font-semibold text-gray-900">
+            Add a little more info first.
+          </h3>
+        </ModalHeader>
+        <ModalContent>
+          <p className="text-sm leading-6 text-gray-600">
+            {searchValidationMessage}
+          </p>
+        </ModalContent>
+        <ModalFooter>
+          <Button
+            type="button"
+            className="text-white"
+            style={{ backgroundColor: "var(--product-primary)" }}
+            onClick={() => setSearchValidationMessage(null)}
+          >
+            Got it
+          </Button>
+        </ModalFooter>
+      </Modal>
+    </section>
   );
 }
