@@ -648,7 +648,6 @@ export function SearchLoadingScreen({
             )}
           </div>
         </div>
-        </div>
       )}
 
       {/* FCRA Disclaimer at the bottom */}
