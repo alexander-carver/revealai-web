@@ -33,6 +33,11 @@ import {
   Crown,
   Search,
   Lock,
+  Phone,
+  Car,
+  Shield,
+  ShieldCheck,
+  Gavel,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -458,6 +463,144 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
+        {/* Background Check Sections - Locked for non-pro */}
+        <div className="space-y-4 mb-8">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            Background Check Results
+          </h3>
+
+          {/* Phone Numbers - Locked */}
+          <Card className="relative overflow-hidden">
+            <CardContent className="p-5">
+              {!isPro && (
+                <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+                  <Lock className="w-8 h-8 text-indigo-500 mb-2" />
+                  <p className="font-semibold text-gray-900">Phone Numbers Hidden</p>
+                  <p className="text-sm text-gray-600 mb-3">Upgrade to Pro to view phone numbers.</p>
+                  <Button size="sm" onClick={() => showFreeTrialPaywall()} className="bg-indigo-600 hover:bg-indigo-700">
+                    Unlock Results
+                  </Button>
+                </div>
+              )}
+              <div className={!isPro ? 'opacity-30 pointer-events-none blur-sm' : ''}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                    <Phone className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Phone Numbers</h4>
+                    <p className="text-xs text-gray-500">2 numbers found</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="p-3 rounded-lg bg-gray-50 flex items-center justify-between">
+                    <span className="text-sm font-medium">(***) ***-****</span>
+                    <Badge variant="secondary" className="text-xs">Mobile</Badge>
+                  </div>
+                  <div className="p-3 rounded-lg bg-gray-50 flex items-center justify-between">
+                    <span className="text-sm font-medium">(***) ***-****</span>
+                    <Badge variant="outline" className="text-xs">Landline</Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Vehicles - Locked */}
+          <Card className="relative overflow-hidden">
+            <CardContent className="p-5">
+              {!isPro && (
+                <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+                  <Lock className="w-8 h-8 text-indigo-500 mb-2" />
+                  <p className="font-semibold text-gray-900">Vehicle Records Hidden</p>
+                  <p className="text-sm text-gray-600 mb-3">Upgrade to Pro to view vehicle records.</p>
+                  <Button size="sm" onClick={() => showFreeTrialPaywall()} className="bg-indigo-600 hover:bg-indigo-700">
+                    Unlock Results
+                  </Button>
+                </div>
+              )}
+              <div className={!isPro ? 'opacity-30 pointer-events-none blur-sm' : ''}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                    <Car className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Vehicle Records</h4>
+                    <p className="text-xs text-gray-500">1-2 vehicles found</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="p-3 rounded-lg bg-gray-50">
+                    <span className="text-sm font-medium">Vehicle record available</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Criminal Records - Locked */}
+          <Card className="relative overflow-hidden">
+            <CardContent className="p-5">
+              {!isPro && (
+                <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+                  <Lock className="w-8 h-8 text-indigo-500 mb-2" />
+                  <p className="font-semibold text-gray-900">Criminal Records Hidden</p>
+                  <p className="text-sm text-gray-600 mb-3">Upgrade to Pro to view criminal records.</p>
+                  <Button size="sm" onClick={() => showFreeTrialPaywall()} className="bg-indigo-600 hover:bg-indigo-700">
+                    Unlock Results
+                  </Button>
+                </div>
+              )}
+              <div className={!isPro ? 'opacity-30 pointer-events-none blur-sm' : ''}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                    <Gavel className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Criminal Records</h4>
+                    <p className="text-xs text-gray-500">Records check complete</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="p-3 rounded-lg bg-gray-50">
+                    <span className="text-sm font-medium">Criminal record check available</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sex Offender - Locked */}
+          <Card className="relative overflow-hidden border-amber-200">
+            <CardContent className="p-5">
+              {!isPro && (
+                <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+                  <Lock className="w-8 h-8 text-indigo-500 mb-2" />
+                  <p className="font-semibold text-gray-900">Sex Offender Status Hidden</p>
+                  <p className="text-sm text-gray-600 mb-3">Upgrade to Pro to view registry results.</p>
+                  <Button size="sm" onClick={() => showFreeTrialPaywall()} className="bg-indigo-600 hover:bg-indigo-700">
+                    Unlock Results
+                  </Button>
+                </div>
+              )}
+              <div className={!isPro ? 'opacity-30 pointer-events-none blur-sm' : ''}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      Sex Offender Registry
+                      <Badge variant="secondary" className="text-xs">Checked</Badge>
+                    </h4>
+                    <p className="text-xs text-gray-500">National and state registry check complete</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Related Questions Section */}
         <Card className="mb-8">
