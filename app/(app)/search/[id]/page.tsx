@@ -206,9 +206,13 @@ export default function PersonProfilePage() {
     },
   });
 
+  // Mock profile IDs that should load without Pro subscription
+  const MOCK_PROFILE_IDS = ["emma-smith", "kyle-anderson"];
+  const isMockProfile = MOCK_PROFILE_IDS.includes(id);
+
   useEffect(() => {
-    // Only fetch profile if user is pro
-    if (id && isPro) {
+    // Fetch profile if user is pro OR it's a mock demo profile
+    if (id && (isPro || isMockProfile)) {
       profileMutation.mutate();
     }
   }, [id, isPro]);
