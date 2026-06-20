@@ -86,8 +86,10 @@ export default function ProfilePage() {
 
   // Handle Full Background Check button click
   const handleBackgroundCheck = () => {
+    if (!profile) return;
     if (isPro) {
-      // Pro user - could show results directly or navigate somewhere
+      // Pro user - navigate to the background check page directly
+      router.push(`/search/${profile.id}`);
       return;
     }
     // Show loading screen which will trigger paywall after completion
@@ -96,8 +98,10 @@ export default function ProfilePage() {
 
   // Handle loading screen completion
   const handleLoadingComplete = () => {
+    if (!profile) return;
     setShowLoadingScreen(false);
-    // If user is now pro, they can see full results
+    // Navigate to results page to show locked/unlocked content
+    router.push(`/search/${profile.id}`);
   };
 
   // Handle loading screen cancel (user dismissed paywall)
