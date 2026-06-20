@@ -621,7 +621,7 @@ export async function fetchPersonProfile(
   if (enformionId === "emma-smith") {
     return {
       queryLabel: "Emma Smith",
-      searchParams: queryPayload,
+      candidate,
       profile: {
         enformionId: "emma-smith",
         fullName: "Emma Rose Smith",
@@ -722,7 +722,7 @@ export async function fetchPersonProfile(
   if (enformionId === "kyle-anderson") {
     return {
       queryLabel: "Kyle Anderson",
-      searchParams: queryPayload,
+      candidate,
       profile: {
         enformionId: "kyle-anderson",
         fullName: "Kyle James Anderson",
