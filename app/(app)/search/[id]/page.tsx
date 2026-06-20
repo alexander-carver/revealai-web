@@ -39,6 +39,7 @@ import {
   XCircle,
   ChevronDown,
   ChevronUp,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -207,7 +208,11 @@ export default function PersonProfilePage() {
   });
 
   // Mock profile IDs that should load without Pro subscription
-  const MOCK_PROFILE_IDS = ["emma-smith", "kyle-anderson"];
+  const MOCK_PROFILE_IDS = [
+    "emma-smith", "kyle-anderson", "donald-trump", "mrbeast", 
+    "jeffrey-epstein", "elon-musk", "dua-lipa", "andrew-tate", 
+    "taylor-swift", "lebron-james"
+  ];
   const isMockProfile = MOCK_PROFILE_IDS.includes(id);
 
   useEffect(() => {
@@ -626,22 +631,32 @@ export default function PersonProfilePage() {
       )}
 
       {/* Sex Offender Registry Check */}
-      <Card className="mb-6 border-emerald-100">
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-7 h-7 text-emerald-500" />
+      <Card className={`mb-6 ${isPro ? 'border-emerald-100' : 'border-gray-200'}`}>
+        <CardContent className="p-5 sm:p-6 relative overflow-hidden">
+          {!isPro && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+              <Lock className="w-8 h-8 text-indigo-500 mb-2" />
+              <p className="font-semibold text-gray-900">Sex Offender Status Hidden</p>
+              <p className="text-sm text-gray-600 mb-3">Upgrade to Premium to view national registry results.</p>
+              <Button size="sm" onClick={() => showPaywall()} className="bg-indigo-600 hover:bg-indigo-700">
+                Unlock Results
+              </Button>
+            </div>
+          )}
+          <div className={`flex items-center gap-4 ${!isPro ? 'opacity-30 pointer-events-none blur-sm' : ''}`}>
+            <div className={`w-14 h-14 rounded-2xl ${isPro ? 'bg-emerald-50' : 'bg-gray-100'} flex items-center justify-center flex-shrink-0`}>
+              <ShieldCheck className={`w-7 h-7 ${isPro ? 'text-emerald-500' : 'text-gray-400'}`} />
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                 Sex Offender Registry
-                <Badge variant="success" className="text-xs">Checked</Badge>
+                <Badge variant={isPro ? "success" : "secondary"} className="text-xs">Checked</Badge>
               </h3>
               <p className="text-sm text-gray-500 mt-0.5">
-                {person.fullName || queryLabel} was <strong className="text-emerald-600">not found</strong> on any state or national sex offender registry.
+                {person.fullName || queryLabel} was <strong className={isPro ? "text-emerald-600" : "text-gray-600"}>not found</strong> on any state or national sex offender registry.
               </p>
             </div>
-            <CheckCircle2 className="w-8 h-8 text-emerald-400 flex-shrink-0" />
+            {isPro && <CheckCircle2 className="w-8 h-8 text-emerald-400 flex-shrink-0" />}
           </div>
         </CardContent>
       </Card>
@@ -798,42 +813,53 @@ export default function PersonProfilePage() {
 
         {/* Phone Numbers */}
         {person.phones && person.phones.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Phone className="w-5 h-5 text-emerald-500" />
-                Phone Numbers
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {person.phones.map((phone, i) => (
-                <div
-                  key={i}
-                  className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-medium font-mono">
-                      {formatPhone(phone.number)}
-                    </p>
-                    {(phone.type || phone.carrier) && (
-                      <p className="text-sm text-muted-foreground">
-                        {[phone.type, phone.carrier].filter(Boolean).join(" • ")}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => handleCopy(phone.number, `phone-${i}`)}
-                    className="p-2 rounded-lg hover:bg-background transition-colors"
+          <Card className="relative overflow-hidden">
+            {!isPro && (
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+                <Lock className="w-6 h-6 text-indigo-500 mb-2" />
+                <p className="font-semibold text-gray-900 text-sm">Phone Numbers Hidden</p>
+                <Button size="sm" onClick={() => showPaywall()} className="mt-2 bg-indigo-600 hover:bg-indigo-700 h-8 text-xs">
+                  Unlock
+                </Button>
+              </div>
+            )}
+            <div className={!isPro ? 'opacity-30 pointer-events-none blur-sm' : ''}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Phone className="w-5 h-5 text-emerald-500" />
+                  Phone Numbers
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {person.phones.map((phone, i) => (
+                  <div
+                    key={i}
+                    className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors flex items-center justify-between"
                   >
-                    {copied === `phone-${i}` ? (
-                      <Check className="w-4 h-4 text-success" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </button>
-                </div>
-              ))}
-            </CardContent>
+                    <div>
+                      <p className="font-medium font-mono">
+                        {formatPhone(phone.number)}
+                      </p>
+                      {(phone.type || phone.carrier) && (
+                        <p className="text-sm text-muted-foreground">
+                          {[phone.type, phone.carrier].filter(Boolean).join(" • ")}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleCopy(phone.number, `phone-${i}`)}
+                      className="p-2 rounded-lg hover:bg-background transition-colors"
+                    >
+                      {copied === `phone-${i}` ? (
+                        <Check className="w-4 h-4 text-success" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </CardContent>
+            </div>
           </Card>
         )}
 
@@ -1163,67 +1189,90 @@ export default function PersonProfilePage() {
 
         {/* Vehicles */}
         {person.vehicles && person.vehicles.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Car className="w-5 h-5 text-blue-600" />
-                Vehicles ({person.vehicles.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {person.vehicles.map((veh, i) => (
-                <div key={i} className="p-3 rounded-lg bg-muted/50">
-                  <p className="font-medium">
-                    {[veh.year, veh.make, veh.model].filter(Boolean).join(" ")}
-                  </p>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {veh.color && <span className="mr-3">Color: {veh.color}</span>}
-                    {veh.type && <span className="mr-3">Type: {veh.type}</span>}
+          <Card className="relative overflow-hidden">
+            {!isPro && (
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+                <Lock className="w-6 h-6 text-indigo-500 mb-2" />
+                <p className="font-semibold text-gray-900 text-sm">Vehicles Hidden</p>
+                <Button size="sm" onClick={() => showPaywall()} className="mt-2 bg-indigo-600 hover:bg-indigo-700 h-8 text-xs">
+                  Unlock
+                </Button>
+              </div>
+            )}
+            <div className={!isPro ? 'opacity-30 pointer-events-none blur-sm' : ''}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Car className="w-5 h-5 text-blue-600" />
+                  Vehicles ({person.vehicles.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {person.vehicles.map((veh, i) => (
+                  <div key={i} className="p-3 rounded-lg bg-muted/50">
+                    <p className="font-medium">
+                      {[veh.year, veh.make, veh.model].filter(Boolean).join(" ")}
+                    </p>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {veh.color && <span className="mr-3">Color: {veh.color}</span>}
+                      {veh.type && <span className="mr-3">Type: {veh.type}</span>}
+                    </div>
+                    {veh.vin && <p className="text-xs font-mono mt-1">VIN: {veh.vin}</p>}
+                    {veh.plate && <p className="text-xs mt-1">Plate: {veh.plate} ({veh.state})</p>}
                   </div>
-                  {veh.vin && <p className="text-xs font-mono mt-1">VIN: {veh.vin}</p>}
-                  {veh.plate && <p className="text-xs mt-1">Plate: {veh.plate} ({veh.state})</p>}
-                </div>
-              ))}
-            </CardContent>
+                ))}
+              </CardContent>
+            </div>
           </Card>
         )}
 
         {/* Criminal Records */}
         {person.criminalRecords && person.criminalRecords.length > 0 && (
-          <Card className="lg:col-span-2 border-red-200 dark:border-red-900">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg text-red-600">
-                <Shield className="w-5 h-5" />
-                Criminal Records ({person.criminalRecords.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {person.criminalRecords.map((crime, i) => (
-                  <div key={i} className="p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium">{crime.offense}</p>
-                        {crime.offenseType && <Badge variant="outline" className="mt-1">{crime.offenseType}</Badge>}
-                      </div>
-                      {crime.severity && (
-                        <Badge variant={crime.severity.toLowerCase().includes("felony") ? "destructive" : "secondary"}>
-                          {crime.severity}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-2 text-sm text-muted-foreground grid grid-cols-2 gap-2">
-                      {crime.offenseDate && <span>Date: {crime.offenseDate}</span>}
-                      {crime.court && <span>Court: {crime.court}</span>}
-                      {crime.county && <span>County: {crime.county}, {crime.state}</span>}
-                      {crime.caseNumber && <span>Case #: {crime.caseNumber}</span>}
-                      {crime.disposition && <span>Disposition: {crime.disposition}</span>}
-                      {crime.sentence && <span>Sentence: {crime.sentence}</span>}
-                    </div>
-                  </div>
-                ))}
+          <Card className={`lg:col-span-2 relative overflow-hidden ${isPro ? 'border-red-200 dark:border-red-900' : 'border-gray-200'}`}>
+            {!isPro && (
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+                <Lock className="w-8 h-8 text-indigo-500 mb-2" />
+                <p className="font-semibold text-gray-900">Criminal Records Hidden</p>
+                <p className="text-sm text-gray-600 mb-3">Upgrade to Premium to view criminal history.</p>
+                <Button size="sm" onClick={() => showPaywall()} className="bg-indigo-600 hover:bg-indigo-700">
+                  Unlock Results
+                </Button>
               </div>
-            </CardContent>
+            )}
+            <div className={!isPro ? 'opacity-30 pointer-events-none blur-[3px]' : ''}>
+              <CardHeader>
+                <CardTitle className={`flex items-center gap-2 text-lg ${isPro ? 'text-red-600' : 'text-gray-900'}`}>
+                  <Shield className="w-5 h-5" />
+                  Criminal Records ({person.criminalRecords.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {person.criminalRecords.map((crime, i) => (
+                    <div key={i} className={`p-4 rounded-lg border ${isPro ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900' : 'bg-gray-50 border-gray-200'}`}>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">{crime.offense}</p>
+                          {crime.offenseType && <Badge variant="outline" className="mt-1">{crime.offenseType}</Badge>}
+                        </div>
+                        {crime.severity && (
+                          <Badge variant={crime.severity.toLowerCase().includes("felony") ? "destructive" : "secondary"}>
+                            {crime.severity}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground grid grid-cols-2 gap-2">
+                        {crime.offenseDate && <span>Date: {crime.offenseDate}</span>}
+                        {crime.court && <span>Court: {crime.court}</span>}
+                        {crime.county && <span>County: {crime.county}, {crime.state}</span>}
+                        {crime.caseNumber && <span>Case #: {crime.caseNumber}</span>}
+                        {crime.disposition && <span>Disposition: {crime.disposition}</span>}
+                        {crime.sentence && <span>Sentence: {crime.sentence}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </div>
           </Card>
         )}
 
