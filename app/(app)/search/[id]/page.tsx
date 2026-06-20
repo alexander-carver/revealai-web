@@ -631,7 +631,7 @@ export default function PersonProfilePage() {
       )}
 
       {/* Sex Offender Registry Check */}
-      <Card className={`mb-6 ${isPro ? 'border-emerald-100' : 'border-gray-200'}`}>
+      <Card className={`mb-6 ${isPro ? (person.indicators?.isSexOffender ? 'border-red-200 dark:border-red-900' : 'border-emerald-100') : 'border-gray-200'}`}>
         <CardContent className="p-5 sm:p-6 relative overflow-hidden">
           {!isPro && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
@@ -644,19 +644,33 @@ export default function PersonProfilePage() {
             </div>
           )}
           <div className={`flex items-center gap-4 ${!isPro ? 'opacity-30 pointer-events-none blur-sm' : ''}`}>
-            <div className={`w-14 h-14 rounded-2xl ${isPro ? 'bg-emerald-50' : 'bg-gray-100'} flex items-center justify-center flex-shrink-0`}>
-              <ShieldCheck className={`w-7 h-7 ${isPro ? 'text-emerald-500' : 'text-gray-400'}`} />
+            <div className={`w-14 h-14 rounded-2xl ${isPro ? (person.indicators?.isSexOffender ? 'bg-red-50 dark:bg-red-950/20' : 'bg-emerald-50') : 'bg-gray-100'} flex items-center justify-center flex-shrink-0`}>
+              {person.indicators?.isSexOffender ? (
+                <AlertTriangle className={`w-7 h-7 ${isPro ? 'text-red-500' : 'text-gray-400'}`} />
+              ) : (
+                <ShieldCheck className={`w-7 h-7 ${isPro ? 'text-emerald-500' : 'text-gray-400'}`} />
+              )}
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                 Sex Offender Registry
-                <Badge variant={isPro ? "success" : "secondary"} className="text-xs">Checked</Badge>
+                <Badge variant={isPro ? (person.indicators?.isSexOffender ? "destructive" : "success") : "secondary"} className="text-xs">
+                  {person.indicators?.isSexOffender ? "Match Found" : "Checked"}
+                </Badge>
               </h3>
               <p className="text-sm text-gray-500 mt-0.5">
-                {person.fullName || queryLabel} was <strong className={isPro ? "text-emerald-600" : "text-gray-600"}>not found</strong> on any state or national sex offender registry.
+                {person.indicators?.isSexOffender ? (
+                  <>
+                    {person.fullName || queryLabel} was <strong className={isPro ? "text-red-600" : "text-gray-600"}>found</strong> on a state or national sex offender registry.
+                  </>
+                ) : (
+                  <>
+                    {person.fullName || queryLabel} was <strong className={isPro ? "text-emerald-600" : "text-gray-600"}>not found</strong> on any state or national sex offender registry.
+                  </>
+                )}
               </p>
             </div>
-            {isPro && <CheckCircle2 className="w-8 h-8 text-emerald-400 flex-shrink-0" />}
+            {isPro && !person.indicators?.isSexOffender && <CheckCircle2 className="w-8 h-8 text-emerald-400 flex-shrink-0" />}
           </div>
         </CardContent>
       </Card>

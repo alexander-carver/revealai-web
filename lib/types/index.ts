@@ -157,6 +157,7 @@ export interface PersonIndicators {
   hasBankruptcy?: boolean;
   hasLien?: boolean;
   hasJudgment?: boolean;
+  isSexOffender?: boolean;
 }
 
 export interface PersonSocialProfile {
